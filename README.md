@@ -1,7 +1,3 @@
-Got it! Here's the updated README for **Civilify**, reflecting the use of OpenAI's GPT-4.0 instead of the Gemini API.
-
----
-
 # Civilify - Legal AI Assistant
 
 **Civilify** is an AI-powered legal assistant designed to help users assess the plausibility of their legal issues and determine if they have a viable case to pursue. Powered by OpenAI's GPT-4.0, Civilify offers insightful legal advice, generates sample documents, and helps users navigate their legal concerns in a conversational manner.
