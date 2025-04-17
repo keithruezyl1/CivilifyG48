@@ -71,7 +71,7 @@ const Signup = () => {
     const initGoogleSignIn = () => {
       if (window.google) {
         window.google.accounts.id.initialize({
-          client_id: "500781687317-6t7manki7ge5ssasfod7n0looqpin8fv.apps.googleusercontent.com", // REPLACE THIS
+          client_id: "", // REPLACE THIS
           callback: handleGoogleSignIn,
         });
 
