@@ -109,15 +109,16 @@
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
-			<version>1.16.0</version>
 		</dependency>
 		
 		<!-- Firebase Admin SDK -->
+		<!--
 		<dependency>
 			<groupId>com.google.firebase</groupId>
 			<artifactId>firebase-admin</artifactId>
 			<version>9.2.0</version>
 		</dependency>
+		-->
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
@@ -165,6 +166,14 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+			<groupId>org.codehaus.mojo</groupId>
+			<artifactId>exec-maven-plugin</artifactId>
+			<version>3.5.0</version>
+			<configuration>
+				<mainClass>com.capstone.civilify.CivilifyApplication</mainClass> <!-- Ensure this is correct -->
+			</configuration>
+		</plugin>
 		</plugins>
 	</build>
 

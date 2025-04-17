@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const Signup = () => {
@@ -51,6 +51,57 @@ const Signup = () => {
       setIsLoading(false);
     }
   };
+
+  const handleGoogleSignIn = (response) => {
+    console.log("Google Response:", response);
+    setIsLoading(true);
+    
+    // Extract user info from the credential
+    const { credential } = response;
+    const payload = JSON.parse(atob(credential.split('.')[1]));
+    console.log("Decoded JWT Payload:", payload);
+
+    // For testing - just display user info and navigate
+    alert(`Welcome ${payload.name} (${payload.email})`);
+    navigate('/chat');
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    const initGoogleSignIn = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: "500781687317-6t7manki7ge5ssasfod7n0looqpin8fv.apps.googleusercontent.com", // REPLACE THIS
+          callback: handleGoogleSignIn,
+        });
+
+        window.google.accounts.id.renderButton(
+          document.getElementById("googleSignInButton"),
+          { 
+            theme: "outline", 
+            size: "large",
+            text: "continue_with" 
+          }
+        );
+        
+        // Optional: Show the One Tap prompt
+        window.google.accounts.id.prompt();
+      }
+    };
+
+    // Check if Google script is already loaded
+    if (window.google) {
+      initGoogleSignIn();
+    } else {
+      // Load the script dynamically
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initGoogleSignIn;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   return (
     <div style={styles.container}>
@@ -155,18 +206,13 @@ const Signup = () => {
         </div>
         
         <div style={styles.socialButtons}>
-          <button style={styles.socialButton}>
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" 
-              alt="Google" 
-              style={styles.socialIcon}
-            />
+          <div id="googleSignInButton" style={{ width: '100%' }}>
             <span>Continue with Google</span>
-          </button>
+          </div>
           
           <button style={styles.socialButton}>
             <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" 
+              src="https://upload.wikimedia.org/wikipedia/commons/b/b8/202</p>1_Facebook_icon.svg" 
               alt="Facebook" 
               style={styles.socialIcon}
             />
