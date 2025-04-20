@@ -1,315 +1,638 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logoImage from '../assets/images/civilifyorangetext.png';
+import logoIconOrange from '../assets/images/logoiconorange.png';
 
 const Chat = () => {
   const navigate = useNavigate();
-  const [message, setMessage] = useState('');
-  const [suggestReplies, setSuggestReplies] = useState(true);
+  const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true);
+  const [question, setQuestion] = useState('');
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleMessageChange = (e) => {
-    setMessage(e.target.value);
+  const suggestedQuestions = [
+    "I have a land dispute",
+    "Can I break an NDA?",
+    "Workplace harassment",
+    "In trouble with the police"
+  ];
+
+  const handleToggleSuggestions = () => {
+    setSuggestedRepliesEnabled(!suggestedRepliesEnabled);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle message submission logic here
-    setMessage('');
+    // Handle chat submission
   };
 
-  const toggleSuggestReplies = () => {
-    setSuggestReplies(!suggestReplies);
+  const handleHowItWorks = () => {
+    setShowHowItWorks(true);
   };
 
-  const handleSuggestionClick = (suggestion) => {
-    setMessage(suggestion);
+  const handleNewChat = () => {
+    setShowNewChatConfirm(true);
   };
 
-  const suggestions = [
-    "I have a land dispute",
-    "Can I break an NDA?",
-    "Leave request not approved",
-    "In trouble with the police"
-  ];
+  const handleNewChatConfirm = (confirm) => {
+    if (confirm) {
+      // Clear current conversation
+      setQuestion('');
+    }
+    setShowNewChatConfirm(false);
+  };
+
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = (confirm) => {
+    if (confirm) {
+      navigate('/signin');
+    }
+    setShowLogoutConfirm(false);
+  };
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, []);
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
-        <div style={styles.leftHeader}>
-          <button style={styles.newChatButton}>+ New chat</button>
-          <div style={styles.suggestRepliesToggle}>
-            Suggest Replies
-            <label style={styles.toggle}>
-              <input 
-                type="checkbox" 
-                checked={suggestReplies} 
-                onChange={toggleSuggestReplies}
-                style={styles.toggleInput}
-              />
-              <div style={suggestReplies ? {...styles.toggleSlider, ...styles.toggleSliderChecked} : styles.toggleSlider}>
-                <div style={suggestReplies ? {...styles.toggleKnob, ...styles.toggleKnobChecked} : styles.toggleKnob}></div>
+      {/* Header */}
+      <header style={styles.header}>
+        <div style={styles.logoSection}>
+          <img src={logoIconOrange} alt="Civilify" style={styles.logo} />
+        </div>
+        
+        <div style={styles.centerSection}>
+        </div>
+
+        <div style={styles.rightSection}>
+          <div style={styles.suggestedRepliesToggle}>
+            <div style={styles.toggleLabelContainer}>
+              <span style={styles.toggleLabel}>Suggested Replies</span>
+              <div 
+                style={styles.infoIcon} 
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#666"/>
+                </svg>
+                {showTooltip && (
+                  <div style={styles.tooltip}>
+                    Enable or disable AI-suggested responses based on common legal queries. These suggestions help you get started with your conversation.
+                  </div>
+                )}
               </div>
-            </label>
+            </div>
+            <div 
+              style={{
+                ...styles.toggleSwitch,
+                backgroundColor: suggestedRepliesEnabled ? '#F34D01' : '#ccc'
+              }}
+              onClick={handleToggleSuggestions}
+            >
+              <div style={{
+                ...styles.toggleHandle,
+                transform: suggestedRepliesEnabled ? 'translateX(20px)' : 'translateX(0)'
+              }} />
+            </div>
           </div>
-        </div>
-        
-        <div style={styles.logo}>
-          <img src={logoImage} alt="Civilify" style={styles.logoImage} />
-        </div>
-        
-        <div style={styles.rightHeader}>
-          <button style={styles.headerButton}>How it works</button>
+          <button style={styles.headerButton} onClick={handleHowItWorks}>How it works</button>
           <button style={styles.headerButton}>Support</button>
-          <button style={styles.shareButton}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 5.12548 15.0077 5.24917 15.0227 5.37061L8.08059 9.11438C7.54431 8.43928 6.7921 8 5.93431 8C4.31233 8 3 9.34315 3 11C3 12.6569 4.31233 14 5.93431 14C6.7921 14 7.54431 13.5607 8.08059 12.8856L15.0227 16.6294C15.0077 16.7508 15 16.8745 15 17C15 18.6569 16.3431 20 18 20C19.6569 20 21 18.6569 21 17C21 15.3431 19.6569 14 18 14C17.1422 14 16.39 14.4393 15.8537 15.1144L8.91165 11.3706C8.9267 11.2492 8.93431 11.1255 8.93431 11C8.93431 10.8745 8.9267 10.7508 8.91165 10.6294L15.8537 6.88562C16.39 7.56072 17.1422 8 18 8Z" fill="currentColor" />
-            </svg>
-          </button>
+          <button style={styles.newChatButton} onClick={handleNewChat}>+ New chat</button>
         </div>
-      </div>
+      </header>
 
-      <div style={styles.mainContent}>
+      {/* Main Chat Area */}
+      <main style={styles.mainContent}>
         <div style={styles.chatContainer}>
-          <div style={styles.welcomeMessage}>
-            Start a conversation with <span style={styles.highlightText}>Villy</span>.
+          <div style={styles.welcomeSection}>
+            <h1 style={styles.welcomeTitle}>
+              Start your conversation with <span style={styles.villyText}>Villy</span>.
+            </h1>
           </div>
 
-          {suggestions.length > 0 && (
-            <div style={styles.suggestionsContainer}>
-              {suggestions.map((suggestion, index) => (
-                <button 
-                  key={index} 
-                  style={styles.suggestionButton}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                >
-                  "{suggestion}"
-                </button>
-              ))}
+          {suggestedRepliesEnabled && (
+            <div style={styles.suggestedReplies}>
+              <div style={styles.suggestedButtonsContainer}>
+                {suggestedQuestions.map((question, index) => (
+                  <button 
+                    key={index}
+                    style={styles.suggestedButton}
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={styles.inputContainer}>
-            <input
-              type="text"
-              value={message}
-              onChange={handleMessageChange}
-              placeholder="Enter your message..."
-              style={styles.input}
-            />
-            <button type="submit" style={styles.sendButton}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor" />
-              </svg>
-            </button>
-          </form>
+          <div style={styles.inputSection}>
+            <form onSubmit={handleSubmit} style={styles.inputForm}>
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Ask a question"
+                style={styles.input}
+              />
+              <button 
+                type="submit" 
+                style={styles.sendButton}
+                onMouseEnter={(e) => {
+                  const button = e.currentTarget;
+                  button.style.backgroundColor = '#F34D01';
+                  button.style.borderColor = '#F34D01';
+                  const path = button.querySelector('path');
+                  path.setAttribute('stroke', '#ffffff');
+                }}
+                onMouseLeave={(e) => {
+                  const button = e.currentTarget;
+                  button.style.backgroundColor = 'transparent';
+                  button.style.borderColor = 'rgba(0, 0, 0, 0.12)';
+                  const path = e.currentTarget.querySelector('path');
+                  path.setAttribute('stroke', '#666666');
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666666" strokeWidth="2">
+                  <path d="M12 20V4M5 11l7-7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </form>
+            <p style={styles.disclaimer}>
+              Villy offers AI-powered legal insights to help you explore your situation. While it's here to assist, it's not a substitute for professional legal advice.
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
+
+      {/* Popup Overlays */}
+      {(showHowItWorks || showNewChatConfirm || showLogoutConfirm) && (
+        <div style={styles.overlay}>
+          {showHowItWorks && (
+            <div style={styles.popup}>
+              <h2 style={styles.popupTitle}>How Civilify Works</h2>
+              <div style={styles.stepsContainer}>
+                <div style={styles.step}>
+                  <div style={styles.stepNumber}>1</div>
+                  <h3 style={styles.stepTitle}>Describe Your Case</h3>
+                  <p style={styles.stepDescription}>
+                    Tell us about your legal situation in simple terms.
+                  </p>
+                </div>
+                <div style={styles.step}>
+                  <div style={styles.stepNumber}>2</div>
+                  <h3 style={styles.stepTitle}>Get AI Analysis</h3>
+                  <p style={styles.stepDescription}>
+                    Receive detailed insights and recommendations.
+                  </p>
+                </div>
+                <div style={styles.step}>
+                  <div style={styles.stepNumber}>3</div>
+                  <h3 style={styles.stepTitle}>Take Action</h3>
+                  <p style={styles.stepDescription}>
+                    Generate documents and follow guided next steps.
+                  </p>
+                </div>
+              </div>
+              <button style={styles.closeButton} onClick={() => setShowHowItWorks(false)}>Close</button>
+            </div>
+          )}
+
+          {showNewChatConfirm && (
+            <div style={styles.popup}>
+              <h2 style={styles.popupTitle}>You are starting a new conversation</h2>
+              <p style={styles.popupSubtitle}>That means all information in the current conversation will be deleted. Continue?</p>
+              <div style={styles.confirmButtons}>
+                <button style={styles.confirmButton} onClick={() => handleNewChatConfirm(true)}>Yes</button>
+                <button style={styles.cancelButton} onClick={() => handleNewChatConfirm(false)}>No</button>
+              </div>
+            </div>
+          )}
+
+          {showLogoutConfirm && (
+            <div style={styles.popup}>
+              <h2 style={styles.popupTitle}>Logout</h2>
+              <p style={styles.popupSubtitle}>Are you sure you want to logout?</p>
+              <div style={styles.confirmButtons}>
+                <button style={styles.confirmButton} onClick={() => handleLogoutConfirm(true)}>Yes, Logout</button>
+                <button style={styles.cancelButton} onClick={() => handleLogoutConfirm(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer style={styles.footer}>
+        <div style={styles.footerLeft}>
+          <span>© The Civilify Company, Cebu City 2025</span>
+          <button style={styles.footerLink}>What is Civilify?</button>
+          <button style={styles.footerLink}>Why use Civilify?</button>
+          <button style={styles.footerLink}>FAQs</button>
+          <button style={styles.footerLink}>Security and Privacy</button>
+        </div>
+        <div style={styles.footerRight}>
+          <button style={styles.logoutButton} onClick={handleLogout}>
+            <span>Logout</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </footer>
     </div>
   );
 };
 
 const styles = {
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    width: '100vw',
-    backgroundColor: '#111',
-    color: '#fff',
-    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif',
-    overflow: 'hidden',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 24px',
-    backgroundColor: '#FF5722',
-    color: 'white',
-    height: '60px',
     position: 'fixed',
     top: 0,
     left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
-  mainContent: {
-    flex: 1,
-    marginTop: '60px', // Height of header
-    padding: '20px',
+    width: '100vw',
+    height: '100vh',
     display: 'flex',
     flexDirection: 'column',
-    height: 'calc(100vh - 60px)', // Viewport height minus header height
+    backgroundColor: '#fafafa',
     overflow: 'hidden',
   },
-  leftHeader: {
+
+  header: {
+    height: '64px',
     display: 'flex',
     alignItems: 'center',
-    gap: '20px',
+    padding: '0 32px',
+    backgroundColor: '#ffffff',
+    flexShrink: 0,
   },
-  rightHeader: {
+  logoSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
   },
   logo: {
+    height: '32px',
+  },
+  centerSection: {
+    flex: 1,
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  logoImage: {
-    height: '40px',
-  },
-  newChatButton: {
-    backgroundColor: '#000',
-    color: 'white',
-    border: 'none',
-    borderRadius: '20px',
-    padding: '8px 16px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-  },
-  suggestRepliesToggle: {
+  rightSection: {
     display: 'flex',
     alignItems: 'center',
-    fontSize: '14px',
-    gap: '8px',
-  },
-  toggle: {
-    position: 'relative',
-    display: 'inline-block',
-    width: '40px',
-    height: '20px',
-    marginLeft: '8px',
-  },
-  toggleInput: {
-    opacity: 0,
-    width: 0,
-    height: 0,
-  },
-  toggleSlider: {
-    position: 'absolute',
-    cursor: 'pointer',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: '34px',
-    transition: '0.4s',
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0 3px',
-  },
-  toggleSliderChecked: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'flex-end',
-  },
-  toggleKnob: {
-    width: '16px',
-    height: '16px',
-    backgroundColor: 'white',
-    borderRadius: '50%',
-    transition: '0.4s',
-  },
-  toggleKnobChecked: {
-    backgroundColor: '#FF5722',
+    gap: '24px',
   },
   headerButton: {
-    backgroundColor: 'transparent',
-    color: 'white',
+    background: 'none',
     border: 'none',
+    color: '#1a1a1a',
     fontSize: '14px',
     fontWeight: '500',
     cursor: 'pointer',
   },
-  shareButton: {
-    backgroundColor: 'transparent',
-    color: 'white',
+  newChatButton: {
+    background: '#1a1a1a',
+    color: '#ffffff',
     border: 'none',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatContainer: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    position: 'relative',
-    height: '100%',
-    overflow: 'hidden',
-  },
-  welcomeMessage: {
-    fontSize: '28px',
-    color: '#333',
-    marginBottom: '40px',
-    textAlign: 'center',
-  },
-  highlightText: {
-    color: '#FF5722',
-    fontWeight: 'bold',
-  },
-  suggestionsContainer: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: '16px',
-    marginBottom: '40px',
-    maxWidth: '800px',
-    padding: '0 20px',
-  },
-  suggestionButton: {
-    padding: '16px',
-    backgroundColor: 'white',
-    border: '1px solid #ddd',
-    borderRadius: '12px',
+    borderRadius: '6px',
+    padding: '8px 16px',
     fontSize: '14px',
-    color: '#333',
+    fontWeight: '500',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      backgroundColor: '#f5f5f5',
-      borderColor: '#FF5722',
+  },
+  suggestedRepliesToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  toggleLabelContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  toggleLabel: {
+    fontSize: '14px',
+    color: '#1a1a1a',
+    fontWeight: '500',
+  },
+  infoIcon: {
+    position: 'relative',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  tooltip: {
+    position: 'absolute',
+    top: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    marginTop: '8px',
+    padding: '12px',
+    backgroundColor: '#333',
+    color: '#fff',
+    borderRadius: '6px',
+    fontSize: '12px',
+    width: '240px',
+    textAlign: 'left',
+    zIndex: 1000,
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: '-6px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      border: '6px solid transparent',
+      borderBottomColor: '#333',
     },
   },
-  inputContainer: {
-    position: 'absolute',
-    bottom: '20px',
-    left: '20px',
-    right: '20px',
+  toggleSwitch: {
+    width: '40px',
+    height: '20px',
+    backgroundColor: '#ccc',
+    borderRadius: '10px',
+    padding: '2px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
     display: 'flex',
-    borderRadius: '24px',
+    alignItems: 'center',
+  },
+  toggleHandle: {
+    width: '16px',
+    height: '16px',
+    backgroundColor: '#fff',
+    borderRadius: '50%',
+    transition: 'transform 0.2s',
+  },
+  mainContent: {
+    flex: 1,
+    position: 'relative',
+    padding: '12px 32px',
     overflow: 'hidden',
-    border: '1px solid #ddd',
-    backgroundColor: 'white',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
+    height: 'calc(100vh - 96px)',
+  },
+  chatContainer: {
+    position: 'relative',
+    height: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: '16px',
+    margin: '0 auto',
+    maxWidth: '1600px',
+    border: '1px solid rgba(0, 0, 0, 0.12)',
+    overflow: 'hidden',
+  },
+  welcomeSection: {
+    position: 'absolute',
+    top: '30%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    textAlign: 'center',
+  },
+  welcomeTitle: {
+    fontSize: '48px',
+    fontWeight: '500',
+    color: '#1a1a1a',
+    margin: 0,
+    whiteSpace: 'nowrap',
+  },
+  villyText: {
+    color: '#F34D01',
+  },
+  suggestedReplies: {
+    position: 'absolute',
+    top: '45%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+  },
+  suggestedButtonsContainer: {
+    display: 'flex',
+    gap: '16px',
+    justifyContent: 'center',
+  },
+  suggestedButton: {
+    background: '#ffffff',
+    border: '1px solid rgba(0, 0, 0, 0.12)',
+    borderRadius: '24px',
+    padding: '12px 24px',
+    fontSize: '14px',
+    color: '#1a1a1a',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  inputSection: {
+    position: 'absolute',
+    bottom: '24px',
+    height: '100px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '600px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  inputForm: {
+    position: 'relative',
+    width: '100%',
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
   },
   input: {
     flex: 1,
-    padding: '16px 24px',
-    border: 'none',
-    fontSize: '16px',
+    padding: '0 16px',
+    fontSize: '14px',
+    border: '1px solid rgba(0, 0, 0, 0.12)',
+    borderRadius: '8px',
     outline: 'none',
+    backgroundColor: '#ffffff',
+    height: '32px',
+    lineHeight: '32px',
   },
   sendButton: {
-    width: '48px',
-    backgroundColor: 'transparent',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    padding: '6px',
+    background: 'none',
+    border: '1px solid rgba(0, 0, 0, 0.12)',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#F34D01',
+      border: '1px solid #F34D01',
+    },
+  },
+  disclaimer: {
+    fontSize: '11px',
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: '12px',
+    fontStyle: 'italic',
+    width: '100%',
+  },
+  footer: {
+    height: '48px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 32px',
+    backgroundColor: '#ffffff',
+    flexShrink: 0,
+  },
+  footerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '24px',
+    color: '#666666',
+    fontSize: '14px',
+    marginLeft: '-8px',
+  },
+  footerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    marginRight: '-8px',
+  },
+  footerLink: {
+    background: 'none',
     border: 'none',
+    color: '#1a1a1a',
+    fontSize: '14px',
+    cursor: 'pointer',
+  },
+  logoutButton: {
+    background: 'none',
+    border: 'none',
+    color: '#1a1a1a',
+    fontSize: '14px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(4px)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
+  },
+  popup: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    padding: '32px',
+    maxWidth: '600px',
+    width: '90%',
+    boxShadow: '0 4px 24px rgba(0, 0, 0, 0.1)',
+  },
+  popupTitle: {
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: '16px',
+    textAlign: 'center',
+  },
+  popupSubtitle: {
+    fontSize: '16px',
+    fontWeight: '400',
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: '32px',
+  },
+  stepsContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+    marginBottom: '32px',
+  },
+  step: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  stepNumber: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    backgroundColor: '#F34D01',
+    color: '#ffffff',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontSize: '16px',
+    fontWeight: '600',
+  },
+  stepTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#1a1a1a',
+    margin: 0,
+  },
+  stepDescription: {
+    fontSize: '14px',
+    fontWeight: '400',
+    color: '#666666',
+    margin: 0,
+  },
+  closeButton: {
+    background: '#F34D01',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '12px 24px',
+    fontSize: '14px',
+    fontWeight: '500',
     cursor: 'pointer',
-    color: '#666',
-    transition: 'color 0.2s ease',
-    '&:hover': {
-      color: '#FF5722',
-    },
+    width: '100%',
+  },
+  confirmButtons: {
+    display: 'flex',
+    gap: '16px',
+    justifyContent: 'center',
+  },
+  confirmButton: {
+    background: '#F34D01',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '12px 24px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+  },
+  cancelButton: {
+    background: '#ffffff',
+    color: '#1a1a1a',
+    border: '1px solid rgba(0, 0, 0, 0.12)',
+    borderRadius: '6px',
+    padding: '12px 24px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
   },
 };
 
