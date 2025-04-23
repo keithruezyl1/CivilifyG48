@@ -1,4 +1,4 @@
-package com.capstone.civilify.service;
+/*package com.capstone.civilify.service;
 
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -120,4 +120,4 @@ public class UserService {
     private String normalizeEmail(String email) {
         return email.replace(".", ",");
     }
-}
+} */

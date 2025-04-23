@@ -34,3 +34,6 @@ build/
 
 # windsurf rules
 .windsurfrules
+
+### Node.js ###
+node_modules/

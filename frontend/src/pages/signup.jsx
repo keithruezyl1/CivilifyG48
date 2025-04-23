@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -141,10 +141,57 @@ const Signup = () => {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    // Will be implemented later
-    alert('Google sign-in will be implemented soon.');
+
+  const handleGoogleSignIn = (response) => {
+    console.log("Google Response:", response);
+    setIsLoading(true);
+    
+    // Extract user info from the credential
+    const { credential } = response;
+    const payload = JSON.parse(atob(credential.split('.')[1]));
+    console.log("Decoded JWT Payload:", payload);
+
+    // For testing - just display user info and navigate
+    alert(`Welcome ${payload.name} (${payload.email})`);
+    navigate('/chat');
+    setIsLoading(false);
   };
+
+  useEffect(() => {
+    const initGoogleSignIn = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: "", // REPLACE THIS
+          callback: handleGoogleSignIn,
+        });
+
+        window.google.accounts.id.renderButton(
+          document.getElementById("googleSignInButton"),
+          { 
+            theme: "outline", 
+            size: "large",
+            text: "continue_with" 
+          }
+        );
+        
+        // Optional: Show the One Tap prompt
+        window.google.accounts.id.prompt();
+      }
+    };
+
+    // Check if Google script is already loaded
+    if (window.google) {
+      initGoogleSignIn();
+    } else {
+      // Load the script dynamically
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initGoogleSignIn;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   return (
     <div style={styles.container}>
@@ -316,17 +363,19 @@ const Signup = () => {
             onClick={handleGoogleSignIn} 
             style={styles.googleButton}
           >
-            <img 
-              src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj48cGF0aCBkPSJNMTcuNiA5LjJsLS4xLTEuOEg5djMuNGg0LjhDMTMuNiAxMiAxMyAxMyAxMiAxMy42djIuMmgzYTguOCA4LjggMCAwIDAgMi42LTYuNnoiIGZpbGw9IiM0Mjg1RjQiIGZpbGwtcnVsZT0ibm9uemVybyIvPjxwYXRoIGQ9Ik05IDE4YzIuNCAwIDQuNS0uOCA2LTIuMmwtMy0yLjJhNS40IDUuNCAwIDAgMS04LTIuOUgxVjEzYTkgOSAwIDAgMCA4IDV6IiBmaWxsPSIjMzRBODUzIiBmaWxsLXJ1bGU9Im5vbnplcm8iLz48cGF0aCBkPSJNNCAxMC43YTUuNCA1LjQgMCAwIDEgMC0zLjRWNUgxYTkgOSAwIDAgMCAwIDhsMy0yLjN6IiBmaWxsPSIjRkJCQzA1IiBmaWxsLXJ1bGU9Im5vbnplcm8iLz48cGF0aCBkPSJNOSAzLjZjMS4zIDAgMi41LjQgMy40IDEuM0wxNSAyLjNBOSA5IDAgMCAwIDEgNWwzIDIuNGE1LjQgNS40IDAgMCAxIDUtMy43eiIgZmlsbD0iI0VBNDMzNSIgZmlsbC1ydWxlPSJub256ZXJvIi8+PHBhdGggZD0iTTAgMGgxOHYxOEgweiIvPjwvZz48L3N2Zz4=" 
-              alt="Google"
-              style={styles.googleIcon}
-            />
-            Continue with Google
+
+            {isLoading ? 'Creating account...' : 'Create account'}
           </button>
-          
-          <p style={styles.signinText}>
-            Already have an account? <Link to="/signin" style={styles.signinLink}>Sign in</Link>
-          </p>
+        </form>
+        
+        <div style={styles.divider}>
+          <span style={styles.dividerText}>OR</span>
+        </div>
+        
+        <div style={styles.socialButtons}>
+          <div id="googleSignInButton" style={{ width: '100%' }}>
+            <span>Continue with Google</span>
+          </div>
         </div>
       </div>
     </div>

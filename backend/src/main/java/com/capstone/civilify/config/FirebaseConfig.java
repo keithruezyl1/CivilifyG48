@@ -1,8 +1,8 @@
 package com.capstone.civilify.config;
 
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
+//import com.google.firebase.FirebaseApp;
+//import com.google.firebase.FirebaseOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,4 +57,4 @@ public class FirebaseConfig {
             logger.error("Firebase initialization failed: {}", e.getMessage());
         }
     }
-}
+} 
