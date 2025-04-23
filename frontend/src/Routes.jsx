@@ -1,8 +1,11 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import Landing from './pages/landing';
-import Chat from './pages/chat';
-import SignIn from './pages/signin';
-import Signup from './pages/signup';
+import { Routes, Route, Navigate } from "react-router-dom";
+import Landing from "./pages/landing";
+import Chat from "./pages/chat";
+import SignIn from "./pages/signin";
+import Signup from "./pages/signup";
+import ForgotPassword from "./pages/forgotpassword";
+import VerifyCode from "./pages/verifycode";
+import ResetPassword from "./pages/resetpassword";
 
 const AppRoutes = () => {
   return (
@@ -12,6 +15,9 @@ const AppRoutes = () => {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/chat" element={<Chat />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/verify-code" element={<VerifyCode />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 };
