@@ -1,3 +1,4 @@
+/*
 package com.capstone.civilify.config;
 
 import com.google.auth.oauth2.GoogleCredentials;
@@ -57,4 +58,5 @@ public class FirebaseConfig {
             logger.error("Firebase initialization failed: {}", e.getMessage());
         }
     }
-} 
+}
+*/

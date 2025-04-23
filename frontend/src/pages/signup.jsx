@@ -356,25 +356,13 @@ const Signup = () => {
           </form>
           
           <div style={styles.divider}>
-            <span style={styles.dividerText}>or</span>
+            <span style={styles.dividerText}>OR</span>
           </div>
           
-          <button 
-            onClick={handleGoogleSignIn} 
-            style={styles.googleButton}
-          >
-
-            {isLoading ? 'Creating account...' : 'Create account'}
-          </button>
-        </form>
-        
-        <div style={styles.divider}>
-          <span style={styles.dividerText}>OR</span>
-        </div>
-        
-        <div style={styles.socialButtons}>
-          <div id="googleSignInButton" style={{ width: '100%' }}>
-            <span>Continue with Google</span>
+          <div style={styles.socialButtons}>
+            <div id="googleSignInButton" style={{ width: '100%' }}>
+              <span>Continue with Google</span>
+            </div>
           </div>
         </div>
       </div>

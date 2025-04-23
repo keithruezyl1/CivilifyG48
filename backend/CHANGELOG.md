@@ -1,5 +1,10 @@
 # Changelog
 
+## 2025-04-23: Spring Boot Update
+
+### Updated
+- Updated Spring Boot version from 3.2.3 to 3.2.12 for security patches and bug fixes
+
 ## 2025-04-16: Firebase Configuration Fixes
 
 ### Fixed
