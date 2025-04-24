@@ -249,7 +249,7 @@ const Signup = () => {
                 value={formData.username}
                 onChange={handleChange}
                 style={styles.input}
-                placeholder="Choose a username"
+                placeholder="What should we call you?"
                 required
               />
             </div>
@@ -262,7 +262,7 @@ const Signup = () => {
                 value={formData.email}
                 onChange={handleChange}
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder="your@email.com"
                 required
               />
             </div>
@@ -276,7 +276,7 @@ const Signup = () => {
                   value={formData.password}
                   onChange={handleChange}
                   style={styles.input}
-                  placeholder="Create a password"
+                  placeholder="Minimum of 8 characters"
                   required
                 />
                 {formData.password && (
@@ -363,6 +363,12 @@ const Signup = () => {
             <div id="googleSignInButton" style={{ width: '100%' }}>
               <span>Continue with Google</span>
             </div>
+          </div>
+          
+          <div style={styles.alreadyHaveAccount}>
+            <span style={styles.alreadyHaveAccountText}>
+              Already have an account? <Link to="/signin" style={styles.signInLink}>Sign In</Link>
+            </span>
           </div>
         </div>
       </div>
@@ -624,6 +630,29 @@ const styles = {
     fontSize: '13px',
     marginBottom: '12px',
     textAlign: 'center',
+  },
+  socialButtons: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '24px',
+  },
+  alreadyHaveAccount: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: '12px',
+  },
+  alreadyHaveAccountText: {
+    fontSize: '13px',
+    color: '#666666',
+  },
+  signInLink: {
+    color: '#F34D01',
+    textDecoration: 'none',
+    fontWeight: '500',
   },
 };
 

@@ -159,7 +159,7 @@ const SignIn = () => {
                 value={formData.email}
                 onChange={handleChange}
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder="your@email.com"
                 required
               />
             </div>
@@ -173,7 +173,7 @@ const SignIn = () => {
                   value={formData.password}
                   onChange={handleChange}
                   style={styles.input}
-                  placeholder="Enter your password"
+                  placeholder="********"
                   required
                 />
                 {formData.password && (

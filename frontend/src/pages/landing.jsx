@@ -2,6 +2,11 @@ import { useNavigate } from 'react-router-dom';import { useEffect, useRef, useSt
 import logoIconOrange from '../assets/images/logoiconorange.png';
 import logoTextOrange from '../assets/images/logotextorange.png';
 import heroImage from '../assets/images/heropic.png';
+import villy3dIllustration from '../assets/images/villy_3dillustration.png';
+import villy3dIllustrationCropped from '../assets/images/villy_3dillustration_cropped.png';
+import featureIcon1 from '../assets/images/1.png';
+import featureIcon2 from '../assets/images/2.png';
+import featureIcon3 from '../assets/images/3.png';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -9,9 +14,6 @@ const Landing = () => {
   const featuresRef = useRef(null);
   const howItWorksRef = useRef(null);
   const [activeSection, setActiveSection] = useState('hero');
-  const [showBackToTop, setShowBackToTop] = useState(false);
-  const [hoveredCard, setHoveredCard] = useState(null);
-  const [expandedCard, setExpandedCard] = useState(null);
 
   // Smooth scroll function
   const smoothScroll = (element) => {
@@ -62,9 +64,6 @@ const Landing = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show back to top button after scrolling 300px
-      setShowBackToTop(window.scrollY > 300);
-
       // Update active section based on scroll position
       const heroPosition = heroRef.current?.getBoundingClientRect();
       const featuresPosition = featuresRef.current?.getBoundingClientRect();
@@ -91,15 +90,60 @@ const Landing = () => {
     navigate('/signup');
   };
 
-  const handleBackToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
+  // Handle wheel events for section locking
+  useEffect(() => {
+    const handleWheel = (e) => {
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      
+      // Define section positions
+      const heroTop = heroRef.current?.offsetTop || 0;
+      const featuresTop = featuresRef.current?.offsetTop || 0;
+      const howItWorksTop = howItWorksRef.current?.offsetTop || 0;
+      const footerTop = document.querySelector('footer')?.offsetTop || 0;
+      
+      // Determine current section and scroll direction
+      let targetPosition;
+      
+      if (e.deltaY > 0) { // Scrolling down
+        if (scrollY < featuresTop - windowHeight/2) {
+          targetPosition = featuresTop;
+        } else if (scrollY < howItWorksTop - windowHeight/2) {
+          targetPosition = howItWorksTop;
+        } else if (scrollY < footerTop - windowHeight/2) {
+          targetPosition = footerTop;
+        }
+      } else { // Scrolling up
+        if (scrollY > howItWorksTop + windowHeight/2) {
+          targetPosition = howItWorksTop;
+        } else if (scrollY > featuresTop + windowHeight/2) {
+          targetPosition = featuresTop;
+        } else if (scrollY > heroTop + windowHeight/2) {
+          targetPosition = heroTop;
+        }
+      }
+      
+      // Scroll to target position if defined
+      if (targetPosition !== undefined) {
+        e.preventDefault();
+        window.scrollTo({
+          top: targetPosition,
+          behavior: 'smooth'
+        });
+      }
+    };
+    
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
-  const handleCardClick = (index) => {
-    setExpandedCard(expandedCard === index ? null : index);
+  // Function to navigate to docs with a specific section
+  const navigateToDocsSection = (sectionId) => {
+    localStorage.setItem('selectedDocSection', sectionId);
+    navigate('/civilify-documents');
   };
 
   return (
@@ -141,31 +185,23 @@ const Landing = () => {
         </div>
       </nav>
 
-      {showBackToTop && (
-        <button 
-          style={styles.backToTop}
-          onClick={handleBackToTop}
-          className="back-to-top-button"
-        >
-          ↑
-        </button>
-      )}
-
       <div ref={heroRef} style={{...styles.heroSection, opacity: 0, transform: 'translateY(20px)', transition: 'all 0.6s ease-out'}}>
-        <div style={styles.heroContent}>
-          <img src={logoTextOrange} alt="Civilify" style={styles.heroLogo} />
-          <h2 style={styles.subheading} className="subheading-shine">AI-Powered Legal Clarity</h2>
-          <p style={styles.description}>
-            Assess your legal case, get insights, and generate documents with <span style={styles.highlight}>Villy</span>, your intelligent legal companion.
-          </p>
-          <button style={styles.primaryButton} onClick={handleSignup} className="get-started-button">
-            Get Started
-          </button>
-        </div>
-        <div style={styles.heroImages}>
-          <img src={heroImage} alt="Legal Assistant 1" style={styles.heroImg} />
-          <img src={heroImage} alt="Legal Assistant 2" style={styles.heroImg} />
-          <img src={heroImage} alt="Legal Assistant 3" style={styles.heroImg} />
+        <div style={styles.heroContainer}>
+          <div style={styles.heroLeft}>
+            <div style={styles.heroContent}>
+              <img src={logoTextOrange} alt="Civilify" style={styles.heroLogo} />
+              <h2 style={styles.subheading} className="subheading-shine">AI-Powered Legal Clarity</h2>
+              <p style={styles.description}>
+                Assess your legal case, get insights, and know what to do next with <span style={styles.highlight}>Villy</span>, your intelligent legal companion.
+              </p>
+              <button style={styles.primaryButton} onClick={handleSignup} className="get-started-button">
+                Get Started
+              </button>
+            </div>
+          </div>
+          <div style={styles.heroRight}>
+            <img src={villy3dIllustrationCropped} alt="Villy AI Assistant" style={styles.villyIllustration} />
+          </div>
         </div>
       </div>
       
@@ -173,97 +209,34 @@ const Landing = () => {
         <h2 style={styles.sectionHeading}>Features</h2>
         <div style={styles.featuresGrid}>
           <div 
-            style={{
-              ...styles.featureCard,
-              transform: hoveredCard === 0 ? 'translateY(-10px)' : 'none',
-              boxShadow: hoveredCard === 0 ? '0 12px 32px rgba(243, 77, 1, 0.2)' : '0 4px 12px rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseEnter={() => setHoveredCard(0)}
-            onMouseLeave={() => setHoveredCard(null)}
+            style={styles.featureCard}
             className="feature-card"
           >
-            <div style={styles.featureIcon}>🤖</div>
-            <h3 style={styles.featureTitle}>Natural Language Processing</h3>
+            <img src={featureIcon1} alt="Natural Language Processing" style={styles.featureImage} />
+            <h3 style={{...styles.featureTitle, fontSize: '20px'}}>Natural Language Processing</h3>
             <p style={styles.featureDescription}>
-              Communicate with Villy in plain English. Our AI understands context and nuance to provide accurate legal guidance.
+              <span>Communicate with Villy in plain English. Our AI understands context and nuance to provide accurate legal guidance.</span>
             </p>
-            <button 
-              style={styles.learnMoreButton}
-              onClick={() => handleCardClick(0)}
-            >
-              {expandedCard === 0 ? 'Show Less' : 'Learn More'}
-            </button>
-            {expandedCard === 0 && (
-              <div style={styles.expandedContent}>
-                <ul style={styles.featureList}>
-                  <li className="feature-list-item">Advanced context understanding</li>
-                  <li className="feature-list-item">Multi-language support</li>
-                  <li className="feature-list-item">Real-time conversation analysis</li>
-                </ul>
-              </div>
-            )}
           </div>
           <div 
-            style={{
-              ...styles.featureCard,
-              transform: hoveredCard === 1 ? 'translateY(-10px)' : 'none',
-              boxShadow: hoveredCard === 1 ? '0 12px 32px rgba(243, 77, 1, 0.2)' : '0 4px 12px rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseEnter={() => setHoveredCard(1)}
-            onMouseLeave={() => setHoveredCard(null)}
+            style={styles.featureCard}
             className="feature-card"
           >
-            <div style={styles.featureIcon}>📊</div>
+            <img src={featureIcon2} alt="Case Analysis" style={styles.featureImage} />
             <h3 style={styles.featureTitle}>Case Analysis</h3>
             <p style={styles.featureDescription}>
-              Get comprehensive analysis of your legal situation with potential outcomes and recommended actions.
+              <span>Get comprehensive analysis of your legal situation with potential outcomes and recommended actions.</span>
             </p>
-            <button 
-              style={styles.learnMoreButton}
-              onClick={() => handleCardClick(1)}
-            >
-              {expandedCard === 1 ? 'Show Less' : 'Learn More'}
-            </button>
-            {expandedCard === 1 && (
-              <div style={styles.expandedContent}>
-                <ul style={styles.featureList}>
-                  <li className="feature-list-item">Detailed case assessment</li>
-                  <li className="feature-list-item">Risk analysis and predictions</li>
-                  <li className="feature-list-item">Actionable recommendations</li>
-                </ul>
-              </div>
-            )}
           </div>
           <div 
-            style={{
-              ...styles.featureCard,
-              transform: hoveredCard === 2 ? 'translateY(-10px)' : 'none',
-              boxShadow: hoveredCard === 2 ? '0 12px 32px rgba(243, 77, 1, 0.2)' : '0 4px 12px rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseEnter={() => setHoveredCard(2)}
-            onMouseLeave={() => setHoveredCard(null)}
+            style={styles.featureCard}
             className="feature-card"
           >
-            <div style={styles.featureIcon}>⚡</div>
+            <img src={featureIcon3} alt="AI Assistance" style={styles.featureImage} />
             <h3 style={styles.featureTitle}>AI Assistance</h3>
             <p style={styles.featureDescription}>
-              Receive intelligent suggestions and document generation assistance powered by advanced AI technology.
+              <span>Receive intelligent suggested next steps and personalized guidance powered by advanced AI technology.</span>
             </p>
-            <button 
-              style={styles.learnMoreButton}
-              onClick={() => handleCardClick(2)}
-            >
-              {expandedCard === 2 ? 'Show Less' : 'Learn More'}
-            </button>
-            {expandedCard === 2 && (
-              <div style={styles.expandedContent}>
-                <ul style={styles.featureList}>
-                  <li className="feature-list-item">Smart document generation</li>
-                  <li className="feature-list-item">Legal form assistance</li>
-                  <li className="feature-list-item">24/7 AI support</li>
-                </ul>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -309,10 +282,10 @@ const Landing = () => {
         <div style={styles.footerContent}>
           <p style={styles.copyright}>© The Civilify Company, Cebu City 2025</p>
           <div style={styles.footerLinks}>
-            <a href="#" style={styles.footerLink}>What is Civilify</a>
-            <a href="#" style={styles.footerLink}>Why use Civilify</a>
-            <a href="#" style={styles.footerLink}>FAQs</a>
-            <a href="#" style={styles.footerLink}>Security and Privacy</a>
+            <a href="/civilify-documents" onClick={(e) => { e.preventDefault(); navigateToDocsSection('what-is'); }} style={styles.footerLink}>What is Civilify</a>
+            <a href="/civilify-documents" onClick={(e) => { e.preventDefault(); navigateToDocsSection('why-use'); }} style={styles.footerLink}>Why use Civilify</a>
+            <a href="/civilify-documents" onClick={(e) => { e.preventDefault(); navigateToDocsSection('getting-started'); }} style={styles.footerLink}>FAQs</a>
+            <a href="/civilify-documents" onClick={(e) => { e.preventDefault(); navigateToDocsSection('security'); }} style={styles.footerLink}>Security and Privacy</a>
           </div>
         </div>
       </footer>
@@ -387,27 +360,71 @@ const styles = {
     fontWeight: '600',
     backgroundColor: '#F34D01',
     color: 'white',
-    border: 'none',
-    borderRadius: '8px',
+    borderRadius: '30px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+    position: 'relative',
+    border: 'none',
+    boxShadow: '0 4px 10px rgba(243, 77, 1, 0.25), 1px 1px 2px rgba(255, 255, 255, 0.3) inset',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 6px 15px rgba(243, 77, 1, 0.3), 1px 1px 2px rgba(255, 255, 255, 0.3) inset',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+      boxShadow: '0 2px 5px rgba(243, 77, 1, 0.2), 1px 1px 1px rgba(255, 255, 255, 0.3) inset',
+    },
   },
   heroSection: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '100px 5% 40px',
-    textAlign: 'center',
-    minHeight: 'calc(100vh - 60px)',
+    justifyContent: 'center',
+    padding: '0 5%',
+    minHeight: '100vh',
+    borderBottom: '1px solid #eee',
+    position: 'relative',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  heroContainer: {
+    display: 'flex',
+    width: '100%',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    height: '100%',
+    position: 'relative',
+  },
+  heroLeft: {
+    width: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+  },
+  heroRight: {
+    width: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    position: 'relative',
+    height: '100%',
   },
   heroContent: {
-    width: '100%',
-    marginBottom: '60px',
-    padding: '0 5%',
+    maxWidth: '450px',
+    textAlign: 'center',
   },
   heroLogo: {
     height: '60px',
     marginBottom: '24px',
+  },
+  villyIllustration: {
+    maxWidth: '100%',
+    height: 'auto',
+    position: 'absolute',
+    bottom: '-400px',
   },
   subheading: {
     fontSize: '36px',
@@ -419,36 +436,24 @@ const styles = {
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     animation: 'shine 3s linear infinite',
+    textAlign: 'center',
   },
   description: {
     fontSize: '18px',
     lineHeight: '1.6',
     marginBottom: '32px',
     color: '#666',
-    maxWidth: '600px',
-    margin: '0 auto 32px',
+    textAlign: 'center',
   },
   highlight: {
     color: '#F34D01',
     fontWeight: '600',
   },
-  heroImages: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '24px',
-    width: '100%',
-    padding: '0 5%',
-  },
-  heroImg: {
-    width: '30%',
-    height: 'auto',
-    borderRadius: '12px',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
-  },
   featuresSection: {
-    padding: '60px 5%',
-    backgroundColor: '#f8f9fa',
+    padding: '80px 5% 60px',
+    backgroundColor: '#ffffff',
     minHeight: 'calc(100vh - 60px)',
+    textAlign: 'center',
   },
   sectionHeading: {
     fontSize: '36px',
@@ -460,78 +465,57 @@ const styles = {
   featuresGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '32px',
+    gap: '48px',
     width: '100%',
     maxWidth: '1200px',
     margin: '0 auto',
-    padding: '0 5%',
-    transform: 'translateX(-5%)',
   },
   featureCard: {
     padding: '32px',
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
     borderRadius: '16px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.08)',
     transition: 'all 0.3s ease',
-    cursor: 'pointer',
-    position: 'relative',
-    overflow: 'visible',
     display: 'flex',
     flexDirection: 'column',
-    height: '350px',
+    alignItems: 'center',
+    textAlign: 'center',
+    overflow: 'visible',
+    height: '400px',
+    justifyContent: 'space-between',
   },
-  featureIcon: {
-    fontSize: '32px',
-    marginBottom: '16px',
+  featureImage: {
+    width: '150px',
+    height: '150px',
+    marginBottom: '24px',
+    objectFit: 'contain',
   },
   featureTitle: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: '600',
     marginBottom: '16px',
     color: '#333',
+    height: '60px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   featureDescription: {
     fontSize: '16px',
     lineHeight: '1.6',
     color: '#666',
-    flex: 1,
-  },
-  expandedContent: {
-    marginTop: '24px',
-    padding: '24px',
-    borderRadius: '16px',
-    backgroundColor: 'white',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  featureList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: '0',
-  },
-  learnMoreButton: {
-    backgroundColor: 'transparent',
-    border: '1px solid #F34D01',
-    color: '#F34D01',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    marginTop: 'auto',
-    alignSelf: 'center',
-    '&:hover': {
-      backgroundColor: '#F34D01',
-      color: 'white',
-    },
+    marginBottom: '24px',
+    flex: '1',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   howItWorksSection: {
-    padding: '60px 5%',
+    padding: '120px 5% 60px',
     backgroundColor: '#ffffff',
     minHeight: 'calc(100vh - 60px)',
+    textAlign: 'center',
   },
   stepsContainer: {
     display: 'grid',
@@ -606,11 +590,14 @@ const styles = {
     fontWeight: '600',
     backgroundColor: '#F34D01',
     color: 'white',
-    border: 'none',
-    borderRadius: '8px',
+    borderRadius: '30px',
     cursor: 'pointer',
-    transition: 'transform 0.3s ease, background-color 0.3s ease',
-    marginBottom: '40px',
+    transition: 'all 0.3s ease',
+    marginBottom: '0',
+    display: 'inline-block',
+    position: 'relative',
+    border: 'none',
+    boxShadow: '0 4px 10px rgba(243, 77, 1, 0.25), 1px 1px 2px rgba(255, 255, 255, 0.3) inset',
   },
   footer: {
     backgroundColor: '#ffffff',
@@ -643,25 +630,6 @@ const styles = {
       color: '#F34D01',
     },
   },
-  backToTop: {
-    position: 'fixed',
-    bottom: '40px',
-    right: '40px',
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    backgroundColor: '#F34D01',
-    color: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '24px',
-    boxShadow: '0 4px 12px rgba(243, 77, 1, 0.3)',
-    transition: 'all 0.3s ease',
-    zIndex: 1000,
-  },
 };
 
 // Add CSS for logo hover effect
@@ -692,20 +660,20 @@ animationStyleSheet.textContent = `
   }
 
   .get-started-button {
-    transform: translateY(0);
     transition: all 0.3s ease;
   }
 
   .get-started-button:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     background: linear-gradient(90deg, #F34D01, #ff6b3d, #F34D01);
     background-size: 200% auto;
     animation: buttonShine 1.5s linear infinite;
+    box-shadow: 0 6px 15px rgba(243, 77, 1, 0.3), 1px 1px 2px rgba(255, 255, 255, 0.3) inset;
   }
-
-  .back-to-top-button:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 16px rgba(243, 77, 1, 0.4);
+  
+  .get-started-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(243, 77, 1, 0.2), 1px 1px 1px rgba(255, 255, 255, 0.3) inset;
   }
 
   .subheading-shine {

@@ -6,6 +6,7 @@ import Signup from "./pages/signup";
 import ForgotPassword from "./pages/forgotpassword";
 import VerifyCode from "./pages/verifycode";
 import ResetPassword from "./pages/resetpassword";
+import CivilifyDocuments from "./pages/civilifydocuments";
 
 const AppRoutes = () => {
   return (
@@ -18,6 +19,7 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-code" element={<VerifyCode />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/civilify-documents" element={<CivilifyDocuments />} />
     </Routes>
   );
 };

@@ -1,4 +1,4 @@
-#root {
+#root:not(:has(.docs-page)) {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
@@ -8,6 +8,18 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  background-color: white;
+  color: black;
+}
+
+/* When docs-page is present, reset the root styles */
+#root:has(.docs-page) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  min-height: 100vh;
+  display: block;
   background-color: white;
   color: black;
 }
