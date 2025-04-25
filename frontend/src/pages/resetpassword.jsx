@@ -1,59 +1,46 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import logoIconOrange from "../assets/images/logoiconorange.png";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const showErrorToast = (message) => {
-    toast.error(message, {
-      position: "top-right",
-      autoClose: 3000,
-      style: {
-        borderRadius: "12px",
-        background: "#F44336",
-        color: "#ffffff",
-      },
-    });
-  };
+  const email = location.state?.email || "";
 
-  const showSuccessToast = (message) => {
-    toast.success(message, {
-      position: "top-right",
-      autoClose: 3000,
-      style: {
-        borderRadius: "12px",
-        background: "#4CAF50",
-        color: "#ffffff",
-      },
-    });
-  };
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!password || !confirmPassword) {
-      showErrorToast("Please fill in all fields.");
-      return;
-    }
+    setError("");
 
     if (password !== confirmPassword) {
-      showErrorToast("Passwords do not match.");
+      setError("Passwords do not match");
       return;
     }
 
     setIsLoading(true);
+
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API
-      showSuccessToast("Password has been reset successfully!");
-      setTimeout(() => navigate("/signin"), 2000);
+      // TODO: Implement reset password logic
+      console.log("Reset password for:", email);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Navigate to sign in page
+      navigate("/signin");
     } catch (err) {
-      showErrorToast("Something went wrong. Please try again.");
+      setError("Failed to reset password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -61,35 +48,42 @@ const ResetPassword = () => {
 
   return (
     <div style={styles.container}>
-      <ToastContainer />
-      <div style={styles.card}>
+      <div style={styles.formContainer}>
         <img src={logoIconOrange} alt="Civilify" style={styles.logo} />
-        <h2 style={styles.title}>Reset Password</h2>
-        <p style={styles.subtitle}>Set a new password for your account.</p>
-
+        <h1 style={styles.title}>Reset Password</h1>
+        <p style={styles.subtitle}>
+          Enter your new password below.
+        </p>
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>New Password</label>
+            <label htmlFor="password" style={styles.label}>
+              New Password
+            </label>
             <input
               type="password"
+              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={styles.input}
-              placeholder="Enter new password"
+              required
+              minLength={8}
             />
           </div>
-
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Confirm Password</label>
+            <label htmlFor="confirmPassword" style={styles.label}>
+              Confirm New Password
+            </label>
             <input
               type="password"
+              id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               style={styles.input}
-              placeholder="Confirm new password"
+              required
+              minLength={8}
             />
           </div>
-
+          {error && <p style={styles.error}>{error}</p>}
           <button
             type="submit"
             style={styles.submitButton}
@@ -98,12 +92,17 @@ const ResetPassword = () => {
             {isLoading ? "Resetting..." : "Reset Password"}
           </button>
         </form>
-
-        <p style={styles.backToLogin}>
-          <Link to="/signin" style={styles.backLink}>
-            Back to Sign In
-          </Link>
-        </p>
+        <div style={styles.footer}>
+          <p style={styles.footerText}>
+            Remember your password?{" "}
+            <button
+              onClick={() => navigate("/signin")}
+              style={styles.footerLink}
+            >
+              Sign in
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -114,83 +113,101 @@ const styles = {
     height: "100vh",
     width: "100vw",
     display: "flex",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#ffffff",
+    padding: "0",
+    margin: "0",
+    overflow: "hidden",
     position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
-  card: {
+  formContainer: {
     width: "100%",
     maxWidth: "400px",
-    padding: "32px",
-    borderRadius: "16px",
     backgroundColor: "#ffffff",
-    boxShadow: "0 0 0 1px rgba(0, 0, 0, 0.08)",
-    textAlign: "center",
+    borderRadius: "12px",
+    padding: "32px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
   },
   logo: {
-    width: "40px",
-    height: "40px",
-    marginBottom: "20px",
+    height: "48px",
+    marginBottom: "24px",
   },
   title: {
-    fontSize: "28px",
+    fontSize: "24px",
     fontWeight: "600",
     color: "#1a1a1a",
     marginBottom: "8px",
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: "15px",
+    fontSize: "14px",
     color: "#666666",
-    marginBottom: "28px",
+    marginBottom: "24px",
+    textAlign: "center",
   },
   form: {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-    width: "100%",
-    maxWidth: "320px",
-    margin: "0 auto",
   },
   inputGroup: {
-    textAlign: "left",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
   },
   label: {
     fontSize: "14px",
     fontWeight: "500",
     color: "#1a1a1a",
-    marginBottom: "6px",
-    display: "block",
   },
   input: {
-    width: "100%",
-    padding: "12px 16px",
-    fontSize: "15px",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
-    borderRadius: "8px",
+    padding: "12px",
+    borderRadius: "6px",
+    border: "1px solid #e0e0e0",
+    fontSize: "14px",
     outline: "none",
+    transition: "border-color 0.2s ease",
+  },
+  error: {
+    color: "#dc3545",
+    fontSize: "14px",
+    marginTop: "-8px",
   },
   submitButton: {
-    backgroundColor: "#F97316",
+    backgroundColor: "#F34D01",
     color: "#ffffff",
-    padding: "12px",
-    fontSize: "15px",
     border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-  },
-  backToLogin: {
+    borderRadius: "6px",
+    padding: "12px",
     fontSize: "14px",
-    marginTop: "24px",
-  },
-  backLink: {
-    textDecoration: "none",
-    color: "#F97316",
     fontWeight: "500",
+    cursor: "pointer",
+    transition: "background-color 0.2s ease",
+  },
+  footer: {
+    marginTop: "24px",
+    textAlign: "center",
+  },
+  footerText: {
+    fontSize: "14px",
+    color: "#666666",
+  },
+  footerLink: {
+    background: "none",
+    border: "none",
+    color: "#F34D01",
+    fontSize: "14px",
+    fontWeight: "500",
+    cursor: "pointer",
+    padding: 0,
   },
 };
 

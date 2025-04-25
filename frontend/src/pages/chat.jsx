@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import logoIconOrange from "../assets/images/logoiconorange.png";
 import axios from "axios";
+import { FaSun, FaMoon, FaUser, FaCog, FaQuestionCircle, FaSignOutAlt, FaKeyboard, FaRobot, FaCheckCircle } from "react-icons/fa";
 
 // Function to format AI response text
 const formatAIResponse = (text) => {
@@ -18,12 +19,24 @@ const formatAIResponse = (text) => {
 };
 
 // Function to fetch response from Gemini API
-const fetchGeminiResponse = async (message) => {
-  const API_KEY =
-    //  process.env.REACT_APP_GEMINI_API_KEY; // Replace with your actual API key
-    "AIzaSyDIYQK3WWrxfW1mDgWErLdb7lggBqog6xE";
+const fetchGeminiResponse = async (userMessage) => {
+  const API_KEY = "AIzaSyDIYQK3WWrxfW1mDgWErLdb7lggBqog6xE";
   const GEMINI_API_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+
+  // Define system prompt
+  const systemPrompt = `
+You are an AI trained in Philippine law, based on information from the Official Gazette, Supreme Court rulings, and lawphil.net. 
+Always include legal basis (if known) and keep your answer simple and understandable to regular Filipinos. 
+If necessary, explain the steps the person should take in the situation. 
+Answer the question clearly and concisely. 
+
+For greetings like "hello", "hi", "kumusta", etc., just respond:
+"Hello! I am your AI legal assistant, trained in Philippine law. How can I help you today?"
+
+End every legal response with:
+"This is not legal advice. Please consult a licensed attorney."
+`;
 
   try {
     const response = await axios.post(
@@ -31,9 +44,10 @@ const fetchGeminiResponse = async (message) => {
       {
         contents: [
           {
+            role: "user",
             parts: [
               {
-                text: message,
+                text: `${systemPrompt}\nUser: ${userMessage}`,
               },
             ],
           },
@@ -77,7 +91,10 @@ const Chat = () => {
   const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showTimestamp, setShowTimestamp] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const chatContainerRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const suggestedQuestions = [
     "I have a land dispute",
@@ -194,24 +211,151 @@ const Chat = () => {
     setShowLogoutConfirm(false);
   };
 
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
   useEffect(() => {
+    // Add global style to remove focus outline
+    const style = document.createElement('style');
+    style.textContent = `
+      button:focus,
+      a:focus,
+      div[role="button"]:focus,
+      input:focus {
+        outline: none !important;
+        box-shadow: none !important; /* Optional: Remove default focus shadow */
+      }
+      button,
+      a,
+      div[role="button"] {
+        -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+      }
+      button::-moz-focus-inner {
+        border: 0; /* Remove Firefox dotted border */
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Add CSS Class Styles for Hover/Active states
+    const hoverStyle = document.createElement('style');
+    hoverStyle.textContent = `
+        .text-button-hover:hover {
+          background-color: ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+        }
+        .text-button-hover:active {
+          background-color: ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'};
+          transform: scale(0.98);
+        }
+    
+        .icon-button-hover:hover {
+          background-color: ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+        }
+        .icon-button-hover:active {
+          background-color: ${isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'};
+          transform: scale(0.95);
+        }
+    
+        .primary-button-hover:hover {
+            background-color: #e04000; /* Darker orange */
+            transform: translateY(-1px);
+        }
+        .primary-button-hover:active {
+            background-color: #c73800; /* Even darker orange */
+            transform: translateY(0px);
+        }
+        
+        .secondary-button-hover:hover {
+            background-color: #f2f2f2; /* Light grey */
+            border-color: #bbb;
+        }
+        .secondary-button-hover:active {
+            background-color: #e6e6e6; /* Darker grey */
+            border-color: #aaa;
+            transform: scale(0.98);
+        }
+        
+        .suggested-button-hover:hover {
+            background-color: #f2f2f2;
+            border-color: #bbb;
+        }
+        .suggested-button-hover:active {
+            background-color: #e6e6e6;
+            border-color: #aaa;
+            transform: scale(0.98);
+        }
+        
+        .send-button-hover {
+            background-color: ${isDarkMode ? '#363636' : '#ffffff'};
+            color: ${isDarkMode ? '#666666' : '#666666'};
+            border: 1px solid ${isDarkMode ? '#555' : '#ccc'};
+        }
+        .send-button-hover:hover {
+            background-color: ${isDarkMode ? '#ffffff' : '#F34D01'};
+            color: ${isDarkMode ? '#ffffff' : '#ffffff'};
+            border-color: ${isDarkMode ? '#ffffff' : '#F34D01'};
+        }
+        .send-button-hover:active {
+            background-color: ${isDarkMode ? '#f0f0f0' : '#e04000'};
+            transform: scale(0.95);
+        }
+        
+        .toggle-switch-hover:hover > div { /* Target the handle */
+           box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+        }
+        .toggle-switch-hover:active {
+           transform: scale(0.97);
+        }
+    
+        .avatar-button-hover:hover > div { /* Target the circle */
+           background-color: #e04000;
+        }
+        .avatar-button-hover:active {
+           transform: scale(0.95);
+        }
+    
+        .dropdown-item-hover:hover {
+           background-color: ${isDarkMode ? '#404040' : '#f0f0f0'};
+        }
+         /* No active state needed for dropdown items usually */
+    
+      `;
+    document.head.appendChild(hoverStyle);
+
     document.body.style.overflow = "hidden";
     document.body.style.height = "100vh";
     document.body.style.position = "fixed";
     document.body.style.width = "100%";
 
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
     return () => {
+      document.head.removeChild(style); // Clean up injected style
+      document.head.removeChild(hoverStyle); // Clean up hover styles
       document.body.style.overflow = "";
       document.body.style.height = "";
       document.body.style.position = "";
       document.body.style.width = "";
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [isDarkMode]); // Add isDarkMode dependency for hover styles
 
   return (
-    <div style={styles.container}>
+    <div style={{
+      ...styles.container,
+      backgroundColor: isDarkMode ? '#2d2d2d' : '#F7F7F9',
+      color: isDarkMode ? '#ffffff' : '#1a1a1a'
+    }}>
       {/* Header */}
-      <header style={styles.header}>
+      <header style={{
+        ...styles.header,
+        backgroundColor: isDarkMode ? '#2d2d2d' : '#F7F7F9'
+      }}>
         <div style={styles.logoSection}>
           <img src={logoIconOrange} alt="Civilify" style={styles.logo} />
         </div>
@@ -219,18 +363,30 @@ const Chat = () => {
         <div style={styles.centerSection}></div>
 
         <div style={styles.rightSection}>
+          <button
+            style={{
+              ...styles.headerButton,
+              color: isDarkMode ? '#ffffff' : '#1a1a1a'
+            }}
+            onClick={toggleDarkMode}
+            className="icon-button-hover"
+          >
+            {isDarkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
+          </button>
           <div style={styles.suggestedRepliesToggle}>
             <div style={styles.toggleLabelContainer}>
-              <span style={styles.toggleLabel}>Suggested Replies</span>
+              <span style={{
+                ...styles.toggleLabel,
+                color: isDarkMode ? '#ffffff' : '#1a1a1a'
+              }}>Suggested Replies</span>
               <div
                 style={styles.infoIcon}
                 onMouseEnter={() => setShowTooltip(true)}
                 onMouseLeave={() => setShowTooltip(false)}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={isDarkMode ? '#ffffff' : '#666'}>
                   <path
                     d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
-                    fill="#666"
                   />
                 </svg>
                 {showTooltip && (
@@ -248,6 +404,7 @@ const Chat = () => {
                 backgroundColor: suggestedRepliesEnabled ? "#F34D01" : "#ccc",
               }}
               onClick={handleToggleSuggestions}
+              className="toggle-switch-hover"
             >
               <div
                 style={{
@@ -259,23 +416,96 @@ const Chat = () => {
               />
             </div>
           </div>
-          <button style={styles.headerButton} onClick={handleHowItWorks}>
+          <button style={{
+            ...styles.headerButton,
+            color: isDarkMode ? '#ffffff' : '#1a1a1a'
+          }} onClick={handleHowItWorks} className="text-button-hover">
             How it works
           </button>
-          <button style={styles.headerButton}>Support</button>
-          <button style={styles.newChatButton} onClick={handleNewChat}>
+          <button style={{
+            ...styles.newChatButton,
+            background: isDarkMode ? "#ffffff" : "#1a1a1a",
+            color: isDarkMode ? "#1a1a1a" : "#ffffff"
+          }} onClick={handleNewChat} className="primary-button-hover">
             + New chat
           </button>
+          <div style={styles.avatarContainer} ref={dropdownRef}>
+            <button
+              style={styles.avatarButton}
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="avatar-button-hover"
+            >
+              <div style={styles.avatarCircle}>
+                <FaUser size={16} />
+              </div>
+            </button>
+            {showDropdown && (
+              <div style={{
+                ...styles.dropdownMenu,
+                backgroundColor: isDarkMode ? '#363636' : '#f8f8f8',
+              }}>
+                <button
+                  style={{
+                    ...styles.dropdownItem,
+                    color: isDarkMode ? '#ffffff' : '#1a1a1a'
+                  }}
+                  className="dropdown-item-hover"
+                >
+                  <FaUser style={styles.dropdownIcon} />
+                  My Profile
+                </button>
+                 <button
+                  style={{
+                    ...styles.dropdownItem,
+                    color: isDarkMode ? '#ffffff' : '#1a1a1a'
+                  }}
+                  className="dropdown-item-hover"
+                >
+                  <FaCog style={styles.dropdownIcon} />
+                  Settings
+                </button>
+                <button
+                  style={{
+                    ...styles.dropdownItem,
+                    color: isDarkMode ? '#ffffff' : '#1a1a1a'
+                  }}
+                  className="dropdown-item-hover"
+                >
+                  <FaQuestionCircle style={styles.dropdownIcon} />
+                  Support
+                </button>
+                <div style={{...styles.dropdownSeparatorBase, backgroundColor: isDarkMode ? '#404040' : 'rgba(0, 0, 0, 0.12)'}}></div>
+                <button
+                  style={{
+                    ...styles.dropdownItem,
+                    color: isDarkMode ? '#ffffff' : '#1a1a1a'
+                  }}
+                  onClick={handleLogout}
+                  className="dropdown-item-hover"
+                >
+                  <FaSignOutAlt style={styles.dropdownIcon} />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Chat Area */}
       <main style={styles.mainContent}>
-        <div style={styles.chatContainer}>
+        <div style={{
+          ...styles.chatContainer,
+          backgroundColor: isDarkMode ? '#2d2d2d' : '#F6F6F8',
+          border: isDarkMode ? '1px solid #404040' : '1px solid #e0e0e0'
+        }}>
           <div style={styles.chatMessages} ref={chatContainerRef}>
             {messages.length === 0 ? (
               <div style={styles.welcomeSection}>
-                <h1 style={styles.welcomeTitle}>
+                <h1 style={{
+                  ...styles.welcomeTitle,
+                  color: isDarkMode ? '#ffffff' : '#1a1a1a'
+                }}>
                   Start your conversation with{" "}
                   <span style={styles.villyText}>Villy</span>.
                 </h1>
@@ -290,12 +520,28 @@ const Chat = () => {
                     alignSelf: message.isUser ? "flex-end" : "flex-start",
                   }}
                 >
+                  <div style={{
+                    ...styles.messageAvatar,
+                    ...(message.isUser 
+                      ? styles.userAvatar 
+                      : {
+                          ...styles.aiAvatar,
+                          backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                          border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                        })
+                  }} />
                   <div
                     style={{
                       ...styles.message,
                       ...(message.isUser
                         ? styles.userMessage
-                        : styles.aiMessage),
+                        : {
+                            ...styles.aiMessage,
+                            backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                            color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                            border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                            boxShadow: isDarkMode ? "none" : "0 1px 2px rgba(0, 0, 0, 0.05)",
+                          }),
                       cursor: "pointer",
                     }}
                     onClick={() => handleMessageClick(index)}
@@ -322,7 +568,10 @@ const Chat = () => {
             )}
           </div>
 
-          <div style={styles.inputWrapper}>
+          <div style={{
+            ...styles.inputWrapper,
+            backgroundColor: isDarkMode ? '#2d2d2d' : '#F6F6F8'
+          }}>
             {suggestedRepliesEnabled && (
               <div style={styles.suggestedReplies}>
                 <div style={styles.suggestedButtonsContainer}>
@@ -331,6 +580,7 @@ const Chat = () => {
                       key={index}
                       style={styles.suggestedButton}
                       onClick={() => handleSuggestedReply(question)}
+                      className="suggested-button-hover"
                     >
                       {question}
                     </button>
@@ -346,32 +596,24 @@ const Chat = () => {
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Ask a question"
-                  style={styles.input}
+                  style={{
+                    ...styles.input,
+                    backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
+                    borderColor: isDarkMode ? '#555' : '#ccc', 
+                    color: isDarkMode ? '#ffffff' : '#1a1a1a',
+                  }}
                 />
                 <button
                   type="submit"
                   style={styles.sendButton}
-                  onMouseEnter={(e) => {
-                    const button = e.currentTarget;
-                    button.style.backgroundColor = "#F34D01";
-                    button.style.borderColor = "#F34D01";
-                    const path = button.querySelector("path");
-                    path.setAttribute("stroke", "#ffffff");
-                  }}
-                  onMouseLeave={(e) => {
-                    const button = e.currentTarget;
-                    button.style.backgroundColor = "transparent";
-                    button.style.borderColor = "rgba(0, 0, 0, 0.12)";
-                    const path = e.currentTarget.querySelector("path");
-                    path.setAttribute("stroke", "#666666");
-                  }}
+                  className="send-button-hover"
                 >
                   <svg
                     width="24"
                     height="24"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#666666"
+                    stroke="currentColor"
                     strokeWidth="2"
                   >
                     <path
@@ -397,33 +639,40 @@ const Chat = () => {
         <div style={styles.overlay}>
           {showHowItWorks && (
             <div style={styles.popup}>
-              <h2 style={styles.popupTitle}>How Civilify Works</h2>
-              <div style={styles.stepsContainer}>
-                <div style={styles.step}>
-                  <div style={styles.stepNumber}>1</div>
-                  <h3 style={styles.stepTitle}>Describe Your Case</h3>
-                  <p style={styles.stepDescription}>
-                    Tell us about your legal situation in simple terms.
-                  </p>
+              
+              <div style={styles.stepsContainerImproved}>
+                <div style={styles.stepImproved}>
+                  <FaKeyboard style={styles.stepIconImproved} />
+                  <div>
+                    <h3 style={styles.stepTitleImproved}>1. Describe Your Case</h3>
+                    <p style={styles.stepDescriptionImproved}>
+                      Tell us about your legal situation in simple terms or ask specific questions.
+                    </p>
+                  </div>
                 </div>
-                <div style={styles.step}>
-                  <div style={styles.stepNumber}>2</div>
-                  <h3 style={styles.stepTitle}>Get AI Analysis</h3>
-                  <p style={styles.stepDescription}>
-                    Receive detailed insights and recommendations.
-                  </p>
+                <div style={styles.stepImproved}>
+                  <FaRobot style={styles.stepIconImproved} />
+                  <div>
+                    <h3 style={styles.stepTitleImproved}>2. Get AI Analysis</h3>
+                    <p style={styles.stepDescriptionImproved}>
+                      Villy provides insights, potential outcomes, and legal context based on Philippine law.
+                    </p>
+                  </div>
                 </div>
-                <div style={styles.step}>
-                  <div style={styles.stepNumber}>3</div>
-                  <h3 style={styles.stepTitle}>Take Action</h3>
-                  <p style={styles.stepDescription}>
-                    Generate documents and follow guided next steps.
-                  </p>
+                <div style={styles.stepImproved}>
+                  <FaCheckCircle style={styles.stepIconImproved} />
+                  <div>
+                    <h3 style={styles.stepTitleImproved}>3. Take Action</h3>
+                    <p style={styles.stepDescriptionImproved}>
+                      Receive suggested next steps and understand the potential path forward.
+                    </p>
+                  </div>
                 </div>
               </div>
               <button
                 style={styles.closeButton}
                 onClick={() => setShowHowItWorks(false)}
+                className="primary-button-hover"
               >
                 Close
               </button>
@@ -443,12 +692,14 @@ const Chat = () => {
                 <button
                   style={styles.confirmButton}
                   onClick={() => handleNewChatConfirm(true)}
+                  className="primary-button-hover"
                 >
                   Yes
                 </button>
                 <button
                   style={styles.cancelButton}
                   onClick={() => handleNewChatConfirm(false)}
+                  className="secondary-button-hover"
                 >
                   No
                 </button>
@@ -457,7 +708,7 @@ const Chat = () => {
           )}
 
           {showLogoutConfirm && (
-            <div style={styles.popup}>
+            <div style={{...styles.popup, maxWidth: "400px"}}>
               <h2 style={styles.popupTitle}>Logout</h2>
               <p style={styles.popupSubtitle}>
                 Are you sure you want to logout?
@@ -466,12 +717,14 @@ const Chat = () => {
                 <button
                   style={styles.confirmButton}
                   onClick={() => handleLogoutConfirm(true)}
+                  className="primary-button-hover"
                 >
                   Yes, Logout
                 </button>
                 <button
                   style={styles.cancelButton}
                   onClick={() => handleLogoutConfirm(false)}
+                  className="secondary-button-hover"
                 >
                   Cancel
                 </button>
@@ -482,24 +735,15 @@ const Chat = () => {
       )}
 
       {/* Footer */}
-      <footer style={styles.footer}>
-        <div style={styles.footerLeft}>
+      <footer style={{
+        ...styles.footer,
+        backgroundColor: isDarkMode ? '#2d2d2d' : '#F7F7F9'
+      }}>
+        <div style={{
+          ...styles.footerLeft,
+          color: isDarkMode ? '#ffffff' : '#666666'
+        }}>
           <span>© The Civilify Company, Cebu City 2025</span>
-          <button style={styles.footerLink}>What is Civilify?</button>
-          <button style={styles.footerLink}>Why use Civilify?</button>
-          <button style={styles.footerLink}>FAQs</button>
-          <button style={styles.footerLink}>Security and Privacy</button>
-        </div>
-        <div style={styles.footerRight}>
-          <button style={styles.logoutButton} onClick={handleLogout}>
-            <span>Logout</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
         </div>
       </footer>
     </div>
@@ -515,7 +759,6 @@ const styles = {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
-    backgroundColor: "#fafafa",
     overflow: "hidden",
   },
   header: {
@@ -523,8 +766,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     padding: "0 32px",
-    backgroundColor: "#ffffff",
     flexShrink: 0,
+    borderBottom: 'none',
   },
   logoSection: {
     display: "flex",
@@ -551,16 +794,18 @@ const styles = {
     fontSize: "14px",
     fontWeight: "500",
     cursor: "pointer",
+    padding: "4px",
+    borderRadius: "4px",
+    transition: "background-color 0.2s ease",
   },
   newChatButton: {
-    background: "#1a1a1a",
-    color: "#ffffff",
     border: "none",
     borderRadius: "6px",
     padding: "8px 16px",
     fontSize: "14px",
     fontWeight: "500",
     cursor: "pointer",
+    transition: "background-color 0.2s ease, transform 0.1s ease",
   },
   suggestedRepliesToggle: {
     display: "flex",
@@ -574,7 +819,6 @@ const styles = {
   },
   toggleLabel: {
     fontSize: "14px",
-    color: "#1a1a1a",
     fontWeight: "500",
   },
   infoIcon: {
@@ -603,7 +847,7 @@ const styles = {
     width: "40px",
     height: "20px",
     backgroundColor: "#ccc",
-    borderRadius: "10px",
+    borderRadius: "20px",
     padding: "2px",
     cursor: "pointer",
     transition: "background-color 0.2s",
@@ -627,14 +871,14 @@ const styles = {
   chatContainer: {
     position: "relative",
     height: "100%",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#F6F6F8",
     borderRadius: "16px",
     margin: "0 auto",
     maxWidth: "1600px",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
+    border: '1px solid #e0e0e0'
   },
   chatMessages: {
     flex: 1,
@@ -643,7 +887,7 @@ const styles = {
     marginBottom: "24px",
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
+    gap: "64px",
   },
   welcomeSection: {
     flex: 1,
@@ -655,7 +899,6 @@ const styles = {
   welcomeTitle: {
     fontSize: "48px",
     fontWeight: "500",
-    color: "#1a1a1a",
     margin: 0,
     whiteSpace: "nowrap",
   },
@@ -666,6 +909,25 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     maxWidth: "70%",
+    width: "500px",
+    margin: "0 auto",
+    position: "relative",
+  },
+  messageAvatar: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    position: "absolute",
+    top: "-16px",
+  },
+  userAvatar: {
+    right: "-16px",
+    backgroundColor: "#F34D01",
+  },
+  aiAvatar: {
+    left: "-16px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e0e0e0",
   },
   message: {
     maxWidth: "100%",
@@ -674,16 +936,21 @@ const styles = {
     fontSize: "14px",
     lineHeight: "1.5",
     wordBreak: "break-word",
+    textAlign: "left",
   },
   userMessage: {
     backgroundColor: "#F34D01",
     color: "#ffffff",
     borderBottomRightRadius: "4px",
+    marginLeft: "auto",
+    marginRight: "32px",
+    textAlign: "right",
   },
   aiMessage: {
-    backgroundColor: "#f5f5f5",
-    color: "#1a1a1a",
     borderBottomLeftRadius: "4px",
+    marginRight: "auto",
+    marginLeft: "32px",
+    textAlign: "left",
   },
   timestamp: {
     fontSize: "12px",
@@ -698,8 +965,8 @@ const styles = {
   },
   inputWrapper: {
     padding: "24px",
-    backgroundColor: "#ffffff",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: '#F6F6F8',
+    borderTop: 'none',
   },
   suggestedReplies: {
     marginBottom: "16px",
@@ -712,13 +979,14 @@ const styles = {
   },
   suggestedButton: {
     background: "#ffffff",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    border: "1px solid #ccc",
     borderRadius: "24px",
-    padding: "12px 24px",
+    padding: "10px 20px",
     fontSize: "14px",
-    color: "#1a1a1a",
+    color: "#333",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    transition: "background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease",
   },
   inputSection: {
     display: "flex",
@@ -727,6 +995,8 @@ const styles = {
   },
   inputForm: {
     width: "100%",
+    maxWidth: '900px',
+    margin: '0 auto',
     display: "flex",
     gap: "12px",
     alignItems: "center",
@@ -738,7 +1008,6 @@ const styles = {
     border: "1px solid rgba(0, 0, 0, 0.12)",
     borderRadius: "8px",
     outline: "none",
-    backgroundColor: "#ffffff",
     height: "40px",
     lineHeight: "40px",
   },
@@ -749,11 +1018,9 @@ const styles = {
     width: "40px",
     height: "40px",
     padding: "8px",
-    background: "none",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
     borderRadius: "8px",
     cursor: "pointer",
-    transition: "all 0.2s ease",
+    transition: "background-color 0.2s ease, color 0.2s ease, transform 0.1s ease, border-color 0.2s ease",
   },
   disclaimer: {
     fontSize: "11px",
@@ -769,8 +1036,8 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: "0 32px",
-    backgroundColor: "#ffffff",
     flexShrink: 0,
+    borderTop: 'none',
   },
   footerLeft: {
     display: "flex",
@@ -838,40 +1105,36 @@ const styles = {
     textAlign: "center",
     marginBottom: "32px",
   },
-  stepsContainer: {
+  stepsContainerImproved: {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
     marginBottom: "32px",
   },
-  step: {
+  stepImproved: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: "16px",
+    textAlign: "left",
   },
-  stepNumber: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "#F34D01",
-    color: "#ffffff",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    fontSize: "16px",
-    fontWeight: "600",
+  stepIconImproved: {
+    fontSize: "24px",
+    color: "#F34D01",
+    marginTop: "4px",
+    flexShrink: 0,
   },
-  stepTitle: {
+  stepTitleImproved: {
     fontSize: "18px",
     fontWeight: "600",
     color: "#1a1a1a",
-    margin: 0,
+    margin: "0 0 4px 0",
   },
-  stepDescription: {
+  stepDescriptionImproved: {
     fontSize: "14px",
     fontWeight: "400",
     color: "#666666",
     margin: 0,
+    lineHeight: 1.5,
   },
   closeButton: {
     background: "#F34D01",
@@ -883,6 +1146,7 @@ const styles = {
     fontWeight: "500",
     cursor: "pointer",
     width: "100%",
+    transition: "background-color 0.2s ease, transform 0.1s ease",
   },
   confirmButtons: {
     display: "flex",
@@ -898,16 +1162,75 @@ const styles = {
     fontSize: "14px",
     fontWeight: "500",
     cursor: "pointer",
+    transition: "background-color 0.2s ease, transform 0.1s ease",
   },
   cancelButton: {
     background: "#ffffff",
     color: "#1a1a1a",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    border: "1px solid #ccc",
     borderRadius: "6px",
     padding: "12px 24px",
     fontSize: "14px",
     fontWeight: "500",
     cursor: "pointer",
+    transition: "background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease",
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarButton: {
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    borderRadius: '50%',
+    transition: "background-color 0.2s ease",
+  },
+  avatarCircle: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    backgroundColor: '#F34D01',
+    color: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: '8px',
+    borderRadius: '8px',
+    padding: '8px 0',
+    minWidth: '200px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    zIndex: 1000,
+    transition: 'background-color 0.2s ease, border 0.2s ease',
+  },
+  dropdownItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 16px',
+    width: '100%',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    backgroundColor: 'transparent',
+    textAlign: 'left',
+    gap: '12px',
+    transition: 'background-color 0.2s ease',
+  },
+  dropdownIcon: {
+    width: '16px',
+    height: '16px',
+    marginRight: '8px',
+  },
+  dropdownSeparatorBase: {
+    height: '1px',
+    margin: '8px 0',
   },
 };
 

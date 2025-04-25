@@ -210,13 +210,14 @@ const SignIn = () => {
                   </button>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                style={styles.forgotPassword}
-              >
-                Forgot password?
-              </button>
+              <div style={styles.forgotPassword}>
+                <button
+                  onClick={() => navigate("/forgotpassword")}
+                  style={styles.forgotPasswordLink}
+                >
+                  Forgot password?
+                </button>
+              </div>
             </div>
 
             <button
@@ -355,16 +356,18 @@ const styles = {
     justifyContent: "center",
   },
   forgotPassword: {
+    textAlign: "right",
+    marginTop: "-8px",
+    marginBottom: "16px",
+  },
+  forgotPasswordLink: {
     background: "none",
     border: "none",
     color: "#F34D01",
     fontSize: "14px",
+    fontWeight: "500",
     cursor: "pointer",
-    padding: "8px 0",
-    position: "absolute",
-    right: "0",
-    top: "100%",
-    marginTop: "3px",
+    padding: 0,
   },
   submitButton: {
     width: "100%",

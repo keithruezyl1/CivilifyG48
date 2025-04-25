@@ -7,6 +7,9 @@ import villy3dIllustrationCropped from '../assets/images/villy_3dillustration_cr
 import featureIcon1 from '../assets/images/1.png';
 import featureIcon2 from '../assets/images/2.png';
 import featureIcon3 from '../assets/images/3.png';
+import number1Icon from '../assets/images/1(1).png';
+import number2Icon from '../assets/images/2(1).png';
+import number3Icon from '../assets/images/3(1).png';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -243,26 +246,35 @@ const Landing = () => {
 
       <div id="how-it-works" ref={howItWorksRef} style={{...styles.howItWorksSection, opacity: 0, transform: 'translateY(20px)', transition: 'all 0.6s ease-out'}}>
         <h2 style={styles.sectionHeading}>How It Works</h2>
-        <div style={styles.stepsContainer}>
-          <div style={styles.step}>
-            <div style={styles.stepNumber}>1</div>
-            <h3 style={styles.stepTitle}>Describe Your Case</h3>
-            <p style={styles.stepDescription}>
-              Tell us about your legal situation in simple terms.
+        <div style={styles.featuresGrid}>
+          <div 
+            style={styles.featureCard}
+            className="feature-card"
+          >
+            <img src={number1Icon} alt="Step 1" style={styles.featureImage} />
+            <h3 style={styles.featureTitle}>Describe Your Case</h3>
+            <p style={styles.featureDescription}>
+              <span>Tell us about your legal situation in simple terms. Our AI will guide you through relevant questions.</span>
             </p>
           </div>
-          <div style={styles.step}>
-            <div style={styles.stepNumber}>2</div>
-            <h3 style={styles.stepTitle}>Get AI Analysis</h3>
-            <p style={styles.stepDescription}>
-              Receive detailed insights and recommendations.
+          <div 
+            style={styles.featureCard}
+            className="feature-card"
+          >
+            <img src={number2Icon} alt="Step 2" style={styles.featureImage} />
+            <h3 style={styles.featureTitle}>Get AI Analysis</h3>
+            <p style={styles.featureDescription}>
+              <span>Receive detailed insights and recommendations based on Philippine law and legal precedents.</span>
             </p>
           </div>
-          <div style={styles.step}>
-            <div style={styles.stepNumber}>3</div>
-            <h3 style={styles.stepTitle}>Take Action</h3>
-            <p style={styles.stepDescription}>
-              Generate documents and follow guided next steps.
+          <div 
+            style={styles.featureCard}
+            className="feature-card"
+          >
+            <img src={number3Icon} alt="Step 3" style={styles.featureImage} />
+            <h3 style={styles.featureTitle}>Take Action</h3>
+            <p style={styles.featureDescription}>
+              <span>Generate documents, follow guided next steps, and understand the best path forward for your situation.</span>
             </p>
           </div>
         </div>
@@ -512,7 +524,7 @@ const styles = {
     width: '100%',
   },
   howItWorksSection: {
-    padding: '120px 5% 60px',
+    padding: '80px 5% 60px',
     backgroundColor: '#ffffff',
     minHeight: 'calc(100vh - 60px)',
     textAlign: 'center',
@@ -603,6 +615,8 @@ const styles = {
     backgroundColor: '#ffffff',
     padding: '20px 5%',
     borderTop: '1px solid #eee',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   footerContent: {
     maxWidth: '1200px',
