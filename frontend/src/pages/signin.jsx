@@ -212,7 +212,7 @@ const SignIn = () => {
               </div>
               <div style={styles.forgotPassword}>
                 <button
-                  onClick={() => navigate("/forgotpassword")}
+                  onClick={() => navigate("/forgot-password")}
                   style={styles.forgotPasswordLink}
                 >
                   Forgot password?

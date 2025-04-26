@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Landing from "./pages/landing";
 import Chat from "./pages/chat";
 import SignIn from "./pages/signin";
@@ -11,7 +11,7 @@ import CivilifyDocuments from "./pages/civilifydocuments";
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/landing" replace />} />
+      <Route path="/" element={<Landing />} />
       <Route path="/landing" element={<Landing />} />
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<Signup />} />

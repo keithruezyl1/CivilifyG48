@@ -145,8 +145,13 @@ const Landing = () => {
 
   // Function to navigate to docs with a specific section
   const navigateToDocsSection = (sectionId) => {
-    localStorage.setItem('selectedDocSection', sectionId);
-    navigate('/civilify-documents');
+    try {
+      window.safeStorage.setItem('selectedDocSection', sectionId);
+      navigate('/civilify-documents');
+    } catch (e) {
+      console.warn('Storage access error:', e);
+      navigate('/civilify-documents');
+    }
   };
 
   return (
@@ -274,7 +279,7 @@ const Landing = () => {
             <img src={number3Icon} alt="Step 3" style={styles.featureImage} />
             <h3 style={styles.featureTitle}>Take Action</h3>
             <p style={styles.featureDescription}>
-              <span>Generate documents, follow guided next steps, and understand the best path forward for your situation.</span>
+              <span>Follow the guided next steps, gain clear insights, and understand the best path forward for your situation.</span>
             </p>
           </div>
         </div>

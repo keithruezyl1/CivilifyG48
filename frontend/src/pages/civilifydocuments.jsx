@@ -354,11 +354,15 @@ const CivilifyDocuments = () => {
 
   // Load selected section from localStorage
   useEffect(() => {
-    const savedSection = localStorage.getItem('selectedDocSection');
-    if (savedSection) {
-      setSelectedItem(savedSection);
-      // Clear the selection from localStorage to avoid persisting between visits
-      localStorage.removeItem('selectedDocSection');
+    try {
+      const savedSection = window.safeStorage.getItem('selectedDocSection');
+      if (savedSection) {
+        setSelectedItem(savedSection);
+        // Clear the selection from localStorage to avoid persisting between visits
+        window.safeStorage.removeItem('selectedDocSection');
+      }
+    } catch (e) {
+      console.warn('Storage access error:', e);
     }
   }, []);
 
