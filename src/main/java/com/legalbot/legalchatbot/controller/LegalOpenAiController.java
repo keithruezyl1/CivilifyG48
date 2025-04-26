@@ -33,7 +33,7 @@ import okhttp3.MediaType;
 public class LegalOpenAiController {
 
     private final OkHttpClient client = new OkHttpClient();
-    private final String OPENAI_API_KEY = "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";  // Replace with your actual key!
+    private final String OPENAI_API_KEY = "";  // Replace with your actual key!
     private final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
     private final ObjectMapper objectMapper = new ObjectMapper();
 
