@@ -412,7 +412,7 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
 
 const Chat = () => {
   const navigate = useNavigate();
-  const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true);
+  // const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -430,6 +430,11 @@ const Chat = () => {
   const chatContainerRef = useRef(null);
   const dropdownRef = useRef(null);
   const [dynamicSuggestions, setDynamicSuggestions] = useState([]);
+  const [noButtonHovered, setNoButtonHovered] = useState(false);
+  const [yesButtonHovered, setYesButtonHovered] = useState(false);
+  const [logoutYesHovered, setLogoutYesHovered] = useState(false);
+  const [logoutNoHovered, setLogoutNoHovered] = useState(false);
+  const [howItWorksHovered, setHowItWorksHovered] = useState(false);
 
   const suggestedQuestions = [
     "I have a land dispute",
@@ -438,9 +443,9 @@ const Chat = () => {
     "In trouble with the police",
   ];
 
-  const handleToggleSuggestions = () => {
-    setSuggestedRepliesEnabled(!suggestedRepliesEnabled);
-  };
+  // const handleToggleSuggestions = () => {
+  //   setSuggestedRepliesEnabled(!suggestedRepliesEnabled);
+  // };
 
   const handleModeSelection = (mode) => {
     setSelectedMode(mode);
@@ -579,6 +584,7 @@ const Chat = () => {
       setMessages([]);
       setQuestion("");
       setShowTimestamp(null);
+      setSelectedMode(null);
     }
     setShowNewChatConfirm(false);
   };
@@ -596,72 +602,72 @@ const Chat = () => {
   }, [isDarkMode]);
 
   // Update GPT prompt for suggested replies to explicitly require only user messages
-  useEffect(() => {
-    if (
-      selectedMode === 'B' &&
-      suggestedRepliesEnabled &&
-      messages.length > 0 &&
-      // Only show suggestions if last message is from AI (user's turn)
-      !messages[messages.length - 1].isUser
-    ) {
-      // Find the last user message for context
-      const lastUserMsg = messages.filter(m => m.isUser).slice(-1)[0]?.text || '';
-      if (isVague(lastUserMsg)) {
-        setDynamicSuggestions(getRandomGenericSuggestions());
-      } else {
-        // Call GPT to generate 4 contextually relevant suggestions
-        (async () => {
-          try {
-            const prompt = `Given the following conversation, generate 4 short, concise user follow-up messages (not AI responses, not questions for the AI to ask the user), each 3–7 words, that a user might want to send next in this conversation. Output only a JSON array of strings.` +
-              `\n\nConversation so far:\n${messages.map(m => (m.isUser ? 'User: ' : 'AI: ') + m.text).join('\n')}\n\nSuggestions:`;
-            const response = await axios.post(
-              "https://api.openai.com/v1/chat/completions",
-              {
-                model: "gpt-3.5-turbo",
-                messages: [
-                  { role: "system", content: "You are a helpful legal assistant for generating short, concise user follow-up messages (not AI responses, not questions for the AI to ask the user). Only output plausible user messages." },
-                  { role: "user", content: prompt }
-                ],
-                temperature: 0.7,
-                max_tokens: 150
-              },
-              {
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
-                },
-              }
-            );
-            // Try to parse the JSON array from the response
-            const text = response.data.choices[0]?.message?.content || '';
-            let suggestions = [];
-            try {
-              suggestions = JSON.parse(text);
-            } catch {
-              // fallback: try to extract array from text
-              const match = text.match(/\[(.*?)\]/s);
-              if (match) {
-                suggestions = JSON.parse('[' + match[1] + ']');
-              }
-            }
-            // Filter out mode switch/process suggestions and AI-like statements/questions
-            const filtered = (Array.isArray(suggestions) ? suggestions : []).filter(s =>
-              !/switch to|assessment mode|process|procedure|how long|how do i start|how to begin|how to proceed|can you switch|i can|let me|i will|i'm here|i'll|allow me|i understand|i suggest|i recommend|please/i.test(s)
-            );
-            if (filtered.length > 0) {
-              setDynamicSuggestions(filtered.slice(0, 4));
-            } else {
-              setDynamicSuggestions(getRandomGenericSuggestions());
-            }
-          } catch {
-            setDynamicSuggestions(getRandomGenericSuggestions());
-          }
-        })();
-      }
-    } else {
-      setDynamicSuggestions([]);
-    }
-  }, [messages, selectedMode, suggestedRepliesEnabled]);
+  // useEffect(() => {
+  //   if (
+  //     selectedMode === 'B' &&
+  //     suggestedRepliesEnabled &&
+  //     messages.length > 0 &&
+  //     // Only show suggestions if last message is from AI (user's turn)
+  //     !messages[messages.length - 1].isUser
+  //   ) {
+  //     // Find the last user message for context
+  //     const lastUserMsg = messages.filter(m => m.isUser).slice(-1)[0]?.text || '';
+  //     if (isVague(lastUserMsg)) {
+  //       setDynamicSuggestions(getRandomGenericSuggestions());
+  //     } else {
+  //       // Call GPT to generate 4 contextually relevant suggestions
+  //       (async () => {
+  //         try {
+  //           const prompt = `Given the following conversation, generate 4 short, concise user follow-up messages (not AI responses, not questions for the AI to ask the user), each 3–7 words, that a user might want to send next in this conversation. Output only a JSON array of strings.` +
+  //             `\n\nConversation so far:\n${messages.map(m => (m.isUser ? 'User: ' : 'AI: ') + m.text).join('\n')}\n\nSuggestions:`;
+  //           const response = await axios.post(
+  //             "https://api.openai.com/v1/chat/completions",
+  //             {
+  //               model: "gpt-3.5-turbo",
+  //               messages: [
+  //                 { role: "system", content: "You are a helpful legal assistant for generating short, concise user follow-up messages (not AI responses, not questions for the AI to ask the user). Only output plausible user messages." },
+  //                 { role: "user", content: prompt }
+  //               ],
+  //               temperature: 0.7,
+  //               max_tokens: 150
+  //             },
+  //             {
+  //               headers: {
+  //                 "Content-Type": "application/json",
+  //                 "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+  //               },
+  //             }
+  //           );
+  //           // Try to parse the JSON array from the response
+  //           const text = response.data.choices[0]?.message?.content || '';
+  //           let suggestions = [];
+  //           try {
+  //             suggestions = JSON.parse(text);
+  //           } catch {
+  //             // fallback: try to extract array from text
+  //             const match = text.match(/\[(.*?)\]/s);
+  //             if (match) {
+  //               suggestions = JSON.parse('[' + match[1] + ']');
+  //             }
+  //           }
+  //           // Filter out mode switch/process suggestions and AI-like statements/questions
+  //           const filtered = (Array.isArray(suggestions) ? suggestions : []).filter(s =>
+  //             !/switch to|assessment mode|process|procedure|how long|how do i start|how to begin|how to proceed|can you switch|i can|let me|i will|i'm here|i'll|allow me|i understand|i suggest|i recommend|please/i.test(s)
+  //           );
+  //           if (filtered.length > 0) {
+  //             setDynamicSuggestions(filtered.slice(0, 4));
+  //           } else {
+  //             setDynamicSuggestions(getRandomGenericSuggestions());
+  //           }
+  //         } catch {
+  //           setDynamicSuggestions(getRandomGenericSuggestions());
+  //         }
+  //       })();
+  //     }
+  //   } else {
+  //     setDynamicSuggestions([]);
+  //   }
+  // }, [messages, selectedMode, suggestedRepliesEnabled]);
 
   useEffect(() => {
     // Add global style to remove focus outline
@@ -861,7 +867,7 @@ const Chat = () => {
             }}
           >
           </button>
-          {selectedMode === 'B' && (
+          {/* {selectedMode === 'B' && (
           <div style={styles.suggestedRepliesToggle}>
             <div style={styles.toggleLabelContainer}>
               <span style={{
@@ -905,7 +911,7 @@ const Chat = () => {
               />
             </div>
           </div>
-          )}
+          )} */}
           <button style={{
             ...styles.headerButton,
             color: isDarkMode ? '#ffffff' : '#1a1a1a'
@@ -1151,7 +1157,7 @@ const Chat = () => {
             ...styles.inputWrapper,
             backgroundColor: isDarkMode ? '#2d2d2d' : '#F6F6F8'
           }}>
-              {selectedMode === 'B' && suggestedRepliesEnabled && messages.length > 0 && !messages[messages.length - 1].isUser && dynamicSuggestions.length > 0 && (
+              {/* {selectedMode === 'B' && suggestedRepliesEnabled && messages.length > 0 && !messages[messages.length - 1].isUser && dynamicSuggestions.length > 0 && (
               <div style={styles.suggestedReplies}>
                 <div style={styles.suggestedButtonsContainer}>
                     {dynamicSuggestions.map((question, index) => (
@@ -1171,7 +1177,7 @@ const Chat = () => {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
             <div style={styles.inputSection}>
               <form onSubmit={handleSubmit} style={styles.inputForm}>
                 <input
@@ -1220,12 +1226,28 @@ const Chat = () => {
 
       {/* Popup Overlays */}
       {showLogoutConfirm ? (
-        <div style={styles.overlay}>
+        <div style={{
+          ...styles.overlay,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}>
           <div
             style={{
               ...styles.popup,
               maxWidth: "400px",
               backgroundColor: isDarkMode ? "#232323" : styles.popup.backgroundColor,
+              margin: 0,
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              position: 'fixed',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <h2
@@ -1246,21 +1268,38 @@ const Chat = () => {
             </p>
             <div style={styles.confirmButtons}>
               <button
-                style={styles.confirmButton}
+                style={{
+                  ...styles.confirmButton,
+                  background: isDarkMode
+                    ? (logoutYesHovered ? '#e04000' : '#F34D01')
+                    : styles.confirmButton.background,
+                  color: isDarkMode ? '#fff' : styles.confirmButton.color,
+                  border: isDarkMode ? 'none' : styles.confirmButton.border,
+                  transform: isDarkMode && logoutYesHovered ? 'translateY(0px) scale(0.98)' : undefined,
+                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
+                }}
                 onClick={() => handleLogoutConfirm(true)}
                 className="primary-button-hover"
+                onMouseEnter={() => setLogoutYesHovered(true)}
+                onMouseLeave={() => setLogoutYesHovered(false)}
               >
                 Yes, Logout
               </button>
               <button
                 style={{
                   ...styles.cancelButton,
-                  background: isDarkMode ? "#444" : styles.cancelButton.background,
-                  color: isDarkMode ? "#fff" : styles.cancelButton.color,
-                  border: isDarkMode ? "1px solid #bbb" : styles.cancelButton.border,
+                  background: isDarkMode
+                    ? (logoutNoHovered ? '#555' : '#444')
+                    : styles.cancelButton.background,
+                  color: isDarkMode ? '#fff' : styles.cancelButton.color,
+                  border: isDarkMode ? '1px solid #bbb' : styles.cancelButton.border,
+                  transform: isDarkMode && logoutNoHovered ? 'translateY(0px) scale(0.98)' : undefined,
+                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
                 }}
                 onClick={() => handleLogoutConfirm(false)}
                 className="secondary-button-hover"
+                onMouseEnter={() => setLogoutNoHovered(true)}
+                onMouseLeave={() => setLogoutNoHovered(false)}
               >
                 Cancel
               </button>
@@ -1268,31 +1307,81 @@ const Chat = () => {
           </div>
         </div>
       ) : showNewChatConfirm ? (
-            <div style={styles.popup}>
-              <h2 style={styles.popupTitle}>
+        <div style={{
+          ...styles.overlay,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}>
+          <div style={{
+            ...styles.popup,
+            maxWidth: '400px',
+            margin: 0,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            position: 'fixed',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: isDarkMode ? '#232323' : styles.popup.backgroundColor,
+          }}>
+            <h2 style={{
+              ...styles.popupTitle,
+              color: isDarkMode ? '#fff' : styles.popupTitle.color,
+            }}>
                 You are starting a new conversation
               </h2>
-              <p style={styles.popupSubtitle}>
+            <p style={{
+              ...styles.popupSubtitle,
+              color: isDarkMode ? '#bbbbbb' : styles.popupSubtitle.color,
+            }}>
                 That means all information in the current conversation will be
                 deleted. Continue?
               </p>
               <div style={styles.confirmButtons}>
                 <button
-                  style={styles.confirmButton}
+                style={{
+                  ...styles.confirmButton,
+                  background: isDarkMode
+                    ? (yesButtonHovered ? '#e04000' : '#F34D01')
+                    : styles.confirmButton.background,
+                  color: isDarkMode ? '#fff' : styles.confirmButton.color,
+                  border: isDarkMode ? 'none' : styles.confirmButton.border,
+                  transform: isDarkMode && yesButtonHovered ? 'translateY(0px) scale(0.98)' : undefined,
+                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
+                }}
                   onClick={() => handleNewChatConfirm(true)}
                   className="primary-button-hover"
+                onMouseEnter={() => setYesButtonHovered(true)}
+                onMouseLeave={() => setYesButtonHovered(false)}
                 >
                   Yes
                 </button>
                 <button
-                  style={styles.cancelButton}
+                style={{
+                  ...styles.cancelButton,
+                  background: isDarkMode
+                    ? (noButtonHovered ? '#555' : '#444')
+                    : styles.cancelButton.background,
+                  color: isDarkMode ? '#fff' : styles.cancelButton.color,
+                  border: isDarkMode ? '1px solid #bbb' : styles.cancelButton.border,
+                  transform: isDarkMode && noButtonHovered ? 'translateY(0px) scale(0.98)' : undefined,
+                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
+                }}
                   onClick={() => handleNewChatConfirm(false)}
                   className="secondary-button-hover"
+                onMouseEnter={() => setNoButtonHovered(true)}
+                onMouseLeave={() => setNoButtonHovered(false)}
                 >
                   No
                 </button>
               </div>
             </div>
+        </div>
       ) : showHowItWorks ? (
         <div style={styles.overlay}>
           <div style={{
@@ -1334,9 +1423,11 @@ const Chat = () => {
                 </li>
               </ol>
             </div>
-            <button
+                <button
               style={{
-                background: '#F34D01',
+                background: isDarkMode
+                  ? (howItWorksHovered ? '#e04000' : '#F34D01')
+                  : '#F34D01',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '6px',
@@ -1347,14 +1438,17 @@ const Chat = () => {
                 marginTop: 32,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                 transition: 'background-color 0.2s ease, transform 0.1s ease',
+                transform: isDarkMode && howItWorksHovered ? 'translateY(0px) scale(0.98)' : undefined,
               }}
               onClick={() => setShowHowItWorks(false)}
-              className="primary-button-hover"
+                  className="primary-button-hover"
+              onMouseEnter={() => setHowItWorksHovered(true)}
+              onMouseLeave={() => setHowItWorksHovered(false)}
             >
               I understand now
-            </button>
-          </div>
-        </div>
+                </button>
+              </div>
+            </div>
       ) : null}
 
       {/* Footer */}
@@ -1575,7 +1669,6 @@ const styles = {
     marginRight: "0",
     textAlign: "right",
     alignSelf: 'flex-start',
-    minWidth: '120px',
   },
   aiMessage: {
     borderBottomLeftRadius: "4px",
@@ -1583,7 +1676,6 @@ const styles = {
     marginLeft: "0",
     textAlign: "left",
     alignSelf: 'flex-start',
-    minWidth: '120px',
   },
   timestamp: {
     fontSize: "12px",

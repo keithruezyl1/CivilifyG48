@@ -165,7 +165,15 @@ const SignIn = () => {
             </div>
 
             <div style={styles.inputGroup}>
-              <label style={styles.label}>Password</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={styles.label}>Password</label>
+                <button
+                  onClick={() => navigate("/forgot-password")}
+                  style={styles.forgotPasswordLink}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div style={styles.passwordWrapper}>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -209,14 +217,6 @@ const SignIn = () => {
                     )}
                   </button>
                 )}
-              </div>
-              <div style={styles.forgotPassword}>
-                <button
-                  onClick={() => navigate("/forgot-password")}
-                  style={styles.forgotPasswordLink}
-                >
-                  Forgot password?
-                </button>
               </div>
             </div>
 
