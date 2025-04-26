@@ -21,7 +21,7 @@ const formatAIResponse = (text) => {
 
 // Function to fetch response from GPT-3.5 Turbo API
 const fetchGPTResponse = async (userMessage) => {
-  const API_KEY = "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";
+  const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
   const GPT_API_URL = "https://api.openai.com/v1/chat/completions";
 
   // Define system prompt
@@ -628,7 +628,7 @@ const Chat = () => {
               {
                 headers: {
                   "Content-Type": "application/json",
-                  "Authorization": `Bearer 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`,
+                  "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
                 },
               }
             );
