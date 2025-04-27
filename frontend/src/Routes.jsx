@@ -4,9 +4,10 @@ import Chat from "./pages/chat";
 import SignIn from "./pages/signin";
 import Signup from "./pages/signup";
 import ForgotPassword from "./pages/forgotpassword";
-import VerifyCode from "./pages/verifycode";
 import ResetPassword from "./pages/resetpassword";
 import CivilifyDocuments from "./pages/civilifydocuments";
+import Profile from "./pages/profile";
+import EditProfile from "./pages/editprofile";
 
 const AppRoutes = () => {
   return (
@@ -17,9 +18,10 @@ const AppRoutes = () => {
       <Route path="/signup" element={<Signup />} />
       <Route path="/chat" element={<Chat />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/verify-code" element={<VerifyCode />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/civilify-documents" element={<CivilifyDocuments />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/edit-profile" element={<EditProfile />} />
     </Routes>
   );
 };

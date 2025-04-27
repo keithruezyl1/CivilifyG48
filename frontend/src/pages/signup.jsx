@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import logoIconOrange from '../assets/images/logoiconorange.png';
+import LoadingScreen from './LoadingScreen';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // Example toast functions for future use
   const showSuccessToast = (message) => {
@@ -132,7 +134,7 @@ const Signup = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       // Example: showSuccessToast('Account created successfully!');
-      navigate('/chat');
+      handleChatRedirect();
     } catch (err) {
       // Example: showErrorToast('Failed to create account. Please try again.');
       setError('Failed to create account. Please try again.');
@@ -141,6 +143,13 @@ const Signup = () => {
     }
   };
 
+  const handleChatRedirect = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/chat');
+    }, 1000);
+  };
 
   const handleGoogleSignIn = (response) => {
     console.log("Google Response:", response);
@@ -153,7 +162,7 @@ const Signup = () => {
 
     // For testing - just display user info and navigate
     alert(`Welcome ${payload.name} (${payload.email})`);
-    navigate('/chat');
+    handleChatRedirect();
     setIsLoading(false);
   };
 
@@ -192,6 +201,8 @@ const Signup = () => {
       document.body.appendChild(script);
     }
   }, []);
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div style={styles.container}>

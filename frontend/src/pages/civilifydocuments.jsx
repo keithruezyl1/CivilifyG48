@@ -342,9 +342,9 @@ const CollapsibleSection = ({ title, children, icon, isLast }) => {
 
 // Sample documentation items for the sidebar
 const sidebarItems = [  
-  { id: 'what-is', title: 'What is Civilify?', content: 'Civilify is an AI-powered legal assistant designed to give users a better understanding of their potential legal standing.' },
-  { id: 'why-use', title: 'Why Use Civilify?', content: 'Legal advice is expensive and inaccessible to many. Civilify bridges that gap by offering an AI-powered assistant that answers legal questions clearly and affordably.' },
-  { id: 'getting-started', title: 'Getting Started', content: 'Learn how to start using Civilify in just a few simple steps.' },
+  { id: 'what-is', title: 'What is Civilify?', content: 'Civilify is an AI-powered legal assistant that helps you with both general legal questions and case-specific analysis. Choose between General Legal Information mode for quick answers, or Case Analysis mode for a detailed assessment of your situation.' },
+  { id: 'why-use', title: 'Why Use Civilify?', content: 'Legal advice is expensive and inaccessible to many. Civilify bridges that gap by offering an AI-powered assistant that answers legal questions clearly and affordably, whether you need general information or a case assessment.' },
+  { id: 'getting-started', title: 'Getting Started', content: 'Learn how to start using Civilify in just a few simple steps. Choose your mode, ask your question, and get AI-powered legal insights.' },
   { id: 'security', title: 'Security and Privacy', content: 'At Civilify, your data security and privacy come first.' },
   { id: 'troubleshooting', title: 'Troubleshooting & Support', content: 'Having issues? Here are common fixes for problems you might encounter while using Civilify.' },
 ];
@@ -498,16 +498,16 @@ const CivilifyDocuments = () => {
                         Visit <a href="#" style={{ color: '#3b82f6', fontWeight: '500' }}>www.civilify.com</a>
                       </li>
                       <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
-                        Sign up for an account or sign-in if you already have one. Continue with Google is an option.
+                        Sign up for an account or sign in if you already have one. Continue with Google is an option.
                       </li>
                       <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
-                        Enter the chat and start conversing with Villy. Choose <strong>Simple Mode</strong> or <strong>Freeform Chat</strong>
+                        Enter the chat and choose your mode: <strong>General Legal Information</strong> for quick legal answers, or <strong>Case Analysis</strong> for a detailed assessment of your situation.
                       </li>
                       <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
-                        Exchange information with Villy until it gets enough context to provide a proper report.
+                        Ask your question or describe your case. Villy will guide you and provide insights based on your chosen mode.
                       </li>
                       <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
-                        Review the AI-generated report, filled with Villy's insights, a case plausibility score and suggested next steps.
+                        Review the AI-generated response, which may include a case plausibility score and suggested next steps if you chose Case Analysis.
                       </li>
                     </ol>
                   </CollapsibleSection>
@@ -522,6 +522,9 @@ const CivilifyDocuments = () => {
                       </li>
                       <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.75rem' }}>
                         Try rephrasing if the answer seems unclear
+                      </li>
+                      <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.75rem' }}>
+                        For case analysis, provide as much relevant detail as possible
                       </li>
                     </ul>
                   </CollapsibleSection>
@@ -538,7 +541,7 @@ const CivilifyDocuments = () => {
                 <div className="section-container" style={sectionContainerStyle}>
                   <CollapsibleSection title="Introduction">
                     <p style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
-                      Civilify is an AI-powered legal assistant designed to give users a better understanding of their potential legal standing. By interacting with "Villy," an intelligent legal chatbot, users can describe their concerns and receive insights on whether their situation may qualify as a legal case.
+                      Civilify is an AI-powered legal assistant designed to give users a better understanding of their legal standing. By interacting with "Villy," you can ask general legal questions or describe your specific situation for a detailed case analysis.
                     </p>
                     <p style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
                       Civilify is <strong>not</strong> a substitute for legal professionals—it serves as a guide for early-stage legal questions and understanding.
@@ -554,20 +557,20 @@ const CivilifyDocuments = () => {
                   <CollapsibleSection title="Key Features">
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
                       <div style={{ flex: '1 1 300px', minWidth: '0', backgroundColor: '#f0f8ff', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e1effe' }}>
-                        <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1e40af', marginBottom: '0.5rem' }}>AI-Powered Legal Analysis</h4>
-                        <p style={{ color: '#374151' }}>Understand your legal situation using natural language.</p>
+                        <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1e40af', marginBottom: '0.5rem' }}>General Legal Information Mode</h4>
+                        <p style={{ color: '#374151' }}>Ask questions about laws, rights, and legal procedures. Get quick, clear answers from Villy.</p>
                       </div>
                       <div style={{ flex: '1 1 300px', minWidth: '0', backgroundColor: '#f0fff4', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e1fcef' }}>
-                        <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#047857', marginBottom: '0.5rem' }}>Plausibility Score</h4>
-                        <p style={{ color: '#374151' }}>Estimate how strong your case might be.</p>
+                        <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#047857', marginBottom: '0.5rem' }}>Case Analysis Mode</h4>
+                        <p style={{ color: '#374151' }}>Describe your situation for a detailed analysis, plausibility score, and suggested next steps.</p>
                       </div>
                       <div style={{ flex: '1 1 300px', minWidth: '0', backgroundColor: '#fff0f0', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #fee1e1' }}>
-                        <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#b91c1c', marginBottom: '0.5rem' }}>Suggested Next Steps</h4>
-                        <p style={{ color: '#374151' }}>AI-generated recommendations for potential legal action.</p>
+                        <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#b91c1c', marginBottom: '0.5rem' }}>AI-Powered Legal Analysis</h4>
+                        <p style={{ color: '#374151' }}>Understand your legal situation using natural language and advanced AI.</p>
                       </div>
                       <div style={{ flex: '1 1 300px', minWidth: '0', backgroundColor: '#f8f0ff', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e5d1fe' }}>
                         <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#7c3aed', marginBottom: '0.5rem' }}>Flexible Chat Modes</h4>
-                        <p style={{ color: '#374151' }}>Converse with Villy in a freeform or guided format.</p>
+                        <p style={{ color: '#374151' }}>Switch between quick legal Q&A and in-depth case analysis as needed.</p>
                       </div>
                       <div style={{ flex: '1 1 300px', minWidth: '0', backgroundColor: '#fff7e6', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #feecc8' }}>
                         <h4 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#c2410c', marginBottom: '0.5rem' }}>Privacy-First Design</h4>

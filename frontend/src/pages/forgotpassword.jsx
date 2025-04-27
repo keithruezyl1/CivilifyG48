@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logoIconOrange from "../assets/images/logoiconorange.png";
+import LoadingScreen from './LoadingScreen';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -28,13 +30,31 @@ const ForgotPassword = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Navigate to reset password page with email
-      navigate("/resetpassword", { state: { email } });
+      handleResetPasswordRedirect(email);
     } catch (err) {
       setError("Failed to send reset link. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleResetPasswordRedirect = (email) => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/resetpassword', { state: { email } });
+    }, 1000);
+  };
+
+  const handleSigninRedirect = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/signin');
+    }, 1000);
+  };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div style={styles.container}>
@@ -73,7 +93,7 @@ const ForgotPassword = () => {
           <p style={styles.footerText}>
             Remember your password?{" "}
             <button
-              onClick={() => navigate("/signin")}
+              onClick={handleSigninRedirect}
               style={styles.footerLink}
             >
               Sign in

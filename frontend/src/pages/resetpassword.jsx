@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logoIconOrange from "../assets/images/logoiconorange.png";
+import LoadingScreen from './LoadingScreen';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const email = location.state?.email || "";
 
@@ -38,13 +40,23 @@ const ResetPassword = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Navigate to sign in page
-      navigate("/signin");
+      handleSigninRedirect();
     } catch (err) {
       setError("Failed to reset password. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleSigninRedirect = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/signin');
+    }, 1000);
+  };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div style={styles.container}>
@@ -96,7 +108,7 @@ const ResetPassword = () => {
           <p style={styles.footerText}>
             Remember your password?{" "}
             <button
-              onClick={() => navigate("/signin")}
+              onClick={handleSigninRedirect}
               style={styles.footerLink}
             >
               Sign in

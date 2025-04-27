@@ -10,6 +10,7 @@ import featureIcon3 from '../assets/images/3.png';
 import number1Icon from '../assets/images/1(1).png';
 import number2Icon from '../assets/images/2(1).png';
 import number3Icon from '../assets/images/3(1).png';
+import LoadingScreen from './LoadingScreen';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ const Landing = () => {
   const featuresRef = useRef(null);
   const howItWorksRef = useRef(null);
   const [activeSection, setActiveSection] = useState('hero');
+  const [loading, setLoading] = useState(false);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
 
   // Smooth scroll function
   const smoothScroll = (element) => {
@@ -85,12 +88,33 @@ const Landing = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    // Scroll indicator fade logic
+    const handleScrollIndicator = () => {
+      if (window.scrollY > 40) {
+        setShowScrollIndicator(false);
+      } else {
+        setShowScrollIndicator(true);
+      }
+    };
+    window.addEventListener('scroll', handleScrollIndicator);
+    return () => window.removeEventListener('scroll', handleScrollIndicator);
+  }, []);
+
   const handleSignIn = () => {
-    navigate('/signin');
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/signin');
+    }, 1500);
   };
 
   const handleSignup = () => {
-    navigate('/signup');
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/signup');
+    }, 1500);
   };
 
   // Handle wheel events for section locking
@@ -145,14 +169,14 @@ const Landing = () => {
 
   // Function to navigate to docs with a specific section
   const navigateToDocsSection = (sectionId) => {
-    try {
-      window.safeStorage.setItem('selectedDocSection', sectionId);
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
       navigate('/civilify-documents');
-    } catch (e) {
-      console.warn('Storage access error:', e);
-      navigate('/civilify-documents');
-    }
+    }, 1500);
   };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div style={styles.container}>
@@ -200,7 +224,7 @@ const Landing = () => {
               <img src={logoTextOrange} alt="Civilify" style={styles.heroLogo} />
               <h2 style={styles.subheading} className="subheading-shine">AI-Powered Legal Clarity</h2>
               <p style={styles.description}>
-                Assess your legal case, get insights, and know what to do next with <span style={styles.highlight}>Villy</span>, your intelligent legal companion.
+                Ask a legal question, assess your legal case, get insights, and know what to do next with <span style={styles.highlight}>Villy</span>, your intelligent legal companion.
               </p>
               <button style={styles.primaryButton} onClick={handleSignup} className="get-started-button">
                 Get Started
@@ -209,6 +233,18 @@ const Landing = () => {
           </div>
           <div style={styles.heroRight}>
             <img src={villy3dIllustrationCropped} alt="Villy AI Assistant" style={styles.villyIllustration} />
+          </div>
+        </div>
+        <div style={{
+          ...styles.scrollIndicator,
+          opacity: showScrollIndicator ? 1 : 0,
+          pointerEvents: 'none',
+          transition: 'opacity 0.5s',
+        }}>
+          <div style={styles.scrollIndicatorBg}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{display: 'block'}}>
+              <path d="M12 16L6 10H18L12 16Z" fill="#fff"/>
+            </svg>
           </div>
         </div>
       </div>
@@ -223,17 +259,17 @@ const Landing = () => {
             <img src={featureIcon1} alt="Natural Language Processing" style={styles.featureImage} />
             <h3 style={{...styles.featureTitle, fontSize: '20px'}}>Natural Language Processing</h3>
             <p style={styles.featureDescription}>
-              <span>Communicate with Villy in plain English. Our AI understands context and nuance to provide accurate legal guidance.</span>
+              <span>Communicate with Villy in plain English, just like talking to a legal expert. Our AI understands context and legal terminology to provide clear, accurate guidance for your legal needs.</span>
             </p>
           </div>
           <div 
             style={styles.featureCard}
             className="feature-card"
           >
-            <img src={featureIcon2} alt="Case Analysis" style={styles.featureImage} />
-            <h3 style={styles.featureTitle}>Case Analysis</h3>
+            <img src={featureIcon2} alt="Legal Analysis" style={styles.featureImage} />
+            <h3 style={styles.featureTitle}>Legal Analysis</h3>
             <p style={styles.featureDescription}>
-              <span>Get comprehensive analysis of your legal situation with potential outcomes and recommended actions.</span>
+              <span>Get comprehensive analysis of your legal situation or detailed answers to your legal questions, with potential outcomes and recommended actions tailored to your needs.</span>
             </p>
           </div>
           <div 
@@ -243,7 +279,7 @@ const Landing = () => {
             <img src={featureIcon3} alt="AI Assistance" style={styles.featureImage} />
             <h3 style={styles.featureTitle}>AI Assistance</h3>
             <p style={styles.featureDescription}>
-              <span>Receive intelligent suggested next steps and personalized guidance powered by advanced AI technology.</span>
+              <span>Receive intelligent suggested next steps and personalized guidance powered by advanced AI technology, whether you're asking general questions or analyzing a specific case.</span>
             </p>
           </div>
         </div>
@@ -257,9 +293,9 @@ const Landing = () => {
             className="feature-card"
           >
             <img src={number1Icon} alt="Step 1" style={styles.featureImage} />
-            <h3 style={styles.featureTitle}>Describe Your Case</h3>
+            <h3 style={styles.featureTitle}>Choose Your Mode</h3>
             <p style={styles.featureDescription}>
-              <span>Tell us about your legal situation in simple terms. Our AI will guide you through relevant questions.</span>
+              <span>Select between General Legal Information for quick answers to legal questions, or Case Analysis for a detailed assessment of your specific legal situation. Pick the mode that fits your needs best.</span>
             </p>
           </div>
           <div 
@@ -267,9 +303,9 @@ const Landing = () => {
             className="feature-card"
           >
             <img src={number2Icon} alt="Step 2" style={styles.featureImage} />
-            <h3 style={styles.featureTitle}>Get AI Analysis</h3>
+            <h3 style={styles.featureTitle}>Get AI-Powered Answers</h3>
             <p style={styles.featureDescription}>
-              <span>Receive detailed insights and recommendations based on Philippine law and legal precedents.</span>
+              <span>Receive detailed insights and recommendations based on Philippine law and legal precedents, tailored to your chosen mode. Villy provides clear, actionable information every step of the way.</span>
             </p>
           </div>
           <div 
@@ -279,7 +315,7 @@ const Landing = () => {
             <img src={number3Icon} alt="Step 3" style={styles.featureImage} />
             <h3 style={styles.featureTitle}>Take Action</h3>
             <p style={styles.featureDescription}>
-              <span>Follow the guided next steps, gain clear insights, and understand the best path forward for your situation.</span>
+              <span>Follow the guided next steps, gain clear insights, and understand the best path forward for your situation—whether you need general information or specific case guidance, Villy is here to help.</span>
             </p>
           </div>
         </div>
@@ -527,6 +563,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    minHeight: '66px',
   },
   howItWorksSection: {
     padding: '80px 5% 60px',
@@ -649,6 +686,26 @@ const styles = {
       color: '#F34D01',
     },
   },
+  scrollIndicator: {
+    position: 'absolute',
+    left: '50%',
+    bottom: '32px',
+    transform: 'translateX(-50%)',
+    zIndex: 10,
+    animation: 'bounceDown 1.5s infinite',
+    opacity: 1,
+    pointerEvents: 'none',
+  },
+  scrollIndicatorBg: {
+    background: '#F34D01',
+    borderRadius: '16px',
+    width: '48px',
+    height: '48px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 12px rgba(243,77,1,0.15)',
+  },
 };
 
 // Add CSS for logo hover effect
@@ -754,5 +811,15 @@ animationStyleSheet.textContent = `
   }
 `;
 document.head.appendChild(animationStyleSheet);
+
+// Add keyframes for bounceDown
+const bounceStyleSheet = document.createElement('style');
+bounceStyleSheet.textContent = `
+  @keyframes bounceDown {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(16px); }
+  }
+`;
+document.head.appendChild(bounceStyleSheet);
 
 export default Landing;

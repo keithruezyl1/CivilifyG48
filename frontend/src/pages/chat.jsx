@@ -4,6 +4,13 @@ import logoIconOrange from "../assets/images/logoiconorange.png";
 import axios from "axios";
 import { FaUser, FaCog, FaQuestionCircle, FaSignOutAlt, FaKeyboard, FaRobot, FaCheckCircle, FaClipboardList } from "react-icons/fa";
 import villyAvatar from "../assets/images/villypfporange.jpg";
+import LoadingScreen from './LoadingScreen';
+
+// Fetch system prompts and API keys from environment variables
+const GLI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY_GLI;
+const CPA_API_KEY = import.meta.env.VITE_OPENAI_API_KEY_CPA;
+const GLI_SYSTEM_PROMPT = import.meta.env.VITE_OPENAI_SYSTEM_PROMPT_GLI;
+const CPA_SYSTEM_PROMPT = import.meta.env.VITE_OPENAI_SYSTEM_PROMPT_CPA;
 
 // Function to format AI response text
 const formatAIResponse = (text) => {
@@ -20,282 +27,37 @@ const formatAIResponse = (text) => {
 };
 
 // Function to fetch response from GPT-3.5 Turbo API
-const fetchGPTResponse = async (userMessage) => {
-  const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const fetchGPTResponse = async (userMessage, mode = 'A', history = []) => {
+  const API_KEY = mode === 'B' ? CPA_API_KEY : GLI_API_KEY;
+  const sysPrompt =
+    mode === 'A'
+      ? (import.meta.env.VITE_OPENAI_SYSTEM_PROMPT_GLI || '').replace(/\\n/g, '\n')
+      : (import.meta.env.VITE_OPENAI_SYSTEM_PROMPT_CPA || '').replace(/\\n/g, '\n');
+
+  // Model and settings per mode
+  const model = mode === 'A' ? 'gpt-3.5-turbo-0125' : 'gpt-4o-mini';
+  const temperature = 0.3;
+  const max_tokens = mode === 'A' ? 500 : 1600;
+  const stream = false;
+
   const GPT_API_URL = "https://api.openai.com/v1/chat/completions";
 
-  // Define system prompt
-  const systemPrompt = `You are Villy, Civilify's AI-powered legal assistant.
-
-You are a separate digital entity operating under Civilify.  
-You are not Civilify itself — you are Villy, a bot created by Civilify to assist users with assessing legal concerns.
-
-If the user asks about your identity, always respond exactly with:
-
-> "I am Villy, Civilify's AI-powered legal assistant. I aim to provide credible, thoughtful insights to help you understand your legal situation by offering general analysis, plausibility scores, and suggested next steps."
-
----
-
-Civilify Information:
-
-- Civilify is an online platform that helps users assess their legal concerns using AI-powered insights.
-- Civilify is not a law firm and does not provide legal representation, binding legal advice, or connections to lawyers.
-- Civilify's AI assistant, Villy, interacts conversationally with users to help them:
-  - Understand their legal situation
-  - Receive a plausibility score regarding their potential case
-  - Get suggested next steps for handling their issue responsibly
-- Civilify emphasizes user privacy and transparency:
-  - No conversation data is stored unless a registered user opts in.
-  - Authentication is handled via OAuth.
-  - Backend services like Firebase and TLS 1.2+ encryption are used to protect user data.
-- Civilify's mission is to make early legal understanding accessible, respectful, and affordable.
-- Brand primary color is orange (#F34D01).
-
-If unsure about a detail not covered, respond politely that further information will be available soon on Civilify's website.
-
----
-
-Follow this strict process during every session:
-
----
-
-## Mode Selection Behavior
-
-- At the beginning of every new session or conversation, if no mode has been set by the frontend, you must ask the user to choose how they would like to proceed.
-
-Prompt the user like this:
-> "To assist you best, could you please let me know how you'd like to proceed?"  
-> - Type **A** for **General Legal Information** (Quick answers to your law-related questions)  
-> - Type **B** for **Case Plausibility Assessment** (Help to understand if your situation could lead to a valid legal case)
-
-Behavior After Selection:
-
-- If the user selects **A (General Legal Information Mode)**:
-    - Stay in **Light Mode**.
-    - Respond casually, lightly, and informatively.
-    - Do NOT automatically build structured case reports unless explicitly asked.
-
-- If the user selects **B (Case Plausibility Mode)**:
-    - Activate **Clarity Mode**.
-    - Engage the user thoughtfully.
-    - Gather facts about the situation.
-    - After 2–4 meaningful exchanges, **proactively generate a full structured case report** without needing to be asked.
-
-If the user responds with something unclear, politely re-ask the mode selection once.
-
-If the frontend eventually passes a mode automatically, respect the passed mode and skip asking.
-
-Summary:
-- **Light Inquiry Mode** ➔ Casual answers only.
-- **Case Plausibility Mode** ➔ Full analysis, report generation, structured closure.
-
----
-
-## Mode Mismatch Detection and Switching
-
-- After every user message, assess if their input matches the currently selected mode.
-
-Mismatch Behavior:
-- If user selected **General Legal Information Mode** but now shares a **personal legal situation** (real-world harm, dispute, or legal concern):
-    - Politely acknowledge the mismatch.
-    - Offer to switch to **Case Plausibility Assessment Mode**.
-
-Sample phrasing:
-> "It sounds like you're describing a personal situation involving a legal issue.  
-> Would you like me to switch to Case Plausibility Assessment Mode so I can help you assess your situation properly?"
-
-- If user selected **Case Plausibility Mode** but only asks simple legal fact questions:
-    - Lightly answer the question.
-    - Then politely offer to switch to **General Legal Information Mode** if they prefer.
-
-Sample phrasing:
-> "If you prefer quick legal information without a full case assessment, I can switch to General Legal Information Mode. Would you like me to do that?"
-
-**Important:**  
-- If the user's input already fits the currently active mode, politely confirm:
-> "Thank you for sharing that. I'll continue assisting you under [current mode]."
-
-- Only offer switching if truly necessary.
-- Always respect the user's decision.
-
----
-
-## 1. Smart User Intent Handling
-
-- If the user asks for legal definitions, facts, procedures, or general explanations:
-    - Respond lightly and conversationally.
-    - Do NOT initiate full case analysis unless switched.
-    - Keep answers friendly, brief, and helpful.
-
-- If the user shares a **personal situation**, **conflict**, **harm**, **dispute**, or **real-world legal problem**:
-    - Assume they are seeking case clarity.
-    - Engage to gather facts thoughtfully.
-    - Plan to generate a structured case report once enough information is gathered.
-
----
-
-## 2. Initial User Input Handling
-
-- If the user greets you or says "Hi", "I need help", "Can I ask something?", etc.:
-    - Gently invite them to describe their situation:
-      > "Of course! Could you briefly describe the situation you're facing?"
-
----
-
-## 3. Knowledge Sufficiency Evaluation
-- As the user shares facts, gather information about:
-    - Who are the involved parties?
-    - What happened?
-    - Is there evidence of harm, violation, or dispute?
-    - (Optional) Is the jurisdiction specified?
-
----
-
-## 4. Outcome Inference
-- Infer the user's goal from context (e.g., seeking compensation, avoiding liability, filing a report, defending).
-- Only explicitly ask about the desired outcome if it remains unclear.
-
----
-
-## 5. Clarification and Conversation Depth
-
-- Ask **one thoughtful question at a time**.
-- Avoid bullet points or asking multiple questions at once.
-- Never re-ask information already provided.
-
-Maximum Clarification Attempts:
-- After three failed clarification attempts (if unclear or vague), politely recommend consulting a licensed attorney.
-
----
-
-## 6. Proactive Report Triggering
-
-General Trigger:
-- After 2 to 4 meaningful exchanges about the user's situation:
-    - Assume enough information has been gathered.
-    - Smoothly transition into delivering a full structured case report.
-
-Immediate Trigger:
-- If the user asks for **help**, **guidance**, **advice**, **options**, **next steps**, or similar:
-    - Immediately generate the full structured report without further waiting.
-
-Transition Example:
-> "Thank you for sharing all of that information. Based on what you've shared, here's a summary of your situation and next steps you might consider:"
-
----
-
-## 7. Sensitive or Serious Cases
-
-- If the user shares a sensitive, emotionally difficult, or criminal situation:
-    - Remain calm, professional, and empathetic.
-    - Proceed to generate a full structured case report as usual.
-    - Never refuse to generate a report unless legally prohibited.
-    - In Suggested Next Steps, respectfully recommend seeking immediate advice from a licensed legal professional if serious criminal implications are involved.
-
----
-
-## 8. Structured Case Report Generation
-
-When generating the full case report, include:
-
----
-
-### a. Villy's Analysis
-- Begin with:
-  > "Based on the information you've shared..."
-- Summarize the user's situation factually and thoughtfully.
-- Highlight important legal issues, risks, and defenses.
-- Keep writing clean, clear, and paragraph-based.
-
----
-
-### b. Sources
-- Link 1–2 reputable public legal resources if available:
-    - (e.g., Cornell LII, government legal sites)
-- If no source link is available, cite the legal concept and note "(no official link available)".
-
-Example:
-> Sources:  
-> - Breach of Contract – https://www.law.cornell.edu/wex/breach_of_contract  
-> - Duty of Care – (no official link available)
-
----
-
-### c. Plausibility Score
-
-Estimate how likely the user's situation could lead to a successful legal outcome:
-
-| Score Range | Rating |
-|:------------|:--------|
-| 80–100%     | Highly Likely |
-| 60–79%      | Moderately Likely |
-| 40–59%      | Uncertain / Moderately Unlikely |
-| 20–39%      | Unlikely |
-| 0–19%       | Highly Unlikely |
-
-Example:
-> Plausibility Score: 65% (Moderately Likely)
-
----
-
-### d. Suggested Next Steps
-
-Recommend practical next actions depending on context:
-- Cooperate with authorities if involved
-- Gather supporting evidence
-- Consult with a licensed attorney
-- Prepare defense or documentation
-
-For criminal issues, strongly recommend seeking legal counsel immediately.
-
----
-
-## 9. Handling Non-Serious Input
-
-- Politely redirect once if user input becomes unserious.
-- Respectfully end the session if unserious behavior continues.
-
----
-
-## 10. Internal Error Fallback
-
-- If unable to assist clearly, recommend consulting a licensed legal professional.
-
----
-
-## 11. Session Flow Management
-
-- After delivering the report:
-    - Offer to assist with another concern.
-    - Or politely conclude if the user seems satisfied.
-
----
-
-## 12. Tone and Behavior
-
-- Maintain a calm, friendly, professional tone at all times.
-- Use plain English unless technical legal terms are necessary.
-- Never fake knowledge or promise guaranteed legal outcomes.
-- Civilify's mission is to provide **clarity without judgment**.
-`;
+  // Build the message history
+  const messages = [
+    { role: 'system', content: sysPrompt },
+    ...history,
+    { role: 'user', content: userMessage }
+  ];
 
   try {
     const response = await axios.post(
       GPT_API_URL,
       {
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: userMessage
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000
+        model,
+        temperature,
+        max_tokens,
+        stream,
+        messages
       },
       {
         headers: {
@@ -305,21 +67,33 @@ For criminal issues, strongly recommend seeking legal counsel immediately.
       }
     );
 
-    console.log("GPT API Response:", response.data);
-
     const generatedText = response.data.choices[0]?.message?.content || "No response generated.";
-
-    console.log("Generated Text:", generatedText);
-
     return {
       success: true,
       response: generatedText,
     };
   } catch (error) {
-    console.error("Error fetching GPT response:", error);
+    let errorMsg = "Sorry, I couldn't process your request. Please try again.";
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMsg = "Authentication failed. Please check your API key or try again later.";
+      } else if (error.response.status === 429) {
+        errorMsg = "You are sending requests too quickly. Please wait a moment and try again.";
+      } else if (error.response.status === 500) {
+        errorMsg = "The server encountered an error. Please try again later.";
+      } else if (error.response.data && error.response.data.error && error.response.data.error.message) {
+        errorMsg = error.response.data.error.message;
+      }
+    } else if (error.request) {
+      errorMsg = "No response from the server. Please check your internet connection and try again.";
+    } else if (error.message) {
+      errorMsg = error.message;
+    }
+    // Optionally log error for debugging
+    console.error("OpenAI API error:", error);
     return {
       success: false,
-      response: "Sorry, I couldn't process your request. Please try again.",
+      response: errorMsg,
     };
   }
 };
@@ -407,6 +181,8 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
   if (mode === 'A') {
     text = text.replace(/would you like to switch to general legal information mode[^?.!]*[?.!]/i, '').replace(/switch to general information mode[^?.!]*[?.!]/i, '').trim();
   }
+  // Remove system prompt echoes (blockquotes or quoted system prompt)
+  text = text.replace(/^>\s*"I am Villy[^"]*"[\s\S]*?(?=\n|$)/gi, '').trim();
   return text.trim();
 };
 
@@ -435,6 +211,9 @@ const Chat = () => {
   const [logoutYesHovered, setLogoutYesHovered] = useState(false);
   const [logoutNoHovered, setLogoutNoHovered] = useState(false);
   const [howItWorksHovered, setHowItWorksHovered] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sendHovered, setSendHovered] = useState(false);
+  const inputRef = useRef(null);
 
   const suggestedQuestions = [
     "I have a land dispute",
@@ -473,9 +252,9 @@ const Chat = () => {
     }
     let aiResponse;
     if (prependSystem) {
-      aiResponse = await fetchGPTResponse(`${prependSystem}\n\n${userMessage}`);
+      aiResponse = await fetchGPTResponse(`${prependSystem}\n\n${userMessage}`, selectedMode);
     } else {
-      aiResponse = await fetchGPTResponse(userMessage);
+      aiResponse = await fetchGPTResponse(userMessage, selectedMode);
     }
     // Filter out system echo and mode switch prompts if already in correct mode
     return {
@@ -484,10 +263,45 @@ const Chat = () => {
     };
   };
 
+  // Auto-expand textarea as user types, but only if content exceeds initial height
+  const handleInputChange = (e) => {
+    setQuestion(e.target.value);
+    if (inputRef.current) {
+      inputRef.current.style.height = '40px'; // initial height
+      if (inputRef.current.scrollHeight > 40) {
+        inputRef.current.style.height = inputRef.current.scrollHeight + 'px';
+      }
+    }
+    // Auto-scroll chat to bottom when input expands
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  // Handle Enter/Shift+Enter in textarea
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      setSendHovered(true);
+      handleSubmit(e);
+      setTimeout(() => setSendHovered(false), 150);
+    }
+    // else allow default (newline)
+  };
+
   // Update handleSubmit and handleSuggestedReply to use fetchGPTWithModeFit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (question.trim()) {
+    // Prevent sending empty, whitespace, or malformed messages (e.g., only brackets)
+    const cleaned = question.trim();
+    if (
+      cleaned &&
+      !/^[\[\]{}()]+$/.test(cleaned) && // not just brackets
+      /[a-zA-Z0-9]/.test(cleaned) // must contain at least one alphanumeric
+    ) {
       const timestamp = new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -495,6 +309,10 @@ const Chat = () => {
       const userMessage = { text: question, isUser: true, timestamp };
       setMessages([...messages, userMessage]);
       setQuestion("");
+      // Reset textarea height after sending
+      if (inputRef.current) {
+        inputRef.current.style.height = '40px';
+      }
       if (chatContainerRef.current) {
         chatContainerRef.current.scrollTo({
           top: chatContainerRef.current.scrollHeight,
@@ -504,12 +322,13 @@ const Chat = () => {
 
       const aiResponse = await fetchGPTWithModeFit(question);
       const aiMessage = {
-        text: aiResponse.response,
+        text: filterSystemEchoAndModeSwitch(aiResponse.response, selectedMode),
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
+        isError: !aiResponse.success,
       };
       setMessages((prevMessages) => {
         const newMessages = [...prevMessages, aiMessage];
@@ -594,6 +413,14 @@ const Chat = () => {
       navigate("/signin");
     }
     setShowLogoutConfirm(false);
+  };
+
+  const handleSigninRedirect = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/signin');
+    }, 1000);
   };
 
   // Persist dark mode preference to localStorage
@@ -842,6 +669,13 @@ const Chat = () => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    document.title = 'Civilify | Chat';
+    return () => { document.title = 'Civilify'; };
+  }, []);
+
+  if (loading) return <LoadingScreen />;
+
   return (
     <div style={{
       ...styles.container,
@@ -946,6 +780,7 @@ const Chat = () => {
                     color: isDarkMode ? '#fff' : '#232323',
                   }}
                   className="dropdown-item-hover"
+                  onClick={() => navigate('/profile')}
                 >
                   <FaUser style={styles.dropdownIcon} />
                   <span style={{ fontSize: '15px' }}>My Profile</span>
@@ -1014,10 +849,10 @@ const Chat = () => {
       <main style={styles.mainContent}>
         <div style={{
           ...styles.chatContainer,
-          backgroundColor: isDarkMode ? '#2d2d2d' : '#F6F6F8',
+          backgroundColor: "transparent",
           border: isDarkMode ? '1.5px solid #444' : '1.5px solid #bdbdbd'
         }}>
-          <div style={styles.chatMessages} ref={chatContainerRef}>
+          <div style={styles.chatMessages} className="chatMessages" ref={chatContainerRef}>
             {messages.length === 0 ? (
               <div style={styles.welcomeSection}>
                 <h1 style={{
@@ -1119,13 +954,21 @@ const Chat = () => {
                       ...styles.message,
                       ...(message.isUser
                         ? styles.userMessage
-                        : {
-                            ...styles.aiMessage,
-                            backgroundColor: isDarkMode ? "#363636" : "#ffffff",
-                            color: isDarkMode ? "#ffffff" : "#1a1a1a",
-                            border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
-                            boxShadow: isDarkMode ? "none" : "0 1px 2px rgba(0, 0, 0, 0.05)",
-                          }),
+                        : message.isError
+                          ? {
+                              ...styles.aiMessage,
+                              backgroundColor: '#fff0f0',
+                              color: '#b91c1c',
+                              border: '1px solid #fca5a5',
+                              fontStyle: 'italic',
+                            }
+                          : {
+                              ...styles.aiMessage,
+                              backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                              color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                              border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                              boxShadow: isDarkMode ? "none" : "0 1px 2px rgba(0, 0, 0, 0.05)",
+                            }),
                       cursor: "pointer",
                     }}
                     onClick={() => handleMessageClick(index)}
@@ -1179,23 +1022,44 @@ const Chat = () => {
               </div>
             )} */}
             <div style={styles.inputSection}>
-              <form onSubmit={handleSubmit} style={styles.inputForm}>
-                <input
-                  type="text"
+              <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
+                <textarea
+                  ref={inputRef}
                   value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
                   placeholder="Ask a question"
                   style={{
                     ...styles.input,
                     backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
                     borderColor: isDarkMode ? '#555' : '#ccc', 
                     color: isDarkMode ? '#ffffff' : '#1a1a1a',
+                    minHeight: '40px',
+                    maxHeight: '120px',
+                    lineHeight: '40px',
+                    padding: '0 16px',
+                    boxSizing: 'border-box',
+                    width: '400px',
+                    verticalAlign: 'middle',
+                    fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    resize: 'none',
+                    overflowY: 'auto',
                   }}
+                  rows={1}
+                  className="chat-input-no-scrollbar"
                 />
                 <button
                   type="submit"
-                  style={styles.sendButton}
-                  className="send-button-hover"
+                  style={{
+                    ...styles.sendButton,
+                    marginLeft: '8px',
+                    marginBottom: '2px',
+                    position: 'static',
+                    zIndex: 21,
+                  }}
+                  className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
                 >
                   <svg
                     width="24"
@@ -1213,11 +1077,11 @@ const Chat = () => {
                   </svg>
                 </button>
               </form>
-              <p style={styles.disclaimer}>
+            </div>
+            <div style={styles.disclaimer}>
                 Villy offers AI-powered legal insights to help you explore your
                 situation. While it's here to assist, it's not a substitute for
                 professional legal advice.
-              </p>
             </div>
           </div>
           )}
@@ -1588,7 +1452,7 @@ const styles = {
   chatContainer: {
     position: "relative",
     height: "100%",
-    backgroundColor: "#F6F6F8",
+    backgroundColor: "transparent",
     borderRadius: "16px",
     margin: "0 auto",
     maxWidth: "1600px",
@@ -1606,6 +1470,8 @@ const styles = {
     flexDirection: "column",
     gap: "64px",
     alignItems: 'center',
+    paddingBottom: '96px',
+    background: 'transparent',
   },
   welcomeSection: {
     flex: 1,
@@ -1667,7 +1533,7 @@ const styles = {
     borderBottomRightRadius: "4px",
     marginLeft: "auto",
     marginRight: "0",
-    textAlign: "right",
+    textAlign: "left",
     alignSelf: 'flex-start',
   },
   aiMessage: {
@@ -1689,34 +1555,30 @@ const styles = {
     textAlign: "left",
   },
   inputWrapper: {
-    padding: "24px",
-    backgroundColor: '#F6F6F8',
-    borderTop: 'none',
-  },
-  suggestedReplies: {
-    marginBottom: "16px",
-  },
-  suggestedButtonsContainer: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "12px",
-    justifyContent: "center",
-  },
-  suggestedButton: {
-    background: "#ffffff",
-    border: "1px solid #ccc",
-    borderRadius: "24px",
-    padding: "10px 20px",
-    fontSize: "14px",
-    color: "#333",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-    transition: "background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease",
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+    padding: '16px 32px',
+    background: 'transparent',
+    pointerEvents: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: 'none',
+    border: 'none',
   },
   inputSection: {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    width: '100%',
+    background: 'transparent',
+    boxShadow: 'none',
+    border: 'none',
   },
   inputForm: {
     width: "100%",
@@ -1754,6 +1616,9 @@ const styles = {
     marginTop: "12px",
     fontStyle: "italic",
     width: "100%",
+    background: 'transparent',
+    boxShadow: 'none',
+    border: 'none',
   },
   footer: {
     height: "48px",
@@ -2057,5 +1922,39 @@ const styles = {
     lineHeight: 1.5,
   },
 };
+
+// Add global CSS for hiding textarea scrollbar and styling chatMessages scrollbar
+if (!document.getElementById('chat-input-no-scrollbar-style')) {
+  const style = document.createElement('style');
+  style.id = 'chat-input-no-scrollbar-style';
+  style.textContent = `
+    .chat-input-no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .chatMessages::-webkit-scrollbar {
+      width: 8px;
+      background: transparent;
+    }
+    .chatMessages::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    .chatMessages::-webkit-scrollbar-thumb:hover {
+      background: #aaa;
+    }
+    .chatMessages::-webkit-scrollbar-button {
+      background: #888;
+      height: 8px;
+    }
+    .chatMessages::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+    .chatMessages {
+      scrollbar-width: thin;
+      scrollbar-color: #888 transparent;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default Chat;

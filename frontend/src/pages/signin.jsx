@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logoIconOrange from "../assets/images/logoiconorange.png";
+import LoadingScreen from './LoadingScreen';
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Example toast functions for future use
   const showSuccessToast = (message) => {
@@ -107,7 +109,7 @@ const SignIn = () => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       // Example: showSuccessToast('Successfully signed in!');
-      navigate("/chat");
+      handleChatRedirect();
     } catch (err) {
       // Example: showErrorToast('Invalid email or password. Please try again.');
       setError("Invalid email or password. Please try again.");
@@ -116,16 +118,28 @@ const SignIn = () => {
     }
   };
 
+  const handleChatRedirect = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/chat');
+    }, 1000);
+  };
+
   const handleForgotPassword = () => {
-    // Example: showInfoToast('Password reset functionality will be implemented soon.');
-    // alert('Password reset functionality will be implemented soon.');
-    navigate("/forgot-password");
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/forgot-password');
+    }, 1000);
   };
 
   const handleGoogleSignIn = () => {
     // Example: showWarningToast('Google sign-in will be implemented soon.');
     alert("Google sign-in will be implemented soon.");
   };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div style={styles.container}>
