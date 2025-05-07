@@ -1,0 +1,34 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Rules for the "users" collection
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rules for the "posts" collection
+    match /posts/{postId} {
+      allow read: if true; // Anyone can read posts
+      allow write: if request.auth != null; // Only authenticated users can write posts
+    }
+
+    // Rules for the "comments" collection
+    match /comments/{commentId} {
+      allow read: if true; // Anyone can read comments
+      allow write: if request.auth != null; // Only authenticated users can write comments
+    }
+    
+    // Rules for the "conversations" collection
+    match /conversations/{conversationId} {
+      allow read: if true; // Anyone can read conversations for development
+      allow write: if true; // Anyone can write conversations for development
+      
+      // Rules for messages subcollection
+      match /messages/{messageId} {
+        allow read: if true; // Anyone can read messages for development
+        allow write: if true; // Anyone can write messages for development
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "properties": [
+    {
+      "name": "firebase.database.url",
+      "type": "java.lang.String",
+      "description": "Firebase Realtime Database URL"
+    },
+    {
+      "name": "firebase.project.id",
+      "type": "java.lang.String",
+      "description": "Firebase project ID"
+    },
+    {
+      "name": "firebase.service-account",
+      "type": "java.lang.String",
+      "description": "Path to Firebase service account credentials file"
+    },
+    {
+      "name": "firebase.api-key",
+      "type": "java.lang.String",
+      "description": "Firebase Web API key for client-side authentication"
+    },
+    {
+      "name": "cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Allowed origins for CORS"
+    },
+    {
+      "name": "cors.allowed-methods",
+      "type": "java.lang.String",
+      "description": "Allowed methods for CORS"
+    },
+    {
+      "name": "cors.allowed-headers",
+      "type": "java.lang.String",
+      "description": "Allowed headers for CORS"
+    },
+    {
+      "name": "cors.allow-credentials",
+      "type": "java.lang.Boolean",
+      "description": "Whether credentials are allowed for CORS"
+    },
+    {
+      "name": "cloudinary.cloudName",
+      "type": "java.lang.String",
+      "description": "Cloudinary cloud name"
+    },
+    {
+      "name": "cloudinary.apiKey",
+      "type": "java.lang.String",
+      "description": "Cloudinary API key"
+    },
+    {
+      "name": "cloudinary.apiSecret",
+      "type": "java.lang.String",
+      "description": "Cloudinary API secret"
+    },
+    {
+      "name": "cloudinary.uploadPreset",
+      "type": "java.lang.String",
+      "description": "Cloudinary upload preset name"
+    }
+  ]
+}

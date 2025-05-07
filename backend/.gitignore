@@ -1,0 +1,52 @@
+# HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# windsurf rules
+.windsurfrules
+
+### Node.js ###
+node_modules/
+
+### Firebase ###
+# Ignore Firebase service account key
+serviceAccountKey.json
+**/serviceAccountKey.json
+src/main/resources/serviceAccountKey.json
+
+# Ignore all JSON files in resources (optional)
+# src/main/resources/*.json
+
+### Environment files ###
+.env
+*.env
