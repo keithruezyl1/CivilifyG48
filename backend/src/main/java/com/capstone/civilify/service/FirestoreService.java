@@ -1,10 +1,13 @@
 package com.capstone.civilify.service;
 
+// Fix unused import
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.google.api.core.ApiFuture;
@@ -16,21 +19,44 @@ import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.cloud.FirestoreClient;
 
-
+/**
+ * Service class for interacting with Firestore.
+ */
 @Service
 public class FirestoreService {
 
+    private static final Logger logger = LoggerFactory.getLogger(FirestoreService.class);
+    
     // Use Firestore from the Firebase Admin SDK
     private final Firestore db;
+    private final boolean mockMode;
     
     // Constructor with Firebase dependency to ensure correct initialization order
     public FirestoreService(FirebaseApp firebaseApp) {
-        this.db = FirestoreClient.getFirestore();
+        Firestore tempDb = null;
+        boolean useMockMode = false;
+        
+        try {
+            tempDb = FirestoreClient.getFirestore(firebaseApp);
+            logger.info("Successfully connected to Firestore");
+        } catch (Exception e) {
+            logger.error("Failed to connect to Firestore: {}", e.getMessage());
+            logger.warn("Running in mock mode - no actual database operations will be performed");
+            useMockMode = true;
+        }
+        
+        this.db = tempDb;
+        this.mockMode = useMockMode;
     }
 
     // Method to store profile information in Firestore
     @SuppressWarnings("CallToPrintStackTrace")
     public void addUserProfile(String uid, String email, String username, String profilePictureUrl) {
+        if (mockMode) {
+            logger.info("Mock mode: Not storing user profile for uid {}", uid);
+            return;
+        }
+        
         Map<String, Object> userProfile = new HashMap<>();
         userProfile.put("email", email);
         userProfile.put("username", username);
@@ -55,21 +81,84 @@ public class FirestoreService {
      * @throws InterruptedException If the operation is interrupted
      */
     public Map<String, Object> getUserByEmail(String email) throws ExecutionException, InterruptedException {
-        // Query Firestore for users with matching email
-        ApiFuture<QuerySnapshot> query = db.collection("users")
-                .whereEqualTo("email", email)
-                .limit(1)
-                .get();
+        if (mockMode) {
+            logger.info("Mock mode: Returning mock user data for email {}", email);
+            // Return mock user data
+            Map<String, Object> mockUser = new HashMap<>();
+            mockUser.put("email", email);
+            mockUser.put("username", "Mock User");
+            mockUser.put("profile_picture_url", "https://example.com/mock-profile.jpg");
+            mockUser.put("uid", "mock-uid-" + email.hashCode());
+            return mockUser;
+        }
         
-        // Get documents from the query result
-        List<QueryDocumentSnapshot> documents = query.get().getDocuments();
+        try {
+            // Query Firestore for users with matching email
+            ApiFuture<QuerySnapshot> query = db.collection("users")
+                    .whereEqualTo("email", email)
+                    .limit(1)
+                    .get();
+            
+            // Get documents from the query result
+            List<QueryDocumentSnapshot> documents = query.get().getDocuments();
+            
+            if (!documents.isEmpty()) {
+                // Return the first matching user's data
+                return documents.get(0).getData();
+            } else {
+                // No user found with the given email
+                logger.warn("No user found with email: {}", email);
+                // Return empty map instead of throwing exception
+                return new HashMap<>();
+            }
+        } catch (Exception e) {
+            logger.error("Error getting user by email: {}", e.getMessage());
+            // Return empty map instead of throwing exception
+            return new HashMap<>();
+        }
+    }
+    
+    /**
+     * Retrieves a user's profile from Firestore by UID
+     * 
+     * @param uid The unique identifier of the user
+     * @return A Map containing the user's profile data
+     */
+    public Map<String, Object> getUserProfile(String uid) {
+        if (mockMode) {
+            logger.info("Mock mode: Returning mock user data for uid {}", uid);
+            // Return mock user data
+            Map<String, Object> mockUser = new HashMap<>();
+            mockUser.put("email", "user@example.com");
+            mockUser.put("username", "Mock User");
+            mockUser.put("profile_picture_url", "https://randomuser.me/api/portraits/men/32.jpg");
+            mockUser.put("uid", uid);
+            return mockUser;
+        }
         
-        if (!documents.isEmpty()) {
-            // Return the first matching user's data
-            return documents.get(0).getData();
-        } else {
-            // No user found with the given email
-            throw new IllegalArgumentException("No user found with email: " + email);
+        try {
+            // Get the user document directly by UID
+            DocumentReference docRef = db.collection("users").document(uid);
+            ApiFuture<com.google.cloud.firestore.DocumentSnapshot> future = docRef.get();
+            com.google.cloud.firestore.DocumentSnapshot document = future.get();
+            
+            if (document.exists()) {
+                Map<String, Object> userData = document.getData();
+                if (userData != null) {
+                    // Add the UID to the data
+                    userData.put("uid", uid);
+                    return userData;
+                } else {
+                    logger.warn("Document exists but data is null for UID: {}", uid);
+                    return new HashMap<>();
+                }
+            } else {
+                logger.warn("No user found with UID: {}", uid);
+                return new HashMap<>();
+            }
+        } catch (Exception e) {
+            logger.error("Error fetching user profile for UID {}: {}", uid, e.getMessage());
+            return new HashMap<>();
         }
     }
 }

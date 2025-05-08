@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logoIconOrange from "../assets/images/logoiconorange.png";
 import LoadingScreen from './LoadingScreen';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -17,22 +20,79 @@ const ForgotPassword = () => {
     };
   }, []);
 
+  // Toast notification functions
+  const showSuccessToast = (message) => {
+    toast.success(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "light",
+      style: {
+        borderRadius: "12px",
+        background: "#4CAF50",
+        color: "#ffffff",
+      },
+    });
+  };
+
+  const showErrorToast = (message) => {
+    toast.error(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "light",
+      style: {
+        borderRadius: "12px",
+        background: "#F44336",
+        color: "#ffffff",
+      },
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
-      // TODO: Implement forgot password logic
-      console.log("Forgot password request for:", email);
+      // Call the backend forgot password endpoint
+      console.log("Sending forgot password request for:", email);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await axios.post('http://localhost:8081/api/auth/forgot-password', 
+        { email },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
       
-      // Navigate to reset password page with email
-      handleResetPasswordRedirect(email);
+      console.log('Response:', response);
+      
+      if (response.data && response.data.success) {
+        showSuccessToast("Password reset email sent successfully. Please check your inbox.");
+        // Navigate to sign in page after a short delay
+        setTimeout(() => {
+          handleSigninRedirect();
+        }, 3000);
+      } else {
+        const errorMessage = response.data?.message || "Failed to send reset link. Please try again.";
+        setError(errorMessage);
+        showErrorToast(errorMessage);
+      }
     } catch (err) {
+      console.error("Error sending password reset email:", err);
       setError("Failed to send reset link. Please try again.");
+      showErrorToast("Failed to send reset link. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +118,18 @@ const ForgotPassword = () => {
 
   return (
     <div style={styles.container}>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div style={styles.formContainer}>
         <img src={logoIconOrange} alt="Civilify" style={styles.logo} />
         <h1 style={styles.title}>Forgot Password</h1>

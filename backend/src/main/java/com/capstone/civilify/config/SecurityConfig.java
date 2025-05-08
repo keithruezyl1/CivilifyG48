@@ -34,6 +34,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/signin")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/google")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/forgot-password")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/test")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/register")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/login")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/health")).permitAll()
@@ -59,7 +61,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

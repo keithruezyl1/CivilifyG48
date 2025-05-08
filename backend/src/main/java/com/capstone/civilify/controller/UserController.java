@@ -97,6 +97,39 @@ public class UserController {
     }
 
     /**
+     * Retrieves a user's profile picture URL by their UID.
+     * 
+     * @param uid The user's unique identifier.
+     * @return Response entity containing the profile picture URL.
+     */
+    @GetMapping("/{uid}/profile-picture")
+    public ResponseEntity<?> getUserProfilePicture(@PathVariable String uid) {
+        try {
+            // Fetch user profile from Firestore
+            Map<String, Object> userProfile = firestoreService.getUserProfile(uid);
+            
+            if (userProfile != null && userProfile.containsKey("profile_picture_url")) {
+                String profilePictureUrl = (String) userProfile.get("profile_picture_url");
+                
+                // Return the profile picture URL
+                Map<String, String> response = new HashMap<>();
+                response.put("profile_picture_url", profilePictureUrl);
+                return ResponseEntity.ok(response);
+            } else {
+                // Return a default profile picture URL if none is found
+                Map<String, String> response = new HashMap<>();
+                response.put("profile_picture_url", "https://randomuser.me/api/portraits/men/32.jpg");
+                return ResponseEntity.ok(response);
+            }
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error fetching user profile picture: " + e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
      * Handles user login.
      * 
      * @param email    User's email.

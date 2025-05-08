@@ -200,6 +200,8 @@ const Chat = () => {
   const [sendHovered, setSendHovered] = useState(false);
   const inputRef = useRef(null);
   const [userData, setUserData] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   // New state variables for chat history
   const [conversations, setConversations] = useState([]);
@@ -288,11 +290,12 @@ const Chat = () => {
   };
 
   // Update handleSubmit and handleSuggestedReply to use fetchGPTWithModeFit
-  // Function to fetch user conversations from backend API
+  // Function to fetch user conversations from backend API - commented out as per requirements
+  /* 
   const fetchUserConversations = async () => {
     try {
       if (!userData || !userData.email) {
-        console.error('No user email available to fetch conversations');
+        console.log('No user email available to fetch conversations');
         return;
       }
       
@@ -301,9 +304,16 @@ const Chat = () => {
       console.log('Fetched conversations:', data);
       setConversations(data);
     } catch (error) {
-      console.error('Error fetching conversations:', error);
-      toast.error('Failed to load conversation history');
+      console.log('Note: Conversations are not being fetched as per requirements');
+      // No error toast to avoid disrupting user experience
     }
+  };
+  */
+  
+  // Placeholder function that does nothing - to avoid errors when called
+  const fetchUserConversations = async () => {
+    console.log('Note: Conversations are not being fetched as per requirements');
+    return; // Do nothing
   };
 
   // Function to create a new conversation
@@ -378,8 +388,8 @@ const Chat = () => {
         console.log('Created new conversation for message:', newConversation);
         setCurrentConversationId(newConversation.id);
         
-        // Update conversations list
-        await fetchUserConversations();
+        // We're not fetching conversations as per requirements
+        // await fetchUserConversations();
       }
       
       // Now save the message
@@ -392,9 +402,9 @@ const Chat = () => {
       
       console.log('Message saved to conversation');
     } catch (error) {
-      console.error('Error saving message:', error);
-      // Don't show error toast for every message save failure
-      // to avoid disrupting the user experience
+      // Just log the error without showing any error messages to the user
+      console.log('Note: Error occurred while saving message, but not showing error to user');
+      // We're intentionally not showing error messages as per requirements
     }
   };
 
@@ -473,7 +483,24 @@ const Chat = () => {
       // Save user message to conversation
       await saveMessageToConversation(question, true);
 
+      // Show typing animation
+      setIsTyping(true);
+      
+      // Scroll to bottom to show typing indicator
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+
       const aiResponse = await fetchGPTWithModeFit(question);
+      
+      // Hide typing animation
+      setIsTyping(false);
+      
       const aiMessage = {
         text: filterSystemEchoAndModeSwitch(aiResponse.response, selectedMode),
         isUser: false,
@@ -512,7 +539,24 @@ const Chat = () => {
     // Save user message to conversation
     await saveMessageToConversation(reply, true);
 
+    // Show typing animation
+    setIsTyping(true);
+    
+    // Scroll to bottom to show typing indicator
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 100);
+
     const aiResponse = await fetchGPTWithModeFit(reply);
+    
+    // Hide typing animation
+    setIsTyping(false);
+    
     const aiMessage = {
       text: aiResponse.response,
       isUser: false,
@@ -616,6 +660,16 @@ const Chat = () => {
             
             // Set the user data in state
             setUserData(parsedData);
+            
+            // Set profile picture if available
+            if (parsedData.profile_picture_url) {
+              setProfilePicture(parsedData.profile_picture_url);
+            } else {
+              // Try to fetch profile picture from Firebase if we have a uid
+              if (parsedData.uid) {
+                fetchProfilePicture(parsedData.uid);
+              }
+            }
           } catch (error) {
             console.error("Error parsing user data from localStorage:", error);
             createDefaultUser();
@@ -626,6 +680,16 @@ const Chat = () => {
             const fetchedUserData = await fetchUserProfile();
             if (fetchedUserData) {
               setUserData(fetchedUserData);
+              
+              // Set profile picture if available
+              if (fetchedUserData.profile_picture_url) {
+                setProfilePicture(fetchedUserData.profile_picture_url);
+              } else {
+                // Try to fetch profile picture from Firebase if we have a uid
+                if (fetchedUserData.uid) {
+                  fetchProfilePicture(fetchedUserData.uid);
+                }
+              }
             } else {
               console.log("No user data from API, creating default user");
               createDefaultUser();
@@ -644,6 +708,35 @@ const Chat = () => {
       }
     };
     
+    // Helper function to fetch profile picture from Firebase
+    const fetchProfilePicture = async (uid) => {
+      try {
+        // Fetch user profile picture from backend
+        const response = await axios.get(`http://localhost:8081/api/users/${uid}/profile-picture`);
+        if (response.data && response.data.profile_picture_url) {
+          console.log("Fetched profile picture:", response.data.profile_picture_url);
+          setProfilePicture(response.data.profile_picture_url);
+          
+          // Update userData with profile picture
+          setUserData(prevData => ({
+            ...prevData,
+            profile_picture_url: response.data.profile_picture_url
+          }));
+          
+          // Update localStorage
+          const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+          storedUser.profile_picture_url = response.data.profile_picture_url;
+          localStorage.setItem('user', JSON.stringify(storedUser));
+        } else {
+          console.log("No profile picture found for user");
+          setProfilePicture("https://randomuser.me/api/portraits/men/32.jpg");
+        }
+      } catch (error) {
+        console.error("Error fetching profile picture:", error);
+        setProfilePicture("https://randomuser.me/api/portraits/men/32.jpg");
+      }
+    };
+    
     // Helper function to create a default user if none exists
     const createDefaultUser = () => {
       // Create a default user for Civilify
@@ -655,6 +748,7 @@ const Chat = () => {
       
       console.log("Created default user:", defaultUser);
       setUserData(defaultUser);
+      setProfilePicture(defaultUser.profile_picture_url);
       
       // Save to localStorage for other components
       localStorage.setItem('user', JSON.stringify(defaultUser));
@@ -663,12 +757,14 @@ const Chat = () => {
     getUserProfile();
   }, []);
   
-  // Fetch user conversations when userData is available
+  // We're not fetching conversations as per requirements
+  /*
   useEffect(() => {
     if (userData && userData.email) {
       fetchUserConversations();
     }
   }, [userData]);
+  */
 
   useEffect(() => {
     // Add global style to remove focus outline
@@ -847,6 +943,55 @@ const Chat = () => {
     document.title = 'Civilify | Chat';
     return () => { document.title = 'Civilify'; };
   }, []);
+  
+  // Add CSS for typing animation
+  useEffect(() => {
+    const typingAnimationStyle = document.createElement('style');
+    typingAnimationStyle.textContent = `
+      .typing-animation {
+        display: flex;
+        align-items: center;
+        column-gap: 6px;
+      }
+      
+      .typing-animation span {
+        height: 8px;
+        width: 8px;
+        background-color: ${isDarkMode ? '#f34d01' : '#f34d01'};
+        border-radius: 50%;
+        display: block;
+        opacity: 0.4;
+      }
+      
+      .typing-animation span:nth-child(1) {
+        animation: pulse 1s infinite ease-in-out;
+      }
+      
+      .typing-animation span:nth-child(2) {
+        animation: pulse 1s infinite ease-in-out 0.2s;
+      }
+      
+      .typing-animation span:nth-child(3) {
+        animation: pulse 1s infinite ease-in-out 0.4s;
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 0.4;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(typingAnimationStyle);
+    
+    return () => {
+      document.head.removeChild(typingAnimationStyle);
+    };
+  }, [isDarkMode]);
 
   if (loading) return <LoadingScreen />;
 
@@ -1136,19 +1281,24 @@ const Chat = () => {
                   }}
                 >
                   {message.isUser ? (
-                  <div style={{
-                    ...styles.messageAvatar,
-                      ...styles.userAvatar,
-                    }} />
+                    <img
+                      src={profilePicture || "https://randomuser.me/api/portraits/men/32.jpg"}
+                      alt="User Avatar"
+                      style={{
+                        ...styles.messageAvatar,
+                        ...styles.userAvatar,
+                        objectFit: 'cover',
+                      }}
+                    />
                   ) : (
                     <img
                       src={villyAvatar}
                       alt="Villy Avatar"
                       style={{
                         ...styles.messageAvatar,
-                          ...styles.aiAvatar,
-                          backgroundColor: isDarkMode ? "#363636" : "#ffffff",
-                          border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                        ...styles.aiAvatar,
+                        backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                        border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
                         objectFit: 'cover',
                       }}
                     />
@@ -1196,6 +1346,50 @@ const Chat = () => {
                   )}
                 </div>
               ))
+            )}
+            
+            {/* Typing animation */}
+            {isTyping && (
+              <div
+                style={{
+                  ...styles.messageWrapper,
+                  flexDirection: 'row',
+                  justifyContent: 'flex-start',
+                }}
+              >
+                <img
+                  src={villyAvatar}
+                  alt="Villy Avatar"
+                  style={{
+                    ...styles.messageAvatar,
+                    ...styles.aiAvatar,
+                    backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                    border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                    objectFit: 'cover',
+                  }}
+                />
+                <div
+                  style={{
+                    ...styles.message,
+                    ...styles.aiMessage,
+                    backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                    color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                    border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                    boxShadow: isDarkMode ? "none" : "0 1px 2px rgba(0, 0, 0, 0.05)",
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '12px 16px',
+                    minHeight: '20px',
+                  }}
+                >
+                  <div className="typing-animation">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

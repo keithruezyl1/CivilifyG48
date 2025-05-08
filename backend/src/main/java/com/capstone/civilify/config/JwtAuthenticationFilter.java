@@ -31,12 +31,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private CustomUserDetailsService userDetailsService;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.equals("/api/auth/forgot-password") || path.equals("/api/auth/test");
+    }
+
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         try {
+            // Skip authentication for certain endpoints
+            if (shouldNotFilter(request)) {
+                logger.debug("Skipping JWT authentication for path: {}", request.getRequestURI());
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             final String authHeader = request.getHeader("Authorization");
             final String jwt;
             final String userEmail;
