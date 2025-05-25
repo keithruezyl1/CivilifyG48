@@ -5,6 +5,7 @@ import LoadingScreen from './LoadingScreen';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+import { API_URL } from '../utils/auth';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ const ForgotPassword = () => {
       // Call the backend forgot password endpoint
       console.log("Sending forgot password request for:", email);
       
-      const response = await axios.post('http://localhost:8081/api/auth/forgot-password', 
+      const response = await axios.post(`${API_URL}/auth/forgot-password`, 
         { email },
         {
           headers: {

@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logoIconOrange from "../assets/images/logoiconorange.png";
+import { API_URL } from '../utils/auth';
+import LoadingScreen from './LoadingScreen';
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Example toast functions for future use
   const showSuccessToast = (message) => {
@@ -108,7 +111,7 @@ const SignIn = () => {
   
     try {
       // Call your backend API for authentication
-      const response = await fetch('http://localhost:8081/api/auth/signin', {
+      const response = await fetch(`${API_URL}/auth/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,13 +161,13 @@ const SignIn = () => {
         localStorage.setItem('user', JSON.stringify(data.user));
         console.log('User data stored from response:', data.user);
         showSuccessToast('Successfully signed in!');
-        navigate("/chat");
+        handleChatRedirect();
         return;
       }
       
       // Otherwise, get user profile data separately
       try {
-        const userResponse = await fetch(`http://localhost:8081/api/users/email/${formData.email}`);
+        const userResponse = await fetch(`${API_URL}/users/email/${formData.email}`);
         console.log('User data response status:', userResponse.status);
         
         if (!userResponse.ok) {
@@ -178,12 +181,12 @@ const SignIn = () => {
         localStorage.setItem('user', JSON.stringify(userData));
         
         showSuccessToast('Successfully signed in!');
-        navigate("/chat");
+        handleChatRedirect();
       } catch (userError) {
         console.error('Error fetching user data:', userError);
         // Continue even if user data fetch fails, since authentication was successful
         showSuccessToast('Signed in, but user data could not be loaded');
-        navigate("/chat");
+        handleChatRedirect();
       }
     } catch (err) {
       console.error('Authentication error:', err);
@@ -194,10 +197,20 @@ const SignIn = () => {
     }
   };
 
+  const handleChatRedirect = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/chat');
+    }, 1000);
+  };
+
   const handleForgotPassword = () => {
-    // Example: showInfoToast('Password reset functionality will be implemented soon.');
-    // alert('Password reset functionality will be implemented soon.');
-    navigate("/forgot-password");
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate("/forgot-password");
+    }, 1000);
   };
 
   useEffect(() => {
@@ -284,7 +297,7 @@ const SignIn = () => {
       console.log('Saved Google user data to localStorage:', userToSave);
       
       // Send to your backend
-      fetch('http://localhost:8081/api/auth/google', {
+      fetch(`${API_URL}/auth/google`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -308,7 +321,7 @@ const SignIn = () => {
         }
         
         showSuccessToast('Successfully signed in with Google!');
-        navigate("/chat");
+        handleChatRedirect();
       })
       .catch(error => {
         console.error('Google sign-in API error:', error);
@@ -321,6 +334,8 @@ const SignIn = () => {
       setIsLoading(false);
     }
   };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div style={styles.container}>
@@ -451,12 +466,8 @@ const styles = {
     backgroundColor: "#ffffff",
     padding: "0",
     margin: "0",
-    overflow: "hidden",
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    overflow: "auto", // Changed from hidden to auto for better scrollability
+    position: "relative", // Changed from fixed to relative
     minHeight: "100vh",
     minWidth: "100vw",
   },
@@ -468,11 +479,7 @@ const styles = {
     borderRadius: "16px",
     textAlign: "center",
     boxShadow: "0 0 0 1px rgba(0, 0, 0, 0.08)",
-    margin: "auto",
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
+    margin: "40px auto",
   },
   logo: {
     width: "40px",
@@ -513,7 +520,7 @@ const styles = {
     marginBottom: "6px",
   },
   input: {
-    width: "285px",
+    width: "100%",
     padding: "12px 16px",
     fontSize: "15px",
     border: "1px solid rgba(0, 0, 0, 0.12)",
@@ -521,9 +528,7 @@ const styles = {
     outline: "none",
     transition: "border-color 0.2s ease",
     backgroundColor: "#ffffff",
-    "&:focus": {
-      borderColor: "#F34D01",
-    },
+    boxSizing: "border-box",
   },
   passwordWrapper: {
     position: "relative",
@@ -541,6 +546,27 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+  },
+  submitButton: {
+    width: "100%",
+    maxWidth: "320px",
+    padding: "12px",
+    fontSize: "15px",
+    fontWeight: "500",
+    color: "#fff",
+    backgroundColor: "#F34D01",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    margin: "0 auto",
+    transition: "all 0.3s ease",
+    position: "relative",
+    overflow: "hidden",
+    '&:hover': {
+      background: "linear-gradient(90deg, #F34D01, #ff6b3d, #F34D01)",
+      backgroundSize: "200% auto",
+      animation: "buttonShine 1.5s linear infinite",
+    }
   },
   divider: {
     position: "relative",
@@ -567,8 +593,9 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     width: "100%",
-    marginBottom: "16px",
-    minHeight: "40px",
+    marginBottom: "24px",
+    marginTop: "8px",
+    minHeight: "48px",
   },
   signupText: {
     marginTop: "16px",
@@ -609,6 +636,7 @@ const styles = {
     display: "block",
     marginLeft: "auto",
     marginTop: "8px",
+    marginBottom: "16px",
     fontWeight: "500",
     textDecoration: "none",
   },

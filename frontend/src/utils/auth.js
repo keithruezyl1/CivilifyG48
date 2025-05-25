@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // API URL for the backend
-const API_URL = 'http://localhost:8081/api';
+export const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 // Get the stored authentication token
 export const getAuthToken = () => {

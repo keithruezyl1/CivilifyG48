@@ -6,7 +6,7 @@ import { FaUser, FaCog, FaQuestionCircle, FaSignOutAlt, FaKeyboard, FaRobot, FaC
 import villyAvatar from "../assets/images/villypfporange.jpg";
 import LoadingScreen from './LoadingScreen';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { fetchUserProfile, getUserData } from '../utils/auth';
+import { fetchUserProfile, getUserData, API_URL } from '../utils/auth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { auth, onAuthStateChanged } from '../firebase-config';
@@ -35,7 +35,7 @@ const fetchGPTResponse = async (userMessage, mode = 'A', history = []) => {
   
   try {
     // Call the backend API endpoint
-    const response = await axios.post('http://localhost:8081/api/ai/chat', {
+    const response = await axios.post(`${API_URL}/ai/chat`, {
       message: userMessage,
       mode: mode
     });
@@ -299,7 +299,7 @@ const Chat = () => {
         return;
       }
       
-      const response = await axios.get(`http://localhost:8081/api/chat/conversations/user/${userData.email}`);
+      const response = await axios.get(`${API_URL}/chat/conversations/user/${userData.email}`);
       const data = response.data;
       console.log('Fetched conversations:', data);
       setConversations(data);
@@ -352,7 +352,7 @@ const Chat = () => {
   // Function to load messages for a conversation
   const loadConversationMessages = async (conversationId) => {
     try {
-      const response = await axios.get(`http://localhost:8081/api/chat/conversations/${conversationId}/messages`);
+      const response = await axios.get(`${API_URL}/chat/conversations/${conversationId}/messages`);
       const data = response.data;
       console.log('Fetched messages:', data);
       
@@ -378,7 +378,7 @@ const Chat = () => {
     try {
       if (!currentConversationId) {
         // Create a new conversation first if none exists
-        const response = await axios.post('http://localhost:8081/api/chat/conversations', {
+        const response = await axios.post(`${API_URL}/chat/conversations`, {
           userId: userData.uid || 'unknown',
           userEmail: userData.email,
           title: content.length > 50 ? content.substring(0, 50) + '...' : content
@@ -393,7 +393,7 @@ const Chat = () => {
       }
       
       // Now save the message
-      await axios.post(`http://localhost:8081/api/chat/conversations/${currentConversationId}/messages`, {
+      await axios.post(`${API_URL}/chat/conversations/${currentConversationId}/messages`, {
         userId: userData.uid || 'unknown',
         userEmail: userData.email,
         content: content,
@@ -426,7 +426,7 @@ const Chat = () => {
       conversation.title = editTitle.trim();
       
       // Update the conversation in the backend
-      await axios.put(`http://localhost:8081/api/chat/conversations/${currentConversationId}`, conversation);
+      await axios.put(`${API_URL}/chat/conversations/${currentConversationId}`, conversation);
       
       // Update local state
       setConversations(conversations.map(conv => 
@@ -712,7 +712,7 @@ const Chat = () => {
     const fetchProfilePicture = async (uid) => {
       try {
         // Fetch user profile picture from backend
-        const response = await axios.get(`http://localhost:8081/api/users/${uid}/profile-picture`);
+        const response = await axios.get(`${API_URL}/users/${uid}/profile-picture`);
         if (response.data && response.data.profile_picture_url) {
           console.log("Fetched profile picture:", response.data.profile_picture_url);
           setProfilePicture(response.data.profile_picture_url);

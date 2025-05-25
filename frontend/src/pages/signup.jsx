@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import logoIconOrange from '../assets/images/logoiconorange.png';
+import { API_URL } from '../utils/auth';
+import LoadingScreen from './LoadingScreen';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -19,6 +21,7 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // Example toast functions for future use
   const showSuccessToast = (message) => {
@@ -124,6 +127,14 @@ const Signup = () => {
     }
   };
 
+  const handleChatRedirect = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/chat');
+    }, 1000);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -156,7 +167,7 @@ const Signup = () => {
       }
   
       // Send request to backend
-      const response = await fetch('http://localhost:8081/api/users/register', {
+      const response = await fetch(`${API_URL}/users/register`, {
         method: 'POST',
         body: data,
         headers: {
@@ -217,7 +228,7 @@ const Signup = () => {
       
       // Automatically log in after successful registration to get the authentication token
       try {
-        const loginResponse = await fetch('http://localhost:8081/api/users/login', {
+        const loginResponse = await fetch(`${API_URL}/users/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -251,7 +262,7 @@ const Signup = () => {
       }
       
       showSuccessToast('Account created successfully!');
-      navigate('/chat');
+      handleChatRedirect();
     } catch (err) {
       console.error('Registration error:', err);
       showErrorToast(err.message || 'Failed to create account. Please try again.');
@@ -261,132 +272,21 @@ const Signup = () => {
   };
 
 
-  const handleGoogleSignIn = (response) => {
-    setIsLoading(true);
-    try {
-      const { credential } = response;
-      let payload;
-      
-      try {
-        // Parse the JWT payload
-        payload = JSON.parse(atob(credential.split('.')[1]));
-        console.log('Google Sign-In payload:', payload);
-      } catch (parseError) {
-        console.error('Error parsing Google credential:', parseError);
-        showErrorToast('Error processing Google sign-in data');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Create user data from Google payload
-      const userToSave = {
-        username: payload.name || 'Google User',
-        email: payload.email || 'user@example.com',
-        profile_picture_url: payload.picture || 'https://randomuser.me/api/portraits/lego/1.jpg'
-      };
-      
-      // Save to localStorage immediately to ensure data is available
-      localStorage.setItem('user', JSON.stringify(userToSave));
-      console.log('Saved Google user data to localStorage:', userToSave);
-      
-      // Send to your backend
-      fetch('http://localhost:8081/api/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: credential })
-      })
-      .then(response => response.json())
-      .then(data => {
-        // If backend provides additional user data, update localStorage
-        if (data && data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-          console.log('Updated user data from backend:', data.user);
-        } else if (data) {
-          localStorage.setItem('user', JSON.stringify(data));
-          console.log('Updated user data from backend:', data);
-        }
-        
-        navigate('/chat');
-      })
-      .catch(error => {
-        showErrorToast('Google sign-in failed');
-      })
-      .finally(() => setIsLoading(false));
-    } catch (error) {
-      showErrorToast('Error processing Google sign-in');
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const initGoogleSignIn = () => {
-      if (window.google && !window.googleSignInInitialized) {
-        console.log('Initializing Google Sign-In...');
-        window.google.accounts.id.initialize({
-          client_id: "433624047904-ea5ipm4k3ogi6fumrpjdu9c59hq1119l.apps.googleusercontent.com",
-          callback: handleGoogleSignIn,
-          prompt_parent_id: "googleSignInButton",
-          ux_mode: "popup",
-          // Add allowed origins to match Google Cloud Console settings
-          allowed_origins: [
-            window.location.origin, // Current origin automatically included
-            "http://localhost:3000",
-            "http://127.0.0.1:3000"
-          ]
-        });
-        window.googleSignInInitialized = true;
-        console.log('Google Sign-In initialized with origin:', window.location.origin);
-  
-
-
-        window.google.accounts.id.renderButton(
-          document.getElementById("googleSignInButton"),
-          { 
-            theme: "outline", 
-            size: "large",
-            text: "continue_with" 
-          }
-        );
-        
-        // Optional: Show the One Tap prompt
-        window.google.accounts.id.prompt();
-      }
-    };
-
-    // Check if Google script is already loaded
-    if (window.google) {
-      initGoogleSignIn();
-    } else {
-      // Load the script dynamically
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = initGoogleSignIn;
-      document.body.appendChild(script);
-    }
-  }, []);
+  // No Google sign-in functionality as requested
+  useEffect(() => {}, []); // Empty useEffect to replace the Google sign-in initialization
 
   const styles = {
     container: {
-      height: '100vh',
-      width: '100vw',
+      minHeight: '100vh',
+      width: '100%',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: '#ffffff',
-      padding: '0',
+      padding: '20px 0',
       margin: '0',
-      overflow: 'hidden', // No scroll bar
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      minHeight: '100vh',
-      minWidth: '100vw',
+      overflow: 'auto', // Enable scrolling
+      position: 'relative',
     },
     signupContainer: {
       width: '100%',
@@ -599,6 +499,33 @@ const Signup = () => {
       textDecoration: 'none',
       fontWeight: '500',
     },
+    divider: {
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      marginTop: '16px',
+      marginBottom: '16px',
+      position: 'relative',
+    },
+    dividerLine: {
+      flex: '1',
+      height: '1px',
+      backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    },
+    dividerText: {
+      backgroundColor: '#ffffff',
+      color: '#666666',
+      fontSize: '12px',
+      padding: '0 16px',
+      position: 'relative',
+      zIndex: '1',
+    },
+    socialButtons: {
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+    },
     error: {
       width: '100%',
       padding: '10px',
@@ -630,6 +557,8 @@ const Signup = () => {
     }
   `;
   document.head.appendChild(animationStyleSheet);
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div style={styles.container}>
@@ -679,93 +608,95 @@ const Signup = () => {
               </label>
             </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Username</label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                style={styles.input}
-                placeholder="What should we call you?"
-                required
-              />
-            </div>
-            
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                style={styles.input}
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-            
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Password</label>
-              <div style={styles.passwordWrapper}>
+            <div style={styles.row}>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Username</label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
+                  type="text"
+                  name="username"
+                  value={formData.username}
                   onChange={handleChange}
                   style={styles.input}
-                  placeholder="Minimum of 8 characters"
+                  placeholder="What should we call you?"
                   required
                 />
-                {formData.password && (
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('password')}
-                    style={styles.eyeIcon}
-                  >
-                    {showPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="#666"/>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" fill="#666"/>
-                      </svg>
-                    )}
-                  </button>
-                )}
+              </div>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  style={styles.input}
+                  placeholder="your@email.com"
+                  required
+                />
               </div>
             </div>
             
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Confirm Password</label>
-              <div style={styles.passwordWrapper}>
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  style={styles.input}
-                  placeholder="Confirm your password"
-                  required
-                />
-                {formData.confirmPassword && (
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('confirm')}
-                    style={styles.eyeIcon}
-                  >
-                    {showConfirmPassword ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="#666"/>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" fill="#666"/>
-                      </svg>
-                    )}
-                  </button>
-                )}
+            <div style={styles.row}>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Password</label>
+                <div style={styles.passwordWrapper}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    style={styles.input}
+                    placeholder="Minimum of 8 characters"
+                    required
+                  />
+                  {formData.password && (
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('password')}
+                      style={styles.eyeIcon}
+                    >
+                      {showPassword ? (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="#666"/>
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" fill="#666"/>
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Confirm Password</label>
+                <div style={styles.passwordWrapper}>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    style={styles.input}
+                    placeholder="Confirm your password"
+                    required
+                  />
+                  {formData.confirmPassword && (
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('confirm')}
+                      style={styles.eyeIcon}
+                    >
+                      {showConfirmPassword ? (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="#666"/>
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" fill="#666"/>
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -792,16 +723,6 @@ const Signup = () => {
               {isLoading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
-          
-          <div style={styles.divider}>
-            <span style={styles.dividerText}>OR</span>
-          </div>
-          
-          <div style={styles.socialButtons}>
-            <div id="googleSignInButton" style={{ width: '100%' }}>
-              <span>Continue with Google</span>
-            </div>
-          </div>
           
           <div style={styles.alreadyHaveAccount}>
             <span style={styles.alreadyHaveAccountText}>
