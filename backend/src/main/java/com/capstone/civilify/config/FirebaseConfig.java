@@ -74,39 +74,15 @@ public class FirebaseConfig {
             }
             
         } catch (Exception e) {
-            // Log the error but don't throw an exception
+            // Log the error and throw an exception - no more mock mode
             logger.error("Failed to initialize Firebase: {}", e.getMessage());
             logger.error("Exception type: {}", e.getClass().getName());
             if (e.getCause() != null) {
                 logger.error("Caused by: {}", e.getCause().getMessage());
             }
-            logger.warn("Using mock Firebase implementation for development purposes");
             
-            try {
-                // Create mock credentials for development
-                GoogleCredentials mockCredentials = GoogleCredentials.create(null);
-                
-                // Create a mock FirebaseOptions for development with credentials
-                FirebaseOptions mockOptions = FirebaseOptions.builder()
-                    .setCredentials(mockCredentials)
-                    .setProjectId("mock-project-id")
-                    .setDatabaseUrl("https://mock-db-url.firebaseio.com")
-                    .build();
-                
-                // Initialize with mock options
-                if (FirebaseApp.getApps().isEmpty()) {
-                    return FirebaseApp.initializeApp(mockOptions, "mock-app");
-                } else {
-                    try {
-                        return FirebaseApp.getInstance("mock-app");
-                    } catch (IllegalStateException ise) {
-                        return FirebaseApp.initializeApp(mockOptions, "mock-app");
-                    }
-                }
-            } catch (Exception ex) {
-                logger.error("Failed to create mock Firebase implementation: {}", ex.getMessage());
-                throw new RuntimeException("Failed to initialize Firebase", ex);
-            }
+            // Throw exception to fail application startup
+            throw new RuntimeException("Failed to initialize Firebase. Application cannot start without proper Firebase configuration.", e);
         }
     }
 }

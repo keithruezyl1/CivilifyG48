@@ -43,9 +43,9 @@ node_modules/
 serviceAccountKey.json
 **/serviceAccountKey.json
 src/main/resources/serviceAccountKey.json
-civilify-a9de6-firebase-adminsdk-fbsvc-7a43e9e197.json
 
 # Ignore all JSON files in resources (optional)
+civilify-a9de6-firebase-adminsdk-fbsvc-7a43e9e197.json
 # src/main/resources/*.json
 
 ### Environment files ###

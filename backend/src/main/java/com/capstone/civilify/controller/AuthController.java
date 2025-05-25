@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+
 import com.capstone.civilify.dto.AuthResponse;
 import com.capstone.civilify.dto.ErrorResponse;
 import com.capstone.civilify.dto.LoginRequest;
@@ -55,16 +56,26 @@ public class AuthController {
         try {
             // Authenticate with Firebase
             logger.info("Authenticating with Firebase...");
+            logger.debug("Password length: {}", loginRequest.getPassword().length());
+            
             String firebaseToken = firebaseAuthService.signInWithEmailAndPassword(
                 loginRequest.getEmail(), 
                 loginRequest.getPassword()
             );
             
-            logger.info("Firebase authentication successful");
+            logger.info("Firebase authentication successful, token received");
             
             // Get user details from Firestore
             logger.info("Fetching user details from Firestore...");
             Map<String, Object> userDetails = firestoreService.getUserByEmail(loginRequest.getEmail());
+            
+            if (userDetails == null || userDetails.isEmpty()) {
+                logger.warn("No user details found in Firestore for email: {}", loginRequest.getEmail());
+                userDetails = new HashMap<>();
+                userDetails.put("email", loginRequest.getEmail());
+            } else {
+                logger.info("User details retrieved successfully: {}", userDetails.keySet());
+            }
             
             // Generate JWT token
             logger.info("Generating JWT token...");

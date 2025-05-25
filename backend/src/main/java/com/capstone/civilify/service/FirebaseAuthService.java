@@ -55,19 +55,18 @@ public class FirebaseAuthService {
             String appName = FirebaseApp.getInstance().getName();
             logger.info("Firebase App name: {}", appName);
             
-            // Check if we're using the mock app
-            if ("mock-app".equals(appName)) {
-                logger.warn("Using mock Firebase app - password reset emails will not be sent");
-                mockMode = true;
-            }
+            // Force mockMode to be false regardless of app name
+            mockMode = false;
+            logger.info("Firebase Auth Service running in REAL mode (mockMode=false)");
         } catch (Exception e) {
             logger.error("Failed to connect to Firebase Auth: {}", e.getMessage());
             logger.error("Exception type: {}", e.getClass().getName());
             if (e.getCause() != null) {
                 logger.error("Caused by: {}", e.getCause().getMessage());
             }
-            logger.warn("Running in mock mode - using simulated authentication");
-            mockMode = true;
+            // Force mockMode to be false even on connection error
+            mockMode = false;
+            logger.info("Firebase Auth Service running in REAL mode (mockMode=false)");
         }
     }
 
@@ -389,5 +388,14 @@ public class FirebaseAuthService {
             logger.error("Error creating custom token: {}", e.getMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * Check if the service is running in mock mode.
+     * 
+     * @return true if in mock mode, false otherwise
+     */
+    public boolean isMockMode() {
+        return mockMode;
     }
 }

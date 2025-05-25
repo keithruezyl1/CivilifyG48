@@ -34,19 +34,26 @@ public class FirestoreService {
     // Constructor with Firebase dependency to ensure correct initialization order
     public FirestoreService(FirebaseApp firebaseApp) {
         Firestore tempDb = null;
-        boolean useMockMode = false;
+        boolean tempMockMode = false; // Temporary variable
         
         try {
             tempDb = FirestoreClient.getFirestore(firebaseApp);
             logger.info("Successfully connected to Firestore");
+            // Set mockMode to false
+            tempMockMode = false;
+            logger.info("Firestore Service running in REAL mode (mockMode=false)");
         } catch (Exception e) {
             logger.error("Failed to connect to Firestore: {}", e.getMessage());
-            logger.warn("Running in mock mode - no actual database operations will be performed");
-            useMockMode = true;
+            // Set mockMode to false even on connection error
+            tempMockMode = false;
+            logger.info("Firestore Service running in REAL mode (mockMode=false)");
+            
+            // Rethrow the exception to fail fast if we can't connect to Firestore
+            throw new RuntimeException("Failed to connect to Firestore. Application cannot run without database connection.", e);
         }
         
         this.db = tempDb;
-        this.mockMode = useMockMode;
+        this.mockMode = tempMockMode; // Assign to final field once
     }
 
     // Method to store profile information in Firestore

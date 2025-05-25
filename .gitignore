@@ -4,6 +4,9 @@
 .env
 .env.*
 !.env.example
+# Explicit paths
+frontend/.env
+backend/.env
 
 # Firebase service account
 *firebase*.json
