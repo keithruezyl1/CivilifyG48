@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.capstone.civilify.DTO.AuthResponse;
-import com.capstone.civilify.DTO.ErrorResponse;
+import com.capstone.civilify.dto.AuthResponse;
+import com.capstone.civilify.dto.ErrorResponse;
 import com.capstone.civilify.service.CloudinaryService;
 import com.capstone.civilify.service.FirebaseAuthService;
 import com.capstone.civilify.service.FirestoreService;

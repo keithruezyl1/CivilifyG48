@@ -9,7 +9,7 @@ import ProfileAvatar from '../components/ProfileAvatar';
 import { fetchUserProfile, getUserData } from '../utils/auth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { auth, onAuthStateChanged } from '../firebase-config';
 
 // System prompts for different modes
 const GLI_SYSTEM_PROMPT = "You are Villy, a helpful assistant providing general information.";

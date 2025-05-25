@@ -1,0 +1,50 @@
+# Project-wide .gitignore file
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Firebase service account
+*firebase*.json
+*serviceAccount*.json
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+build
+
+# Dependencies
+node_modules/
+
+# IDE and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Maven/Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Windsurf rules
+.windsurfrules

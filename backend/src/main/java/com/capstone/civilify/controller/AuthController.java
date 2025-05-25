@@ -18,10 +18,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
-import com.capstone.civilify.DTO.AuthResponse;
-import com.capstone.civilify.DTO.ErrorResponse;
-import com.capstone.civilify.DTO.LoginRequest;
+import com.capstone.civilify.dto.AuthResponse;
+import com.capstone.civilify.dto.ErrorResponse;
+import com.capstone.civilify.dto.LoginRequest;
 import com.capstone.civilify.service.FirebaseAuthService;
 import com.capstone.civilify.service.FirestoreService;
 import com.capstone.civilify.util.JwtUtil;

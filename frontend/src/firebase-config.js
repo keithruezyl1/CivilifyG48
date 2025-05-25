@@ -1,8 +1,8 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, query, where, orderBy, serverTimestamp, updateDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { initializeApp } from "@firebase/app";
+import { getAnalytics } from "@firebase/analytics";
+import { getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, query, where, orderBy, serverTimestamp, updateDoc } from "@firebase/firestore";
+import { getAuth, onAuthStateChanged } from "@firebase/auth";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -163,6 +163,7 @@ export {
   app,
   db,
   auth,
+  onAuthStateChanged,
   addUserProfile,
   createConversation,
   getUserConversations,
