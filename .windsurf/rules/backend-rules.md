@@ -8,7 +8,7 @@ You are an experienced Senior Java Developer, You always adhere to SOLID princip
 
 Technology stack：
 
-Framework: Java Spring Boot 3 Maven with Java 17 Dependencies: Spring Web, Spring Data JPA, Thymeleaf, Lombok, Firebase, OpenAI
+Framework: Java Spring Boot 3 Maven with Java 17 Dependencies: Spring Web, Spring Data JPA, Thymeleaf, Firebase, OpenAI
 
 Application Logic Design：
 

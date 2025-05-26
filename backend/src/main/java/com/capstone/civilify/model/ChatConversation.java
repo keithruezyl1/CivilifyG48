@@ -10,14 +10,13 @@ public class ChatConversation {
     private Date createdAt;
     private Date updatedAt;
     private String status; // pending, in-progress, completed
-    private String assignedAdminId; // ID of admin assigned to this conversation
 
     // Default constructor for Firestore
     public ChatConversation() {}
 
     // Constructor with all fields
     public ChatConversation(String id, String userId, String userEmail, String title, 
-                           Date createdAt, Date updatedAt, String status, String assignedAdminId) {
+                           Date createdAt, Date updatedAt, String status) {
         this.id = id;
         this.userId = userId;
         this.userEmail = userEmail;
@@ -25,7 +24,6 @@ public class ChatConversation {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.status = status;
-        this.assignedAdminId = assignedAdminId;
     }
 
     // Getters and setters
@@ -77,8 +75,6 @@ public class ChatConversation {
         this.updatedAt = updatedAt;
     }
 
-
-
     public String getStatus() {
         return status;
     }
@@ -87,11 +83,5 @@ public class ChatConversation {
         this.status = status;
     }
 
-    public String getAssignedAdminId() {
-        return assignedAdminId;
-    }
 
-    public void setAssignedAdminId(String assignedAdminId) {
-        this.assignedAdminId = assignedAdminId;
-    }
 }

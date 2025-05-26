@@ -179,19 +179,6 @@ public class ChatController {
         }
     }
 
-    // Get all conversations for an admin
-    @GetMapping("/conversations/admin/{id}")
-    public ResponseEntity<?> getAdminConversations(@PathVariable String id) {
-        try {
-            List<ChatConversation> conversations = chatService.getAdminConversations(id);
-            return ResponseEntity.ok(conversations);
-        } catch (Exception e) {
-            logger.error("Error getting admin conversations", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error getting admin conversations: " + e.getMessage()));
-        }
-    }
-
     // Get conversations by status
     @GetMapping("/conversations/status/{status}")
     public ResponseEntity<?> getConversationsByStatus(@PathVariable String status) {

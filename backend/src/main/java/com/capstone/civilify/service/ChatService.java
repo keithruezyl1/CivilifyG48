@@ -35,8 +35,7 @@ public class ChatService {
             title,
             now,
             now,
-            "pending", // Initial status
-            null       // No admin assigned initially
+            "pending" // Initial status
         );
         
         // Save to Firestore
@@ -176,7 +175,6 @@ public class ChatService {
         if (document.exists()) {
             ChatConversation conversation = document.toObject(ChatConversation.class);
             if (conversation != null) {
-                conversation.setAssignedAdminId(adminId);
                 conversation.setStatus("in-progress");
                 conversation.setUpdatedAt(new Date());
                 
@@ -216,22 +214,6 @@ public class ChatService {
         return null;
     }
     
-    // Get all conversations for an admin
-    public List<ChatConversation> getAdminConversations(String adminId) throws ExecutionException, InterruptedException {
-        Firestore db = FirestoreClient.getFirestore();
-        
-        // Query conversations by admin ID
-        Query query = db.collection(CONVERSATIONS_COLLECTION)
-                        .whereEqualTo("assignedAdminId", adminId)
-                        .orderBy("updatedAt", Query.Direction.DESCENDING);
-        
-        ApiFuture<QuerySnapshot> future = query.get();
-        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-        
-        return documents.stream()
-                .map(doc -> doc.toObject(ChatConversation.class))
-                .collect(Collectors.toList());
-    }
     
     // Get conversations by location
     public List<ChatConversation> getConversationsByLocation(String location) throws ExecutionException, InterruptedException {
