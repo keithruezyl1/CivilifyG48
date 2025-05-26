@@ -357,8 +357,34 @@ const Chat = () => {
   //   setSuggestedRepliesEnabled(!suggestedRepliesEnabled);
   // };
 
-  const handleModeSelection = (mode) => {
+  const handleModeSelection = async (mode) => {
     setSelectedMode(mode);
+    
+    // Delete all previous conversations when starting a new chat to maintain confidentiality
+    if (userData && userData.email) {
+      try {
+        // Show loading state
+        setLoading(true);
+        
+        // Call the backend API to delete all previous conversations
+        const response = await axios.post(`${API_URL}/ai/delete-previous-conversations`, {
+          userEmail: userData.email
+        });
+        
+        console.log('Deleted previous conversations:', response.data);
+        
+        // Clear current conversation state
+        setCurrentConversationId(null);
+        setConversations([]);
+      } catch (error) {
+        console.error('Error deleting previous conversations:', error);
+        // We don't show an error to the user as this is a background operation
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    // Set initial AI message based on selected mode
     const aiMessage = {
       text:
         mode === 'A'
@@ -835,9 +861,34 @@ ${userMessage}` : userMessage;
     setShowLogoutConfirm(false);
   };
 
-  const handleNewChatConfirm = (confirm) => {
+  const handleNewChatConfirm = async (confirm) => {
     if (confirm) {
-      // Clear current conversation
+      try {
+        // Check if user is logged in and has an email
+        if (userData && userData.email) {
+          // Only show loading state if we're making the API call
+          setLoading(true);
+          
+          // Call API to delete previous conversations
+          const response = await axios.post(`${API_URL}/ai/delete-previous-conversations`, {
+            userEmail: userData.email
+          });
+          
+          // Log the result based on whether conversations existed
+          if (response.data.conversationsExisted) {
+            console.log(`Deleted ${response.data.deletedCount} previous conversations for user ${userData.email}`);
+          } else {
+            console.log('No previous conversations found to delete');
+          }
+        }
+      } catch (error) {
+        console.error('Error during conversation cleanup:', error);
+        // We don't show an error to the user as this is a background operation
+      } finally {
+        setLoading(false);
+      }
+      
+      // Clear current conversation state regardless of API results
       setCurrentConversationId(null);
       setMessages([]);
       setQuestion("");

@@ -27,6 +27,43 @@ public class OpenAIController {
     @Autowired
     private ChatService chatService;
     
+    // Endpoint to delete all previous conversations for a user
+    @PostMapping("/delete-previous-conversations")
+    public ResponseEntity<?> deleteAllPreviousConversations(@RequestBody Map<String, String> request) {
+        try {
+            String userEmail = request.get("userEmail");
+            
+            if (userEmail == null || userEmail.trim().isEmpty()) {
+                logger.warn("No user email provided for deleting conversations");
+                return ResponseEntity.badRequest().body(createErrorResponse("User email is required"));
+            }
+            
+            // First check if the user has any conversations to delete
+            boolean hasConversations = chatService.userHasConversations(userEmail);
+            
+            // Only proceed with deletion if conversations exist
+            int deletedCount = 0;
+            if (hasConversations) {
+                deletedCount = chatService.deleteAllUserConversations(userEmail);
+                logger.info("Deleted {} previous conversations for user: {}", deletedCount, userEmail);
+            } else {
+                logger.info("No conversations found to delete for user: {}", userEmail);
+            }
+            
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("success", true);
+            responseBody.put("message", deletedCount > 0 ? "Successfully deleted previous conversations" : "No conversations found to delete");
+            responseBody.put("deletedCount", deletedCount);
+            responseBody.put("conversationsExisted", hasConversations);
+            
+            return ResponseEntity.ok(responseBody);
+        } catch (Exception e) {
+            logger.error("Error deleting previous conversations", e);
+            return ResponseEntity.internalServerError()
+                    .body(createErrorResponse("Error deleting previous conversations: " + e.getMessage()));
+        }
+    }
+    
     @PostMapping("/chat")
     public ResponseEntity<?> generateChatResponse(@RequestBody Map<String, String> request) {
         try {

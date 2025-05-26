@@ -13,6 +13,7 @@ public class User implements UserDetails {
     private String email;
     private String username;
     private String profilePictureUrl;
+    private String role = "ROLE_USER"; // Default role
     // We don't store the password in our entity since Firebase handles this
     
     public User() {}
@@ -23,12 +24,20 @@ public class User implements UserDetails {
         this.username = username;
         this.profilePictureUrl = profilePictureUrl;
     }
+    
+    public User(String id, String email, String username, String profilePictureUrl, String role) {
+        this.id = id;
+        this.email = email;
+        this.username = username;
+        this.profilePictureUrl = profilePictureUrl;
+        this.role = role;
+    }
 
     // UserDetails implementation methods
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // For simple apps, you can use a single role
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        // Return the user's role
+        return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 
     @Override
@@ -90,5 +99,17 @@ public class User implements UserDetails {
 
     public void setProfilePictureUrl(String profilePictureUrl) {
         this.profilePictureUrl = profilePictureUrl;
+    }
+    
+    public String getRole() {
+        return role;
+    }
+    
+    public void setRole(String role) {
+        this.role = role;
+    }
+    
+    public boolean isAdmin() {
+        return "ROLE_ADMIN".equals(role);
     }
 }

@@ -97,6 +97,22 @@ public class FirebaseAuthService {
     }
     
     /**
+     * Deletes a user from Firebase Authentication.
+     *
+     * @param uid The UID of the user to delete.
+     * @throws FirebaseAuthException If an error occurs while deleting the user.
+     */
+    public void deleteUser(String uid) throws FirebaseAuthException {
+        try {
+            FirebaseAuth.getInstance().deleteUser(uid);
+            logger.info("Successfully deleted user: {}", uid);
+        } catch (FirebaseAuthException e) {
+            logger.error("Error deleting user in Firebase Authentication: {}", e.getMessage());
+            throw e;
+        }
+    }
+    
+    /**
      * Authenticates a user with email and password.
      * 
      * @param email    The user's email address.

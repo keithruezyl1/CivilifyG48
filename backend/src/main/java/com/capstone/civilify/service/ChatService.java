@@ -302,4 +302,43 @@ public class ChatService {
         logger.info("Deleted conversation {} with {} messages", conversationId, messages.size());
         return true;
     }
+    
+    // Check if a user has any conversations
+    public boolean userHasConversations(String userEmail) throws ExecutionException, InterruptedException {
+        Firestore db = FirestoreClient.getFirestore();
+        
+        // Query conversations by user email with a limit of 1 (just to check existence)
+        Query query = db.collection(CONVERSATIONS_COLLECTION)
+                        .whereEqualTo("userEmail", userEmail)
+                        .limit(1);
+        
+        ApiFuture<QuerySnapshot> future = query.get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        
+        // Return true if at least one conversation exists
+        return !documents.isEmpty();
+    }
+    
+    // Delete all previous conversations for a user by email
+    public int deleteAllUserConversations(String userEmail) throws ExecutionException, InterruptedException {
+        Firestore db = FirestoreClient.getFirestore();
+        
+        // Query all conversations for the user
+        Query query = db.collection(CONVERSATIONS_COLLECTION)
+                       .whereEqualTo("userEmail", userEmail);
+        
+        ApiFuture<QuerySnapshot> future = query.get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        
+        int deletedCount = 0;
+        for (QueryDocumentSnapshot document : documents) {
+            String conversationId = document.getId();
+            if (deleteConversation(conversationId)) {
+                deletedCount++;
+            }
+        }
+        
+        logger.info("Deleted {} conversations for user: {}", deletedCount, userEmail);
+        return deletedCount;
+    }
 }

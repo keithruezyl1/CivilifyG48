@@ -211,6 +211,16 @@ const SignIn = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      
+      // Check if user has admin role
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.role === 'ROLE_ADMIN') {
+        // Redirect to admin page if user is an admin
+        console.log('Admin user detected, redirecting to admin page');
+        navigate('/admin');
+        return;
+      }
+      
       // Check if there's a stored redirect path
       const redirectPath = localStorage.getItem('redirectAfterLogin');
       if (redirectPath) {

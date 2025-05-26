@@ -59,6 +59,12 @@ public class FirestoreService {
     // Method to store profile information in Firestore
     @SuppressWarnings("CallToPrintStackTrace")
     public void addUserProfile(String uid, String email, String username, String profilePictureUrl) {
+        addUserProfile(uid, email, username, profilePictureUrl, "ROLE_USER");
+    }
+    
+    // Method to store profile information in Firestore with role
+    @SuppressWarnings("CallToPrintStackTrace")
+    public void addUserProfile(String uid, String email, String username, String profilePictureUrl, String role) {
         if (mockMode) {
             logger.info("Mock mode: Not storing user profile for uid {}", uid);
             return;
@@ -68,6 +74,7 @@ public class FirestoreService {
         userProfile.put("email", email);
         userProfile.put("username", username);
         userProfile.put("profile_picture_url", profilePictureUrl);
+        userProfile.put("role", role);
     
         DocumentReference userRef = db.collection("users").document(uid);
         ApiFuture<WriteResult> future = userRef.set(userProfile);

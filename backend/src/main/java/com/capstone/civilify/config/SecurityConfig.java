@@ -57,6 +57,8 @@ public class SecurityConfig {
                 // Explicitly allow profile endpoints (they will be authenticated by JWT filter)
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/profile")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/upload-profile-picture")).permitAll()
+                // Admin-specific endpoints
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/admin/**")).hasAuthority("ROLE_ADMIN")
                 // Secure all other endpoints
                 .anyRequest().authenticated()
             )

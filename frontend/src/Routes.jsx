@@ -10,6 +10,7 @@ import CivilifyDocuments from "./pages/CivilifyDocuments"
 import EditProfile from "./pages/editprofile";
 import Profile from "./pages/profile";
 import DiagnosticsPage from "./pages/diagnostics";
+import Admin from "./pages/admin";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const AppRoutes = () => {
@@ -39,6 +40,11 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/diagnostics" element={<DiagnosticsPage />} />
+      <Route path="/admin" element={
+        <ProtectedRoute>
+          <Admin />
+        </ProtectedRoute>
+      } />
     </Routes>
   );
 };

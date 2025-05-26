@@ -179,6 +179,81 @@ Or for endpoints using the ApiResponse wrapper:
 }
 ```
 
+### OpenAI Controller (`/api/ai`)
+
+#### Generate Chat Response
+
+- **URL**: `/api/ai/chat`
+- **Method**: `POST`
+- **Auth Required**: No (but user identification is required in the request body)
+- **Description**: Generates an AI response based on user message and conversation history
+- **Request Body**:
+
+```json
+{
+  "message": "User's message text",
+  "mode": "A",  // A for General Legal Information, B for Case Plausibility Assessment
+  "conversationId": "existing-conversation-id",  // Optional, if continuing a conversation
+  "userId": "user-id",  // User's ID for tracking conversation
+  "userEmail": "user@example.com"  // User's email for tracking conversation
+}
+```
+
+- **Success Response**:
+
+```json
+{
+  "response": "AI generated response text",
+  "conversationId": "conversation-id",
+  "success": true,
+  "plausibilityLabel": "Highly Likely",  // Only for mode B
+  "plausibilitySummary": "Summary text",  // Only for mode B
+  "isReport": true  // Only for mode B
+}
+```
+
+- **Error Response**:
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+#### Delete Previous Conversations
+
+- **URL**: `/api/ai/delete-previous-conversations`
+- **Method**: `POST`
+- **Auth Required**: No (but user email is required in the request body)
+- **Description**: Deletes all previous conversations for a user to maintain confidentiality when starting a new chat
+- **Request Body**:
+
+```json
+{
+  "userEmail": "user@example.com"  // User's email to identify conversations to delete
+}
+```
+
+- **Success Response**:
+
+```json
+{
+  "success": true,
+  "message": "Successfully deleted all previous conversations",
+  "deletedCount": 5  // Number of conversations deleted
+}
+```
+
+- **Error Response**:
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
 ### User Controller (`/api/users`)
 
 #### Register User
@@ -588,6 +663,110 @@ Or for endpoints using the ApiResponse wrapper:
   },
   // more conversations
 ]
+```
+
+### Admin Controller (`/api/admin`)
+
+#### Get All Users
+
+- **URL**: `/api/admin/users`
+- **Method**: `GET`
+- **Auth Required**: Yes (ROLE_ADMIN required)
+- **Description**: Retrieves all users from the system
+
+- **Success Response**:
+
+```json
+{
+  "result": "SUCCESS",
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "userId": "USER_ID",
+      "email": "user@example.com",
+      "username": "Username",
+      "profilePictureUrl": "https://example.com/profile.jpg",
+      "role": "ROLE_USER"
+    },
+    // more users
+  ]
+}
+```
+
+#### Update User Role
+
+- **URL**: `/api/admin/users/{userId}/role`
+- **Method**: `PUT`
+- **Auth Required**: Yes (ROLE_ADMIN required)
+- **Description**: Updates a user's role
+- **URL Parameters**:
+  - `userId`: User ID
+- **Request Body**:
+
+```json
+{
+  "role": "ROLE_ADMIN"  // possible values: ROLE_USER, ROLE_ADMIN
+}
+```
+
+- **Success Response**:
+
+```json
+{
+  "result": "SUCCESS",
+  "message": "User role updated successfully",
+  "data": {
+    "userId": "USER_ID",
+    "email": "user@example.com",
+    "username": "Username",
+    "profilePictureUrl": "https://example.com/profile.jpg",
+    "role": "ROLE_ADMIN"
+  }
+}
+```
+
+#### Delete User
+
+- **URL**: `/api/admin/users/{userId}`
+- **Method**: `DELETE`
+- **Auth Required**: Yes (ROLE_ADMIN required)
+- **Description**: Deletes a user from the system
+- **URL Parameters**:
+  - `userId`: User ID
+
+- **Success Response**:
+
+```json
+{
+  "result": "SUCCESS",
+  "message": "User deleted successfully",
+  "data": null
+}
+```
+
+#### Setup Initial Admin
+
+- **URL**: `/api/admin/setup-initial-admin`
+- **Method**: `POST`
+- **Auth Required**: Yes
+- **Description**: Utility endpoint to set up an initial admin user
+- **Query Parameters**:
+  - `userEmail`: Email of the user to promote to admin
+
+- **Success Response**:
+
+```json
+{
+  "result": "SUCCESS",
+  "message": "Admin role assigned successfully",
+  "data": {
+    "userId": "USER_ID",
+    "email": "admin@example.com",
+    "username": "AdminUser",
+    "profilePictureUrl": "https://example.com/profile.jpg",
+    "role": "ROLE_ADMIN"
+  }
+}
 ```
 
 ## CORS Configuration
