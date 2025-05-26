@@ -3,12 +3,19 @@ package com.capstone.civilify.controller;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.security.Principal;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,6 +35,8 @@ import com.capstone.civilify.util.JwtUtil;
 @RequestMapping("/api/users")
 public class UserController {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+    
     private final FirestoreService firestoreService;
     private final FirebaseAuthService firebaseAuthService;
     private final CloudinaryService cloudinaryService;
@@ -140,7 +149,8 @@ public class UserController {
     public ResponseEntity<?> login(@RequestParam String email, @RequestParam String password) {
         try {
             // Authenticate user with Firebase
-            String firebaseToken = firebaseAuthService.signInWithEmailAndPassword(email, password);
+            // We need to call this method to verify credentials, but we're using JWT for subsequent auth
+            firebaseAuthService.signInWithEmailAndPassword(email, password);
             
             // Get user details from Firestore
             Map<String, Object> userDetails = firestoreService.getUserByEmail(email);
@@ -172,6 +182,168 @@ public class UserController {
         } catch (InterruptedException | ExecutionException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse("User not found"));
+        }
+    }
+
+    /**
+     * Retrieves the authenticated user's profile.
+     * 
+     * @param principal The authenticated user.
+     * @return Response entity containing the user's profile details.
+     */
+    @GetMapping("/profile")
+    public ResponseEntity<?> getUserProfile(Principal principal, HttpServletRequest request) {
+        try {
+            // Debug authentication issues
+            String authHeader = request.getHeader("Authorization");
+            boolean hasAuth = (authHeader != null && !authHeader.isEmpty());
+            
+            if (principal == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Authentication required. Has Auth Header: " + hasAuth));
+            }
+            
+            String email = principal.getName();
+            Map<String, Object> userData = firestoreService.getUserByEmail(email);
+            
+            if (userData == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("User profile not found"));
+            }
+            
+            return ResponseEntity.ok(userData);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("Error fetching user profile: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Updates the authenticated user's profile.
+     * 
+     * @param principal The authenticated user.
+     * @param profileData Map containing the profile data to update.
+     * @return Response entity containing the updated user profile.
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateUserProfile(Principal principal, @RequestBody Map<String, Object> profileData, HttpServletRequest request) {
+        try {
+            // Debug auth header and validate it safely
+            String authHeader = null;
+            boolean hasAuthHeader = false;
+            boolean isBearerToken = false;
+            
+            // Get header if request exists
+            if (request != null) {
+                authHeader = request.getHeader("Authorization");
+                // First check if header exists
+                if (authHeader != null) {
+                    hasAuthHeader = !authHeader.isEmpty();
+                    // Only check format if we have a non-empty header
+                    if (hasAuthHeader) {
+                        isBearerToken = authHeader.startsWith("Bearer ");
+                    }
+                }
+            }
+            
+            if (principal == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Authentication required: Header present: " + hasAuthHeader + ", Bearer format: " + isBearerToken));
+            }
+            
+            String email = principal.getName();
+            
+            // Validate the profile data
+            if (profileData.containsKey("email") && !email.equals(profileData.get("email"))) {
+                // Prevent changing email through this endpoint for security reasons
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ErrorResponse("Changing email is not allowed through this endpoint"));
+            }
+            
+            // Check if password is being updated
+            if (profileData.containsKey("password")) {
+                String newPassword = (String) profileData.get("password");
+                
+                // Update password in Firebase Authentication
+                boolean passwordUpdateSuccess = firebaseAuthService.updateUserPassword(email, newPassword);
+                
+                if (!passwordUpdateSuccess) {
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ErrorResponse("Failed to update password in authentication system"));
+                }
+                
+                logger.info("Password successfully updated in Firebase Authentication for user: {}", email);
+            }
+            
+            // Update the user profile in Firestore
+            Map<String, Object> updatedProfile = firestoreService.updateUserProfile(email, profileData);
+            
+            return ResponseEntity.ok(updatedProfile);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("Error updating user profile: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Uploads a profile picture for the authenticated user.
+     * 
+     * @param principal The authenticated user.
+     * @param profilePicture The profile picture file to upload.
+     * @return Response entity containing the URL of the uploaded profile picture.
+     */
+    @PostMapping(value = "/upload-profile-picture", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadProfilePicture(Principal principal, @RequestParam("profilePicture") MultipartFile profilePicture, HttpServletRequest request) {
+        try {
+            // Debug auth header to troubleshoot
+            // Get auth header and validate it safely
+            String authHeader = null; // Initialize to null first
+            boolean hasAuthHeader = false;
+            boolean isBearerToken = false;
+            
+            // Get header if request exists
+            if (request != null) {
+                authHeader = request.getHeader("Authorization");
+                // First check if header exists
+                if (authHeader != null) {
+                    hasAuthHeader = !authHeader.isEmpty();
+                    // Only check format if we have a non-empty header
+                    if (hasAuthHeader) {
+                        isBearerToken = authHeader.startsWith("Bearer ");
+                    }
+                }
+            }
+            
+            if (principal == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Authentication required: Header present: " + hasAuthHeader + ", Bearer format: " + isBearerToken));
+            }
+            
+            if (profilePicture == null || profilePicture.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("No profile picture provided"));
+            }
+            
+            String email = principal.getName();
+            
+            // Upload the profile picture to Cloudinary
+            String profilePictureUrl = cloudinaryService.uploadImage(profilePicture);
+            
+            // Update the user's profile with the new profile picture URL
+            Map<String, Object> profileUpdate = new HashMap<>();
+            profileUpdate.put("profile_picture_url", profilePictureUrl);
+            
+            // Update the profile and log the result
+            firestoreService.updateUserProfile(email, profileUpdate);
+            
+            // Return just the profile picture URL in the response
+            Map<String, String> response = new HashMap<>();
+            response.put("profile_picture_url", profilePictureUrl);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("Error uploading profile picture: " + e.getMessage()));
         }
     }
 }

@@ -1,5 +1,5 @@
 ---
-trigger: manual
+trigger: always_on
 ---
 
 AI Persona：
@@ -87,3 +87,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ApiResponse.error(400, ex.getMessage()), HttpStatus.BAD_REQUEST);
     }
 }
+
+API_DOCUMENTATION
+- If there are changes in the backend related to the api, ensure proper documentation of it.

@@ -9,6 +9,7 @@ import ResetPassword from "./pages/resetpassword";
 import CivilifyDocuments from "./pages/CivilifyDocuments"
 import EditProfile from "./pages/editprofile";
 import Profile from "./pages/profile";
+import DiagnosticsPage from "./pages/diagnostics";
 
 const AppRoutes = () => {
   return (
@@ -24,6 +25,7 @@ const AppRoutes = () => {
       <Route path="/civilify-documents" element={<CivilifyDocuments />} />
       <Route path="/edit-profile" element={<EditProfile />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/diagnostics" element={<DiagnosticsPage />} />
 
     </Routes>
   );

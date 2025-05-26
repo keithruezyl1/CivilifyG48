@@ -30,14 +30,21 @@ const formatAIResponse = (text) => {
 };
 
 // Function to fetch response from GPT-3.5 Turbo API via backend
-const fetchGPTResponse = async (userMessage, mode = 'A', history = []) => {
+const fetchGPTResponse = async (userMessage, mode = 'A', conversationId = null, userId = null, userEmail = null) => {
   console.log('Fetching AI response for:', userMessage);
+  console.log('Conversation ID:', conversationId);
   
   try {
-    // Call the backend API endpoint
+    // Get user data for the request
+    const user = getUserData();
+    
+    // Call the backend API endpoint with conversation context
     const response = await axios.post(`${API_URL}/ai/chat`, {
       message: userMessage,
-      mode: mode
+      mode: mode,
+      conversationId: conversationId,
+      userId: userId || (user ? user.uid : null),
+      userEmail: userEmail || (user ? user.email : null)
     });
     
     console.log('AI response received:', response.data);
@@ -46,12 +53,14 @@ const fetchGPTResponse = async (userMessage, mode = 'A', history = []) => {
       return {
         success: true,
         response: response.data.response,
+        conversationId: response.data.conversationId // Get the conversation ID from the response
       };
     } else {
       console.error('Error in AI response:', response.data);
       return {
         success: false,
         response: 'Sorry, I encountered an error processing your request. Please try again later.',
+        conversationId: conversationId
       };
     }
   } catch (error) {
@@ -247,12 +256,31 @@ const Chat = () => {
     } else if (selectedMode === 'A' && fitsGeneralInfoMode(userMessage)) {
       prependSystem = "The user's input fits the current mode (General Legal Information). Please confirm and continue. Do not offer a mode switch. Do not repeat this system message in your reply.";
     }
+    
+    // Prepare to send the request with conversation context
     let aiResponse;
-    if (prependSystem) {
-      aiResponse = await fetchGPTResponse(`${prependSystem}\n\n${userMessage}`, selectedMode);
+    const messageToSend = prependSystem ? `${prependSystem}
+
+${userMessage}` : userMessage;
+    
+    if (userData) {
+      aiResponse = await fetchGPTResponse(
+        messageToSend, 
+        selectedMode, 
+        currentConversationId, 
+        userData.uid, 
+        userData.email
+      );
     } else {
-      aiResponse = await fetchGPTResponse(userMessage, selectedMode);
+      aiResponse = await fetchGPTResponse(messageToSend, selectedMode);
     }
+    
+    // Update conversation ID if it was created by the backend
+    if (aiResponse.conversationId && !currentConversationId) {
+      setCurrentConversationId(aiResponse.conversationId);
+      console.log('New conversation created with ID:', aiResponse.conversationId);
+    }
+    
     // Filter out system echo and mode switch prompts if already in correct mode
     return {
       ...aiResponse,
@@ -442,6 +470,33 @@ const Chat = () => {
     }
   };
 
+  // Function to delete a conversation
+  const deleteConversation = async (conversationId) => {
+    try {
+      // Confirm deletion with the user
+      if (!window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+        return;
+      }
+      
+      // Delete the conversation from backend
+      await axios.delete(`${API_URL}/chat/conversations/${conversationId}`);
+      
+      // Remove from local state
+      setConversations(conversations.filter(conv => conv.id !== conversationId));
+      
+      // If the deleted conversation was the current one, reset current conversation
+      if (currentConversationId === conversationId) {
+        setCurrentConversationId(null);
+        setMessages([]);
+      }
+      
+      toast.success('Conversation deleted successfully');
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      toast.error('Failed to delete conversation');
+    }
+  };
+
   // Function to handle conversation selection
   const handleConversationSelect = (conversationId) => {
     setCurrentConversationId(conversationId);
@@ -452,79 +507,125 @@ const Chat = () => {
       setShowConversationList(false);
     }
   };
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Prevent sending empty, whitespace, or malformed messages (e.g., only brackets)
-    const cleaned = question.trim();
-    if (
-      cleaned &&
-      !/^[\[\]{}()]+$/.test(cleaned) && // not just brackets
-      /[a-zA-Z0-9]/.test(cleaned) // must contain at least one alphanumeric
-    ) {
-      const timestamp = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
+    if (!question || question.trim() === '' || question.trim() === '{}' || question.trim() === '[]') {
+      return;
+    }
+
+    // If mode is not selected, show mode selection instead
+    if (!selectedMode) {
+      setShowDropdown(true);
+      return;
+    }
+
+    // Add user message to the chat
+    const userMessage = {
+      text: question,
+      isUser: true,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+    };
+
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setQuestion(''); // Clear input field
+    setIsTyping(true); // Show typing indicator
+
+    // Reset input height to default
+    if (inputRef.current) {
+      inputRef.current.style.height = '40px';
+    }
+
+    // Auto-scroll to bottom of messages
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth',
       });
-      const userMessage = { text: question, isUser: true, timestamp };
-      setMessages([...messages, userMessage]);
-      setQuestion("");
-      // Reset textarea height after sending
-      if (inputRef.current) {
-        inputRef.current.style.height = '40px';
-      }
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTo({
-          top: chatContainerRef.current.scrollHeight,
-          behavior: "smooth",
-        });
+    }
+
+    // Generate dynamic suggestions if input is vague
+    if (isVague(question)) {
+      setDynamicSuggestions(getRandomGenericSuggestions());
+    } else {
+      setDynamicSuggestions([]);
+    }
+
+    try {
+      // Save user message to conversation if user is logged in
+      if (userData && userData.email) {
+        await saveMessageToConversation(question, true);
       }
 
-      // Save user message to conversation
-      await saveMessageToConversation(question, true);
+      // Call the backend API for GPT response with conversation context
+      const result = await fetchGPTWithModeFit(question);
 
-      // Show typing animation
-      setIsTyping(true);
-      
-      // Scroll to bottom to show typing indicator
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTo({
-            top: chatContainerRef.current.scrollHeight,
-            behavior: "smooth",
-          });
+      // Update conversation ID if a new one was created
+      if (result.conversationId && result.conversationId !== currentConversationId) {
+        setCurrentConversationId(result.conversationId);
+        console.log('New conversation created with ID:', result.conversationId);
+      }
+
+      // Add AI response to chat
+      if (result.success) {
+        const aiMessage = {
+          text: result.response,
+          isUser: false,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+        };
+
+        setMessages([...newMessages, aiMessage]);
+
+        // Save AI response to conversation if user is logged in
+        if (userData && userData.email) {
+          await saveMessageToConversation(result.response, false);
         }
-      }, 100);
 
-      const aiResponse = await fetchGPTWithModeFit(question);
-      
-      // Hide typing animation
-      setIsTyping(false);
-      
-      const aiMessage = {
-        text: filterSystemEchoAndModeSwitch(aiResponse.response, selectedMode),
+        // Auto-scroll to bottom of messages
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTo({
+              top: chatContainerRef.current.scrollHeight,
+              behavior: 'smooth',
+            });
+          }
+        }, 100);
+      } else {
+        // Handle error
+        const errorMessage = {
+          text: result.response || 'An error occurred. Please try again.',
+          isUser: false,
+          isError: true,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+        };
+        setMessages([...newMessages, errorMessage]);
+      }
+    } catch (error) {
+      console.error('Error in chat response:', error);
+      // Add error message to chat
+      const errorMessage = {
+        text: 'An error occurred. Please try again later.',
         isUser: false,
+        isError: true,
         timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
+          hour: '2-digit',
+          minute: '2-digit'
         }),
-        isError: !aiResponse.success,
       };
-      setMessages((prevMessages) => {
-        const newMessages = [...prevMessages, aiMessage];
-        console.log("Updated Messages:", newMessages);
-        return newMessages;
-      });
-
-      // Save AI response to conversation
-      await saveMessageToConversation(aiResponse.response, false);
-
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop =
-            chatContainerRef.current.scrollHeight;
-        }
-      }, 0);
+      setMessages([...newMessages, errorMessage]);
+    } finally {
+      setIsTyping(false); // Hide typing indicator
     }
   };
 

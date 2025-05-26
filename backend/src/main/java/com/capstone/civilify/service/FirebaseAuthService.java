@@ -398,4 +398,33 @@ public class FirebaseAuthService {
     public boolean isMockMode() {
         return mockMode;
     }
+    
+    /**
+     * Updates a user's password in Firebase Authentication.
+     *
+     * @param email    The user's email address
+     * @param newPassword The new password
+     * @return true if the password was updated successfully, false otherwise
+     */
+    public boolean updateUserPassword(String email, String newPassword) {
+        try {
+            logger.info("Attempting to update password for user: {}", email);
+            
+            // First, get the user by email to get their UID
+            UserRecord userRecord = FirebaseAuth.getInstance().getUserByEmail(email);
+            String uid = userRecord.getUid();
+            
+            // Update the user's password
+            UserRecord.UpdateRequest request = new UserRecord.UpdateRequest(uid)
+                    .setPassword(newPassword);
+            
+            FirebaseAuth.getInstance().updateUser(request);
+            
+            logger.info("Password updated successfully for user: {}", email);
+            return true;
+        } catch (FirebaseAuthException e) {
+            logger.error("Error updating user password in Firebase Authentication: {}", e.getMessage(), e);
+            return false;
+        }
+    }
 }

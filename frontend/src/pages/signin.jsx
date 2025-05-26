@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logoIconOrange from "../assets/images/logoiconorange.png";
-import { API_URL } from '../utils/auth';
+import { API_URL, clearAuthData } from '../utils/auth';
 import LoadingScreen from './LoadingScreen';
 
 const SignIn = () => {
@@ -148,9 +148,19 @@ const SignIn = () => {
       
       console.log('Authentication successful:', data);
       
-      // Store the token in localStorage or context
+      // Clear any existing auth data to prevent conflicts
+      clearAuthData();
+      
+      // Store the token and expiration info in localStorage
       if (data.token) {
         localStorage.setItem('authToken', data.token);
+        
+        // Store token expiration information if available
+        if (data.expiresAt) {
+          localStorage.setItem('tokenExpires', new Date(data.expiresAt).getTime().toString());
+          console.log('Auth token stored with expiration:', new Date(data.expiresAt));
+        }
+        
         console.log('Auth token stored in localStorage');
       } else {
         console.warn('No token received from server');
@@ -271,6 +281,9 @@ const SignIn = () => {
   const handleGoogleSignIn = (response) => {
     setIsLoading(true);
     try {
+      // Clear any existing auth data to prevent conflicts
+      clearAuthData();
+      
       const { credential } = response;
       let payload;
       
@@ -315,9 +328,15 @@ const SignIn = () => {
           console.log('Updated user data from backend:', data);
         }
         
-        // Store the token
+        // Store the token and expiration data
         if (data && data.token) {
           localStorage.setItem('authToken', data.token);
+          
+          // Store token expiration information if available
+          if (data.expiresAt) {
+            localStorage.setItem('tokenExpires', new Date(data.expiresAt).getTime().toString());
+            console.log('Auth token stored with expiration:', new Date(data.expiresAt));
+          }
         }
         
         showSuccessToast('Successfully signed in with Google!');

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { getUserData, updateUserProfile, uploadProfilePicture } from '../utils/auth';
+import { getUserData, updateUserProfile, uploadProfilePicture, validateAuthToken } from '../utils/auth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -82,13 +82,29 @@ const EditProfile = () => {
       
       try {
         setIsLoading(true);
+        
+        // Validate auth token before making request
+        const tokenStatus = validateAuthToken();
+        if (!tokenStatus.valid) {
+          toast.error(`${tokenStatus.message}. Please sign in again.`);
+          setTimeout(() => navigate('/signin'), 2000);
+          return;
+        }
+        
         // Upload to Cloudinary via backend
         const profilePictureUrl = await uploadProfilePicture(file);
         toast.success('Profile picture uploaded successfully');
         setAvatarPreview(profilePictureUrl);
       } catch (error) {
         console.error('Error uploading profile picture:', error);
-        toast.error('Failed to upload profile picture');
+        
+        // Handle specific error cases
+        if (error.response && error.response.status === 403) {
+          toast.error('Session expired. Please sign in again.');
+          setTimeout(() => navigate('/signin'), 2000);
+        } else {
+          toast.error('Failed to upload profile picture. Please try again.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -107,6 +123,14 @@ const EditProfile = () => {
     try {
       setIsLoading(true);
       
+      // Validate auth token before making request
+      const tokenStatus = validateAuthToken();
+      if (!tokenStatus.valid) {
+        toast.error(`${tokenStatus.message}. Please sign in again.`);
+        setTimeout(() => navigate('/signin'), 2000);
+        return;
+      }
+      
       // Prepare data for update
       const updateData = {
         username: formData.username,
@@ -122,10 +146,17 @@ const EditProfile = () => {
       await updateUserProfile(updateData);
       
       toast.success('Profile updated successfully');
-      navigate('/profile');
+      setTimeout(() => navigate('/profile'), 1000);
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      
+      // Handle specific error cases
+      if (error.response && error.response.status === 403) {
+        toast.error('Session expired. Please sign in again.');
+        setTimeout(() => navigate('/signin'), 2000);
+      } else {
+        toast.error('Failed to update profile. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

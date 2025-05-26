@@ -16,6 +16,10 @@ Most endpoints require authentication using JWT (JSON Web Token).
 
 The token must be included in the `Authorization` header for protected endpoints.
 
+**Token Lifetime**: Tokens are valid for 7 days by default.
+
+**Authentication Response**: When authenticating, the API returns the token, expiration date, and authentication status along with user data.
+
 ## Error Responses
 
 Error responses generally follow this format:
@@ -38,6 +42,45 @@ Or for endpoints using the ApiResponse wrapper:
 ```
 
 ## API Endpoints
+
+### Health Check Endpoint (`/health`)
+
+#### Check Backend Health
+
+- **URL**: `/health`
+- **Method**: `GET`
+- **Auth Required**: No
+- **Description**: Checks if the backend is running and reachable
+
+- **Success Response**:
+  - **Code**: 200 OK
+  - **Content**: `{ "status": "UP", "timestamp": "2023-05-26T11:35:36Z" }`
+
+### Debug Controller (`/api/debug`)
+
+#### Request Information
+
+- **URL**: `/api/debug/request-info`
+- **Method**: `GET`
+- **Auth Required**: No (but will show authentication info if provided)
+- **Description**: Returns detailed information about the HTTP request, authentication status, and server configuration
+
+- **Success Response**:
+  - **Code**: 200 OK
+  - **Content**: JSON object with headers, authentication status, and server configuration
+
+#### Validate Token
+
+- **URL**: `/api/debug/validate-token`
+- **Method**: `GET`
+- **Auth Required**: No
+- **Parameters**:
+  - `token`: JWT token to validate (without "Bearer " prefix)
+- **Description**: Validates a JWT token and returns its details
+
+- **Success Response**:
+  - **Code**: 200 OK
+  - **Content**: JSON object with token validity information
 
 ### Auth Controller (`/api/auth`)
 

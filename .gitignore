@@ -1,12 +1,9 @@
 # Project-wide .gitignore file
 
 # Environment files
-.env
-.env.*
-!.env.example
-# Explicit paths
-frontend/.env
-backend/.env
+#.env
+#.env.*
+#!.env.example
 
 # Firebase service account
 *firebase*.json

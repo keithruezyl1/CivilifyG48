@@ -283,4 +283,41 @@ public class ChatService {
                 .map(doc -> doc.toObject(ChatConversation.class))
                 .collect(Collectors.toList());
     }
+    
+    // Delete a conversation and all its messages
+    public boolean deleteConversation(String conversationId) throws ExecutionException, InterruptedException {
+        Firestore db = FirestoreClient.getFirestore();
+        
+        // First check if the conversation exists
+        DocumentReference convRef = db.collection(CONVERSATIONS_COLLECTION).document(conversationId);
+        ApiFuture<DocumentSnapshot> convFuture = convRef.get();
+        DocumentSnapshot convDoc = convFuture.get();
+        
+        if (!convDoc.exists()) {
+            logger.warn("Conversation not found for deletion: {}", conversationId);
+            return false;
+        }
+        
+        // Delete all messages in the conversation
+        CollectionReference messagesRef = convRef.collection("messages");
+        ApiFuture<QuerySnapshot> messagesFuture = messagesRef.get();
+        List<QueryDocumentSnapshot> messages = messagesFuture.get().getDocuments();
+        
+        // Batch delete for better performance
+        WriteBatch batch = db.batch();
+        
+        for (QueryDocumentSnapshot message : messages) {
+            batch.delete(message.getReference());
+        }
+        
+        // Delete the conversation document itself
+        batch.delete(convRef);
+        
+        // Commit the batch
+        ApiFuture<List<WriteResult>> result = batch.commit();
+        result.get(); // Wait for operation to complete
+        
+        logger.info("Deleted conversation {} with {} messages", conversationId, messages.size());
+        return true;
+    }
 }

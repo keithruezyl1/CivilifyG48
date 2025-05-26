@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { getUserData, fetchUserProfile } from '../utils/auth';
+import { getUserData, fetchUserProfile, clearAuthData } from '../utils/auth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -23,34 +23,32 @@ const Profile = () => {
         const userData = await fetchUserProfile();
         
         if (userData) {
+          // Successfully fetched profile from API
           setProfile({
             username: userData.username || '',
             email: userData.email || '',
             profile_picture_url: userData.profile_picture_url || null,
           });
         } else {
-          // Fallback to localStorage if API request fails
-          const localUserData = getUserData();
-          if (localUserData) {
-            setProfile({
-              username: localUserData.username || '',
-              email: localUserData.email || '',
-              profile_picture_url: localUserData.profile_picture_url || null,
-            });
-          }
+          // No userData means authentication failed
+          console.error('Authentication failed, redirecting to signin');
+          toast.error('Please sign in to view your profile');
+          // Redirect to signin after a short delay
+          setTimeout(() => navigate('/#/signin'), 1500);
+          return; // Exit early
         }
       } catch (error) {
         console.error('Error loading profile data:', error);
-        toast.error('Failed to load profile data');
         
-        // Fallback to localStorage if API request fails
-        const localUserData = getUserData();
-        if (localUserData) {
-          setProfile({
-            username: localUserData.username || '',
-            email: localUserData.email || '',
-            profile_picture_url: localUserData.profile_picture_url || null,
-          });
+        // Check if this is an authentication error (401/403)
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          toast.error('Authentication failed. Please sign in again.');
+          // Clear all auth data
+          clearAuthData();
+          // Redirect to signin after a short delay
+          setTimeout(() => navigate('/#/signin'), 1500);
+        } else {
+          toast.error('Failed to load profile data');
         }
       } finally {
         setIsLoading(false);

@@ -1,5 +1,6 @@
 package com.capstone.civilify.controller;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,12 +59,18 @@ public class AuthController {
             logger.info("Authenticating with Firebase...");
             logger.debug("Password length: {}", loginRequest.getPassword().length());
             
+            // Authenticate with Firebase and log the token (shortened for security)
             String firebaseToken = firebaseAuthService.signInWithEmailAndPassword(
                 loginRequest.getEmail(), 
                 loginRequest.getPassword()
             );
             
-            logger.info("Firebase authentication successful, token received");
+            // Log that we received a token (but don't log the actual token for security)
+            if (firebaseToken != null && !firebaseToken.isEmpty()) {
+                logger.info("Firebase authentication successful, token received (length: {})", firebaseToken.length());
+            } else {
+                logger.warn("Firebase authentication returned null or empty token");
+            }
             
             // Get user details from Firestore
             logger.info("Fetching user details from Firestore...");
@@ -81,9 +88,12 @@ public class AuthController {
             logger.info("Generating JWT token...");
             String jwtToken = jwtUtil.generateToken(loginRequest.getEmail());
             
-            // Create response with JWT token and user details
+            // Get token expiration date
+            Date expiresAt = jwtUtil.getTokenExpirationDate();
+            
+            // Create response with JWT token, user details, and expiration date
             logger.info("Login successful for user: {}", loginRequest.getEmail());
-            return ResponseEntity.ok(new AuthResponse(jwtToken, userDetails));
+            return ResponseEntity.ok(new AuthResponse(jwtToken, userDetails, expiresAt, null));
         } catch (Exception e) {
             logger.error("Authentication failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -175,6 +185,9 @@ public class AuthController {
             // Generate JWT token for our application
             String jwtToken = jwtUtil.generateToken(email);
             
+            // Get token expiration date
+            Date expiresAt = jwtUtil.getTokenExpirationDate();
+            
             // Get or create user profile in Firestore
             Map<String, Object> userProfile = firestoreService.getUserByEmail(email);
             if (userProfile == null || userProfile.isEmpty()) {
@@ -190,8 +203,8 @@ public class AuthController {
                 userProfile = newUserProfile;
             }
             
-            // Create response with JWT token and user details
-            return ResponseEntity.ok(new AuthResponse(jwtToken, userProfile));
+            // Create response with JWT token, user details, and expiration date
+            return ResponseEntity.ok(new AuthResponse(jwtToken, userProfile, expiresAt, null));
         } catch (Exception e) {
             logger.error("Error authenticating with Google: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -23,7 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
-.env.temp
+#.env
+#.env.temp
 # Allow .env.example
 # .env.example

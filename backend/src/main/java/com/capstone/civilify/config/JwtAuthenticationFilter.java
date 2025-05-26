@@ -33,7 +33,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals("/api/auth/forgot-password") || path.equals("/api/auth/test");
+        // Exclude authentication for login and registration endpoints
+        return path.startsWith("/api/auth/") || 
+               path.equals("/api/users/register") || 
+               path.startsWith("/api/chat/") || 
+               path.startsWith("/api/ai/") || 
+               path.equals("/health");
     }
 
     @Override
@@ -63,6 +68,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             logger.debug("JWT token found in request");
 
             try {
+                // Log token first few characters for debugging
+                logger.debug("Processing JWT token (first 15 chars): {}...", jwt.substring(0, Math.min(15, jwt.length())));
+                
                 userEmail = jwtUtil.extractUsername(jwt);
                 logger.debug("Extracted email from token: {}", userEmail);
 

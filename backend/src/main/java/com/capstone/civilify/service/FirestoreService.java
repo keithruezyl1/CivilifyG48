@@ -168,4 +168,73 @@ public class FirestoreService {
             return new HashMap<>();
         }
     }
+    
+    /**
+     * Updates a user's profile in Firestore based on email
+     * 
+     * @param email The email address of the user to update
+     * @param profileData Map containing the profile data to update
+     * @return A Map containing the updated user profile data
+     * @throws ExecutionException If the Firestore operation fails
+     * @throws InterruptedException If the operation is interrupted
+     */
+    public Map<String, Object> updateUserProfile(String email, Map<String, Object> profileData) throws ExecutionException, InterruptedException {
+        if (mockMode) {
+            logger.info("Mock mode: Not updating user profile for email {}", email);
+            
+            // Return mock updated user data
+            Map<String, Object> mockUser = new HashMap<>();
+            mockUser.put("email", email);
+            mockUser.putAll(profileData); // Add the profile data to mock response
+            mockUser.put("uid", "mock-uid-" + email.hashCode());
+            return mockUser;
+        }
+        
+        try {
+            // First, find the user document by email
+            ApiFuture<QuerySnapshot> query = db.collection("users")
+                    .whereEqualTo("email", email)
+                    .limit(1)
+                    .get();
+            
+            List<QueryDocumentSnapshot> documents = query.get().getDocuments();
+            
+            if (documents.isEmpty()) {
+                logger.warn("No user found with email: {}", email);
+                throw new RuntimeException("User not found");
+            }
+            
+            // Get the first matching document
+            QueryDocumentSnapshot document = documents.get(0);
+            String uid = document.getId();
+            
+            // Update the user document
+            DocumentReference userRef = db.collection("users").document(uid);
+            
+            // Remove email from profileData if present to prevent email changes
+            profileData.remove("email");
+            
+            // Update the document
+            ApiFuture<WriteResult> writeResult = userRef.update(profileData);
+            writeResult.get(); // Wait for the update to complete
+            
+            // Fetch the updated document
+            ApiFuture<com.google.cloud.firestore.DocumentSnapshot> updatedDocFuture = userRef.get();
+            com.google.cloud.firestore.DocumentSnapshot updatedDoc = updatedDocFuture.get();
+            
+            if (updatedDoc.exists()) {
+                Map<String, Object> updatedData = updatedDoc.getData();
+                if (updatedData != null) {
+                    // Add the UID to the data
+                    updatedData.put("uid", uid);
+                    return updatedData;
+                }
+            }
+            
+            throw new RuntimeException("Failed to retrieve updated user profile");
+        } catch (Exception e) {
+            logger.error("Error updating user profile for email {}: {}", email, e.getMessage());
+            throw e;
+        }
+    }
 }

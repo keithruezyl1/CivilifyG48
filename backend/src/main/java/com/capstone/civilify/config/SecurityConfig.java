@@ -3,6 +3,7 @@ package com.capstone.civilify.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,7 +16,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -23,6 +23,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+    
+    @Autowired
+    private Environment environment;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
@@ -38,13 +41,22 @@ public class SecurityConfig {
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/test")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/register")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/login")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/users/email/**")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/users/*/profile-picture")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/health")).permitAll()
+                // Allow debug API endpoints
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/debug/**")).permitAll()
+                // Allow CORS preflight requests
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/**")).permitAll()
                 // Allow chat API endpoints
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/chat/**")).permitAll()
                 // Allow AI API endpoints
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/ai/**")).permitAll()
                 // For H2 console access (for development only)
                 .requestMatchers(mvcMatcherBuilder.pattern("/h2-console/**")).permitAll()
+                // Explicitly allow profile endpoints (they will be authenticated by JWT filter)
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/users/profile")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/users/upload-profile-picture")).permitAll()
                 // Secure all other endpoints
                 .anyRequest().authenticated()
             )
@@ -61,10 +73,47 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:3000"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        
+        // Get allowed origins from application properties (set in application.properties)
+        String[] allowedOriginsArray = environment.getProperty("cors.allowed-origins", String[].class);
+        if (allowedOriginsArray != null && allowedOriginsArray.length > 0) {
+            configuration.setAllowedOrigins(Arrays.asList(allowedOriginsArray));
+        } else {
+            // Fallback to default values
+            configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000", 
+                "http://localhost:5173", 
+                "http://127.0.0.1:5173", 
+                "http://127.0.0.1:3000"
+            ));
+        }
+        
+        // Get allowed methods from application properties
+        String[] allowedMethodsArray = environment.getProperty("cors.allowed-methods", String[].class);
+        if (allowedMethodsArray != null && allowedMethodsArray.length > 0) {
+            configuration.setAllowedMethods(Arrays.asList(allowedMethodsArray));
+        } else {
+            // Fallback to default values
+            configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        }
+        
+        // Set allowed headers - include all needed headers including custom debug headers
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Allow credentials (important for cookies and Authorization headers)
         configuration.setAllowCredentials(true);
+        
+        // Add exposed headers for debugging
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "X-Auth-Token", "X-Debug-Info"));
+        
+        // Set max age for preflight requests (1 hour)
+        configuration.setMaxAge(3600L);
+        
+        // Set exposed headers - explicitly expose the Authorization header
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        
+        // Set max age for CORS preflight requests (in seconds) - 1 hour
+        configuration.setMaxAge(3600L);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

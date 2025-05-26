@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
+// ExecutionException import removed as it's not being used
 
 @RestController
 @RequestMapping("/api/chat")
@@ -205,10 +205,32 @@ public class ChatController {
         }
     }
 
+    // Delete a conversation and all its messages
+    @DeleteMapping("/conversations/{id}")
+    public ResponseEntity<?> deleteConversation(@PathVariable String id) {
+        try {
+            logger.info("Deleting conversation: {}", id);
+            boolean deleted = chatService.deleteConversation(id);
+            
+            if (!deleted) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Conversation deleted successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error deleting conversation", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("Error deleting conversation: " + e.getMessage()));
+        }
+    }
+    
     // Helper method to create error response
-    private Map<String, String> createErrorResponse(String message) {
-        Map<String, String> response = new HashMap<>();
-        response.put("error", message);
-        return response;
+    private Map<String, Object> createErrorResponse(String message) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", message);
+        return errorResponse;
     }
 }
