@@ -91,6 +91,12 @@ public class AuthController {
             // Get token expiration date
             Date expiresAt = jwtUtil.getTokenExpirationDate();
             
+            // Remove password from user details for security
+            if (userDetails.containsKey("password")) {
+                userDetails.remove("password");
+                logger.info("Password removed from user details for security");
+            }
+            
             // Create response with JWT token, user details, and expiration date
             logger.info("Login successful for user: {}", loginRequest.getEmail());
             return ResponseEntity.ok(new AuthResponse(jwtToken, userDetails, expiresAt, null));
@@ -201,6 +207,12 @@ public class AuthController {
                 firestoreService.addUserProfile(uid, email, name, pictureUrl);
                 
                 userProfile = newUserProfile;
+            }
+            
+            // Remove password from user profile for security
+            if (userProfile.containsKey("password")) {
+                userProfile.remove("password");
+                logger.info("Password removed from user profile for security");
             }
             
             // Create response with JWT token, user details, and expiration date

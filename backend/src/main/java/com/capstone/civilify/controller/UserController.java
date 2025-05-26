@@ -155,6 +155,12 @@ public class UserController {
             // Get user details from Firestore
             Map<String, Object> userDetails = firestoreService.getUserByEmail(email);
             
+            // Remove password from user details for security
+            if (userDetails.containsKey("password")) {
+                userDetails.remove("password");
+                logger.info("Password removed from user details for security");
+            }
+            
             // Generate JWT token
             String jwtToken = jwtUtil.generateToken(email);
             
@@ -178,6 +184,13 @@ public class UserController {
     public ResponseEntity<?> getUserByEmail(@PathVariable String email) {
         try {
             Map<String, Object> userData = firestoreService.getUserByEmail(email);
+            
+            // Remove password from user data for security
+            if (userData.containsKey("password")) {
+                userData.remove("password");
+                logger.info("Password removed from user profile data for security");
+            }
+            
             return ResponseEntity.ok(userData);
         } catch (InterruptedException | ExecutionException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -209,6 +222,12 @@ public class UserController {
             if (userData == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse("User profile not found"));
+            }
+            
+            // Remove password from user data for security
+            if (userData.containsKey("password")) {
+                userData.remove("password");
+                logger.info("Password removed from user profile data for security");
             }
             
             return ResponseEntity.ok(userData);
@@ -277,6 +296,9 @@ public class UserController {
             
             // Update the user profile in Firestore
             Map<String, Object> updatedProfile = firestoreService.updateUserProfile(email, profileData);
+            
+            // Make sure password is never sent back to the frontend for security
+            updatedProfile.remove("password");
             
             return ResponseEntity.ok(updatedProfile);
         } catch (Exception e) {

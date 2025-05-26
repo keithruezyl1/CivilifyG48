@@ -218,8 +218,10 @@ public class FirestoreService {
             // Update the user document
             DocumentReference userRef = db.collection("users").document(uid);
             
-            // Remove email from profileData if present to prevent email changes
+            // Remove sensitive information from profileData to prevent security issues
             profileData.remove("email");
+            // Ensure password is never stored in Firestore
+            profileData.remove("password");
             
             // Update the document
             ApiFuture<WriteResult> writeResult = userRef.update(profileData);
