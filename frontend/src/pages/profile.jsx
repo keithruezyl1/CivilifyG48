@@ -114,6 +114,7 @@ const Profile = () => {
     document.body.style.height = '100vh';
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
+    document.title = 'Civilify | Profile';
     return () => {
       if (document.head.contains(style)) document.head.removeChild(style);
       document.body.style.overflow = '';

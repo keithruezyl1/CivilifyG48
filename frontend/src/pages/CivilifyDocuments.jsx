@@ -351,15 +351,21 @@ const sidebarItems = [
 
 const CivilifyDocuments = () => {
   const [selectedItem, setSelectedItem] = useState(null);
+  const [fromSignup, setFromSignup] = useState(false);
+  const navigate = window.reactRouterNavigate || null; // fallback if not in router context
 
   // Load selected section from localStorage
   useEffect(() => {
     try {
-      const savedSection = window.safeStorage.getItem('selectedDocSection');
+      const savedSection = window.localStorage.getItem('selectedDocSection');
+      const fromSignupFlag = window.localStorage.getItem('docFromSignup');
       if (savedSection) {
         setSelectedItem(savedSection);
-        // Clear the selection from localStorage to avoid persisting between visits
-        window.safeStorage.removeItem('selectedDocSection');
+        window.localStorage.removeItem('selectedDocSection');
+      }
+      if (fromSignupFlag) {
+        setFromSignup(true);
+        window.localStorage.removeItem('docFromSignup');
       }
     } catch (e) {
       console.warn('Storage access error:', e);
@@ -394,6 +400,10 @@ const CivilifyDocuments = () => {
         document.head.removeChild(mediaStyles);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    document.title = 'Civilify | Documents';
   }, []);
 
   // Navigation link component to ensure consistent visibility
@@ -713,6 +723,86 @@ const CivilifyDocuments = () => {
                         Any stored information is encrypted with <strong>AES-256</strong>
                       </li>
                     </ul>
+                  </CollapsibleSection>
+
+                  <CollapsibleSection title="Terms of Service">
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>1. Acceptance of Terms</h4>
+                      <p style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
+                        By accessing and using Civilify, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service.
+                      </p>
+
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>2. Service Description</h4>
+                      <p style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
+                        Civilify provides AI-powered legal information and case analysis. Our service is not a substitute for professional legal advice and should not be relied upon as such.
+                      </p>
+
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>3. User Responsibilities</h4>
+                      <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Provide accurate and truthful information
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Maintain the confidentiality of your account
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Use the service in compliance with applicable laws
+                        </li>
+                      </ul>
+
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>4. Limitations of Service</h4>
+                      <p style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
+                        Civilify is not a law firm and does not provide legal representation. Our AI-generated responses are for informational purposes only and should not be considered legal advice.
+                      </p>
+                    </div>
+                  </CollapsibleSection>
+
+                  <CollapsibleSection title="Privacy Policy">
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>1. Information We Collect</h4>
+                      <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Account information (email, name)
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Usage data (interactions with the service)
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Conversation data (only if explicitly opted in)
+                        </li>
+                      </ul>
+
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>2. How We Use Your Information</h4>
+                      <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          To provide and improve our services
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          To communicate with you about your account
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          To ensure platform security
+                        </li>
+                      </ul>
+
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>3. Data Protection</h4>
+                      <p style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '1rem' }}>
+                        We implement industry-standard security measures to protect your data. This includes encryption, secure servers, and regular security audits.
+                      </p>
+
+                      <h4 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '1rem' }}>4. Your Rights</h4>
+                      <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Access your personal data
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Request data deletion
+                        </li>
+                        <li style={{ fontSize: '1.125rem', color: '#4B5563', marginBottom: '0.5rem' }}>
+                          Opt-out of data collection
+                        </li>
+                      </ul>
+                    </div>
                   </CollapsibleSection>
                   
                   <CollapsibleSection title="Compliance" isLast={true}>

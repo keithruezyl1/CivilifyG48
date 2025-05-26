@@ -1410,7 +1410,41 @@ ${userMessage}` : userMessage;
     }
   });
 
-  if (loading) return <LoadingScreen />;
+  // Loading messages for each mode
+  const villyLoadingMessagesGLI = [
+    "Villy is thinking...",
+    "Villy is looking up legal facts...",
+    "Villy is searching for the right law...",
+    "Villy is checking the legal database...",
+    "Villy is reviewing legal information...",
+    "Villy is preparing a clear answer...",
+    "Villy is making sure the info is accurate...",
+    "Villy is finding the best legal explanation...",
+  ];
+  const villyLoadingMessagesCPA = [
+    "Villy is analyzing your case...",
+    "Villy is reviewing your situation...",
+    "Villy is assessing the details...",
+    "Villy is checking for possible outcomes...",
+    "Villy is preparing a case assessment...",
+    "Villy is evaluating the plausibility...",
+    "Villy is building your case report...",
+    "Villy is considering next steps...",
+  ];
+  const getVillyLoadingMessages = () =>
+    selectedMode === 'B' ? villyLoadingMessagesCPA : villyLoadingMessagesGLI;
+  const [villyLoadingMessage, setVillyLoadingMessage] = useState(villyLoadingMessagesGLI[0]);
+
+  useEffect(() => {
+    if (isTyping) {
+      const messages = getVillyLoadingMessages();
+      setVillyLoadingMessage(
+        messages[Math.floor(Math.random() * messages.length)]
+      );
+    }
+  }, [isTyping, selectedMode]);
+
+  if (loading) return <LoadingScreen isDarkMode={isDarkMode} />;
 
   return (
     <div style={{
@@ -1865,7 +1899,7 @@ ${userMessage}` : userMessage;
                     <span></span>
                     <span></span>
                   </div>
-                  <span style={{ marginLeft: 12, color: isDarkMode ? '#bbbbbb' : '#666666', fontSize: 14 }}>Villy is thinking...</span>
+                  <span style={{ marginLeft: 12, color: isDarkMode ? '#bbbbbb' : '#666666', fontSize: 14 }}>{villyLoadingMessage}</span>
                 </div>
               </div>
             )}
@@ -2021,24 +2055,6 @@ ${userMessage}` : userMessage;
             <div style={styles.confirmButtons}>
               <button
                 style={{
-                  ...styles.confirmButton,
-                  background: isDarkMode
-                    ? (logoutYesHovered ? '#e04000' : '#F34D01')
-                    : styles.confirmButton.background,
-                  color: isDarkMode ? '#fff' : styles.confirmButton.color,
-                  border: isDarkMode ? 'none' : styles.confirmButton.border,
-                  transform: isDarkMode && logoutYesHovered ? 'translateY(0px) scale(0.98)' : undefined,
-                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
-                }}
-                onClick={() => handleLogoutConfirm(true)}
-                className="primary-button-hover"
-                onMouseEnter={() => setLogoutYesHovered(true)}
-                onMouseLeave={() => setLogoutYesHovered(false)}
-              >
-                Yes, Logout
-              </button>
-              <button
-                style={{
                   ...styles.cancelButton,
                   background: isDarkMode
                     ? (logoutNoHovered ? '#555' : '#444')
@@ -2054,6 +2070,24 @@ ${userMessage}` : userMessage;
                 onMouseLeave={() => setLogoutNoHovered(false)}
               >
                 Cancel
+              </button>
+              <button
+                style={{
+                  ...styles.confirmButton,
+                  background: isDarkMode
+                    ? (logoutYesHovered ? '#e04000' : '#F34D01')
+                    : styles.confirmButton.background,
+                  color: isDarkMode ? '#fff' : styles.confirmButton.color,
+                  border: isDarkMode ? 'none' : styles.confirmButton.border,
+                  transform: isDarkMode && logoutYesHovered ? 'translateY(0px) scale(0.98)' : undefined,
+                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
+                }}
+                onClick={() => handleLogoutConfirm(true)}
+                className="primary-button-hover"
+                onMouseEnter={() => setLogoutYesHovered(true)}
+                onMouseLeave={() => setLogoutYesHovered(false)}
+              >
+                Yes, Logout
               </button>
             </div>
           </div>
@@ -2096,40 +2130,40 @@ ${userMessage}` : userMessage;
               </p>
               <div style={styles.confirmButtons}>
                 <button
-                style={{
-                  ...styles.confirmButton,
-                  background: isDarkMode
-                    ? (yesButtonHovered ? '#e04000' : '#F34D01')
-                    : styles.confirmButton.background,
-                  color: isDarkMode ? '#fff' : styles.confirmButton.color,
-                  border: isDarkMode ? 'none' : styles.confirmButton.border,
-                  transform: isDarkMode && yesButtonHovered ? 'translateY(0px) scale(0.98)' : undefined,
-                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
-                }}
-                  onClick={() => handleNewChatConfirm(true)}
-                  className="primary-button-hover"
-                onMouseEnter={() => setYesButtonHovered(true)}
-                onMouseLeave={() => setYesButtonHovered(false)}
-                >
-                  Yes
-                </button>
-                <button
-                style={{
-                  ...styles.cancelButton,
-                  background: isDarkMode
-                    ? (noButtonHovered ? '#555' : '#444')
-                    : styles.cancelButton.background,
-                  color: isDarkMode ? '#fff' : styles.cancelButton.color,
-                  border: isDarkMode ? '1px solid #bbb' : styles.cancelButton.border,
-                  transform: isDarkMode && noButtonHovered ? 'translateY(0px) scale(0.98)' : undefined,
-                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
-                }}
+                  style={{
+                    ...styles.cancelButton,
+                    background: isDarkMode
+                      ? (noButtonHovered ? '#555' : '#444')
+                      : styles.cancelButton.background,
+                    color: isDarkMode ? '#fff' : styles.cancelButton.color,
+                    border: isDarkMode ? '1px solid #bbb' : styles.cancelButton.border,
+                    transform: isDarkMode && noButtonHovered ? 'translateY(0px) scale(0.98)' : undefined,
+                    transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
+                  }}
                   onClick={() => handleNewChatConfirm(false)}
                   className="secondary-button-hover"
-                onMouseEnter={() => setNoButtonHovered(true)}
-                onMouseLeave={() => setNoButtonHovered(false)}
+                  onMouseEnter={() => setNoButtonHovered(true)}
+                  onMouseLeave={() => setNoButtonHovered(false)}
                 >
                   No
+                </button>
+                <button
+                  style={{
+                    ...styles.confirmButton,
+                    background: isDarkMode
+                      ? (yesButtonHovered ? '#e04000' : '#F34D01')
+                      : styles.confirmButton.background,
+                    color: isDarkMode ? '#fff' : styles.confirmButton.color,
+                    border: isDarkMode ? 'none' : styles.confirmButton.border,
+                    transform: isDarkMode && yesButtonHovered ? 'translateY(0px) scale(0.98)' : undefined,
+                    transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
+                  }}
+                  onClick={() => handleNewChatConfirm(true)}
+                  className="primary-button-hover"
+                  onMouseEnter={() => setYesButtonHovered(true)}
+                  onMouseLeave={() => setYesButtonHovered(false)}
+                >
+                  Yes
                 </button>
               </div>
             </div>

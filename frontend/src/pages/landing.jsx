@@ -101,6 +101,10 @@ const Landing = () => {
     return () => window.removeEventListener('scroll', handleScrollIndicator);
   }, []);
 
+  useEffect(() => {
+    document.title = 'Civilify';
+  }, []);
+
   const handleSignIn = () => {
     setLoading(true);
     setTimeout(() => {
