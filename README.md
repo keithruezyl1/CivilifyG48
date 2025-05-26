@@ -1,6 +1,6 @@
 # Civilify - Legal AI Assistant
 
-**Civilify** is an AI-powered legal assistant designed to help users assess the plausibility of their legal issues and determine if they have a viable case to pursue. Powered by OpenAI's GPT-4.0, Civilify offers insightful legal advice, generates sample documents, and helps users navigate their legal concerns in a conversational manner.
+**Civilify** is an AI-powered legal assistant designed to help users assess the plausibility of their legal issues and determine if they have a viable case to pursue. Powered by OpenAI's GPT-3.5 and 4o, Civilify offers insightful legal advice, generates sample documents, and helps users navigate their legal concerns in a conversational manner.
 
 ## Features
 - **AI-Powered Legal Assistance**  
@@ -25,8 +25,8 @@
   Civilify does not refer users to legal professionals. It provides insights and advice based on its AI assessments but does not act as a marketplace for legal services.
 
 ## Technologies
-- **Backend:** OpenAI's GPT-4.0 for legal insights
-- **Frontend:** Chatbot-based UI for seamless user interaction
+- **Backend:** OpenAI's GPT-3.5 and GPT-4o for legal insights (Spring Boot Java)
+- **Frontend:** React-based chatbot UI for seamless user interaction
 - **Security:** Data encryption for privacy and confidentiality
 
 ## Getting Started
@@ -34,8 +34,8 @@
 ### Prerequisites
 Before running Civilify, ensure you have the following tools installed:
 
-- **Java JDK 21
-- **Flask (or another web framework)**
+- **Java JDK 21**
+- **Node.js & npm**
 - **OpenAI API key** (for legal insights)
 
 ### Installation
@@ -46,31 +46,35 @@ git clone https://github.com/yourusername/civilify.git
 cd civilify
 ```
 
-Install dependencies:
-
+Install backend dependencies:
 ```bash
-pip install -r requirements.txt
+cd backend
+# Make sure you have Maven installed
+mvn clean install
+```
+
+Install frontend dependencies:
+```bash
+cd ../frontend
+npm install
 ```
 
 ### Running the Application
-To run the application locally, use the following command:
+To run the application locally, use the following commands:
 
 #### For Backend ####
 ```bash
-open new terminal
 cd backend
 mvn spring-boot:run
 ```
 
 #### For Frontend ####
 ```bash
-open new terminal
 cd frontend
-npm i (if not yet)
 npm run dev
 ```
 
-Visit `http://localhost:5000` in your browser to start interacting with Villy, the chatbot.
+Visit `http://localhost:3000` in your browser to start interacting with Villy, the chatbot.
 
 ## Usage
 1. **Start a Conversation**  
@@ -92,5 +96,5 @@ Contributions are welcome! If you'd like to help improve Civilify, feel free to 
 Please open an issue on GitHub to report bugs or suggest new features.
 
 ## Acknowledgments
-- **OpenAI GPT-4.0** for providing the legal insights and case assessment capabilities.
+- **OpenAI GPT-3.5 & GPT-4o** for providing the legal insights and case assessment capabilities.
 - **OpenAI** for contributing to the development of the AI chatbot (Villy).
