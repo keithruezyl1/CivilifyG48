@@ -344,7 +344,6 @@ const Chat = () => {
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [showInputAfterReport, setShowInputAfterReport] = useState(true); // Initialize to true by default
   const [showReportThanksPopup, setShowReportThanksPopup] = useState(false); // controls the 'Villy is glad' popup
 
   const suggestedQuestions = [
@@ -1268,26 +1267,14 @@ ${userMessage}` : userMessage;
       try {
         const parsedMessages = JSON.parse(savedMessages);
         setMessages(parsedMessages);
-        // Always show input when restoring session
-        setShowInputAfterReport(true);
       } catch (e) {
         setMessages([]);
-        setShowInputAfterReport(true);
       }
     }
     if (savedMode) {
       setSelectedMode(savedMode);
     }
   }, []);
-
-  // Modify the handleContinueConversation function
-  const handleContinueConversation = () => {
-    setShowInputAfterReport(true);
-    // Force a re-render of the input
-    setTimeout(() => {
-      setShowInputAfterReport(true);
-    }, 100);
-  };
 
   // Handler for 'This report was helpful. Thanks!'
   const handleReportThanks = () => {
@@ -1303,7 +1290,6 @@ ${userMessage}` : userMessage;
     setQuestion("");
     setShowTimestamp(null);
     setSelectedMode(null);
-    setShowInputAfterReport(true);
     // Clear session from localStorage
     localStorage.removeItem('currentConversationId');
     localStorage.removeItem('chatMessages');
@@ -1738,72 +1724,71 @@ ${userMessage}` : userMessage;
             )}
           </div>
 
-          {selectedMode && (
-            <div style={styles.inputWrapper}>
-              <div style={styles.inputSection}>
-                <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
-                  <textarea
-                    ref={inputRef}
-                    value={question}
-                    onChange={handleInputChange}
-                    onKeyDown={handleInputKeyDown}
-                    placeholder="Ask a question"
-                    style={{
-                      ...styles.input,
-                      backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
-                      borderColor: isDarkMode ? '#555' : '#ccc', 
-                      color: isDarkMode ? '#ffffff' : '#1a1a1a',
-                      minHeight: '40px',
-                      maxHeight: '120px',
-                      lineHeight: '40px',
-                      padding: '0 16px',
-                      boxSizing: 'border-box',
-                      width: '400px',
-                      verticalAlign: 'middle',
-                      fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
-                      scrollbarWidth: 'none',
-                      msOverflowStyle: 'none',
-                      resize: 'none',
-                      overflowY: 'auto',
-                    }}
-                    rows={1}
-                    className="chat-input-no-scrollbar"
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      ...styles.sendButton,
-                      marginLeft: '8px',
-                      marginBottom: '2px',
-                      position: 'static',
-                      zIndex: 21,
-                    }}
-                    className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
+          <div style={styles.inputWrapper}>
+            <div style={styles.inputSection}>
+              <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
+                <textarea
+                  ref={inputRef}
+                  value={question}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
+                  placeholder="Ask a question"
+                  style={{
+                    ...styles.input,
+                    backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
+                    borderColor: isDarkMode ? '#555' : '#ccc', 
+                    color: isDarkMode ? '#ffffff' : '#1a1a1a',
+                    minHeight: '40px',
+                    maxHeight: '120px',
+                    lineHeight: '40px',
+                    padding: '0 16px',
+                    boxSizing: 'border-box',
+                    width: '400px',
+                    verticalAlign: 'middle',
+                    fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    resize: 'none',
+                    overflowY: 'auto',
+                  }}
+                  rows={1}
+                  className="chat-input-no-scrollbar"
+                />
+                <button
+                  type="submit"
+                  style={{
+                    ...styles.sendButton,
+                    marginLeft: '8px',
+                    marginBottom: '2px',
+                    position: 'static',
+                    zIndex: 21,
+                  }}
+                  className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
+                  disabled={!selectedMode} // Optionally disable if no mode
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
                   >
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path
-                        d="M12 20V4M5 11l7-7 7 7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                </form>
-              </div>
-              <div style={styles.disclaimer}>
-                  Villy offers AI-powered legal insights to help you explore your
-                  situation. While it's here to assist, it's not a substitute for
-                  professional legal advice.
-              </div>
+                    <path
+                      d="M12 20V4M5 11l7-7 7 7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </form>
             </div>
-          )}
+            <div style={styles.disclaimer}>
+                Villy offers AI-powered legal insights to help you explore your
+                situation. While it's here to assist, it's not a substitute for
+                professional legal advice.
+            </div>
+          </div>
         </div>
       </main>
 
