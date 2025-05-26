@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { getUserData, fetchUserProfile, clearAuthData } from '../utils/auth';
+import { getUserData, fetchUserProfile, clearAuthData, validateAuthToken, getAuthToken } from '../utils/auth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -15,6 +15,17 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check authentication on mount
+    const token = getAuthToken();
+    const authStatus = validateAuthToken();
+    
+    if (!token || !authStatus.valid) {
+      console.log('Profile: Authentication check failed, redirecting to login');
+      localStorage.setItem('redirectAfterLogin', '/profile');
+      navigate('/signin', { replace: true });
+      return;
+    }
+
     // Load user profile data from backend
     const loadProfileData = async () => {
       try {
@@ -222,9 +233,6 @@ const Profile = () => {
           <ul style={{ listStyleType: 'none', paddingLeft: 0, marginLeft: 0 }}>
             <li style={{ marginBottom: '1rem' }}>
               <button style={{ color: '#F34D01', fontWeight: 600, background: 'none', border: 'none', fontSize: '1rem' }}>Profile</button>
-            </li>
-            <li style={{ marginBottom: '1rem' }}>
-              <button style={{ color: '#4B5563', background: 'none', border: 'none', fontSize: '1rem' }}>Settings</button>
             </li>
           </ul>
         </nav>

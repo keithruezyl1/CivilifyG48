@@ -6,10 +6,12 @@ import { FaUser, FaCog, FaQuestionCircle, FaSignOutAlt, FaKeyboard, FaRobot, FaC
 import villyAvatar from "../assets/images/villypfporange.jpg";
 import LoadingScreen from './LoadingScreen';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { fetchUserProfile, getUserData, API_URL } from '../utils/auth';
+import { fetchUserProfile, getUserData, API_URL, clearAuthData } from '../utils/auth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { auth, onAuthStateChanged } from '../firebase-config';
+import VillyReportCard from '../components/VillyReportCard';
+import { validateAuthToken, getAuthToken } from '../utils/auth';
 
 // System prompts for different modes
 const GLI_SYSTEM_PROMPT = "You are Villy, a helpful assistant providing general information.";
@@ -53,14 +55,18 @@ const fetchGPTResponse = async (userMessage, mode = 'A', conversationId = null, 
       return {
         success: true,
         response: response.data.response,
-        conversationId: response.data.conversationId // Get the conversation ID from the response
+        conversationId: response.data.conversationId, // Get the conversation ID from the response
+        plausibilityLabel: response.data.plausibilityLabel,
+        plausibilitySummary: response.data.plausibilitySummary,
       };
     } else {
       console.error('Error in AI response:', response.data);
       return {
         success: false,
         response: 'Sorry, I encountered an error processing your request. Please try again later.',
-        conversationId: conversationId
+        conversationId: conversationId,
+        plausibilityLabel: null,
+        plausibilitySummary: null,
       };
     }
   } catch (error) {
@@ -88,6 +94,8 @@ const fetchGPTResponse = async (userMessage, mode = 'A', conversationId = null, 
     return {
       success: true,
       response: responseText,
+      plausibilityLabel: null,
+      plausibilitySummary: null,
     };
   }
 };
@@ -180,6 +188,122 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
   return text.trim();
 };
 
+// 1. VillyReportUI component
+const VillyReportUI = ({ reportText, isDarkMode }) => {
+  // Parse the reportText for score, label, summary, sources, and steps
+  // Simple regex-based extraction for demo; adjust as needed for your format
+  const scoreMatch = reportText.match(/(\d{1,3})%\s*(Possible|Likely|Unlikely|Highly Likely|Highly Unlikely)/i);
+  const score = scoreMatch ? scoreMatch[1] : null;
+  const label = scoreMatch ? scoreMatch[2] : null;
+
+  // Extract summary (first paragraph)
+  const summary = reportText.split('Sources:')[0].replace(/\n+/g, ' ').trim();
+
+  // Extract sources
+  let sources = '';
+  let steps = '';
+  if (reportText.includes('Sources:')) {
+    const afterSources = reportText.split('Sources:')[1];
+    const sourcesEnd = afterSources.indexOf('Suggested Steps:');
+    if (sourcesEnd !== -1) {
+      sources = afterSources.substring(0, sourcesEnd).trim();
+      steps = afterSources.substring(sourcesEnd + 'Suggested Steps:'.length).trim();
+    } else {
+      sources = afterSources.trim();
+    }
+  }
+  // Extract steps as list
+  let stepsList = [];
+  if (steps) {
+    stepsList = steps.split(/\n\d+\./).map(s => s.trim()).filter(Boolean);
+    if (stepsList.length === 0 && steps) {
+      // fallback: try splitting by newlines
+      stepsList = steps.split(/\n/).map(s => s.trim()).filter(Boolean);
+    }
+  }
+
+  // Helper to style report text for dark mode
+  function formatReportText(text, isDarkMode) {
+    if (!text) return '';
+    // Remove emojis from the text
+    text = text.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu, '');
+    // Split into lines
+    const lines = text.split('\n');
+    let html = '';
+    lines.forEach(line => {
+      let styledLine = line;
+      // Highlight section headers in white for dark mode
+      if (isDarkMode && (
+        line.trim().startsWith('Case Summary:') ||
+        line.trim().startsWith('Legal Issues or Concerns:') ||
+        line.trim().startsWith('Suggested Next Steps:')
+      )) {
+        styledLine = `<span style=\"color: #fff; font-weight: 600;\">${line}</span>`;
+      } else if (isDarkMode) {
+        styledLine = `<span style=\"color: #e0e0e0;\">${line}</span>`;
+      }
+      html += `<div style=\"margin-bottom: 4px;\">${styledLine}</div>`;
+    });
+    return html;
+  }
+
+  return (
+    <div style={{
+      background: isDarkMode ? '#232323' : '#fff',
+      border: '1.5px solid #F34D01',
+      borderRadius: '16px',
+      boxShadow: '0 2px 8px rgba(243,77,1,0.08)',
+      padding: '32px 32px 24px 32px',
+      margin: '24px 0',
+      maxWidth: 600,
+      minWidth: 320,
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 32,
+    }}>
+      {/* Score section */}
+      <div style={{
+        minWidth: 120,
+        textAlign: 'center',
+        color: '#F34D01',
+        fontWeight: 700,
+        fontSize: 48,
+        lineHeight: 1.1,
+        marginRight: 16,
+        marginTop: 8,
+      }}>
+        {score ? `${score}%` : ''}
+        <div style={{ fontSize: 22, color: '#16a34a', fontWeight: 600, marginTop: 4 }}>
+          {label || ''}
+        </div>
+      </div>
+      {/* Main content */}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: 22, color: '#F34D01', marginBottom: 8 }}>
+          Villy's Report
+        </div>
+        <div style={{ fontSize: 16, color: isDarkMode ? '#e0e0e0' : '#222', marginBottom: 16 }}
+             dangerouslySetInnerHTML={{ __html: formatReportText(summary, isDarkMode) }} />
+        {sources && (
+          <div style={{ fontSize: 14, color: isDarkMode ? '#e0e0e0' : '#666', marginBottom: 12 }}>
+            <b>Sources:</b><br />
+            {sources.split(/\s+/).map((src, i) => src && <span key={i}>{src}<br /></span>)}
+          </div>
+        )}
+        {stepsList.length > 0 && (
+          <div style={{ fontSize: 15, color: isDarkMode ? '#e0e0e0' : '#222', marginTop: 8 }}>
+            <b>Suggested Steps:</b>
+            <ol style={{ margin: '8px 0 0 20px', padding: 0 }}>
+              {stepsList.map((step, i) => <li key={i} style={{ marginBottom: 6 }}>{step}</li>)}
+            </ol>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Chat = () => {
   const navigate = useNavigate();
   // const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true);
@@ -220,6 +344,7 @@ const Chat = () => {
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState('');
+  const [showReportThanksPopup, setShowReportThanksPopup] = useState(false); // controls the 'Villy is glad' popup
 
   const suggestedQuestions = [
     "I have a land dispute",
@@ -371,6 +496,9 @@ ${userMessage}` : userMessage;
       setShowNewConversationForm(false);
       
       toast.success('New conversation created');
+      // Clear session from localStorage
+      localStorage.removeItem('currentConversationId');
+      localStorage.removeItem('chatMessages');
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast.error('Failed to create new conversation');
@@ -541,7 +669,7 @@ ${userMessage}` : userMessage;
       inputRef.current.style.height = '40px';
     }
 
-    // Auto-scroll to bottom of messages
+    // Auto-scroll chat to bottom when input expands
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
@@ -580,9 +708,13 @@ ${userMessage}` : userMessage;
             hour: '2-digit',
             minute: '2-digit'
           }),
+          isReport: result.isReport || false,
+          plausibilityLabel: result.plausibilityLabel,
+          plausibilitySummary: result.plausibilitySummary,
         };
 
-        setMessages([...newMessages, aiMessage]);
+        const updatedMessages = [...newMessages, aiMessage];
+        setMessages(updatedMessages);
 
         // Save AI response to conversation if user is logged in
         if (userData && userData.email) {
@@ -635,7 +767,8 @@ ${userMessage}` : userMessage;
       minute: "2-digit",
     });
     const userMessage = { text: reply, isUser: true, timestamp };
-    setMessages([...messages, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
 
     // Save user message to conversation
     await saveMessageToConversation(reply, true);
@@ -666,11 +799,8 @@ ${userMessage}` : userMessage;
         minute: "2-digit",
       }),
     };
-    setMessages((prevMessages) => {
-      const newMessages = [...prevMessages, aiMessage];
-      console.log("Updated Messages:", newMessages);
-      return newMessages;
-    });
+    const finalMessages = [...updatedMessages, aiMessage];
+    setMessages(finalMessages);
 
     // Save AI response to conversation
     await saveMessageToConversation(aiResponse.response, false);
@@ -727,6 +857,7 @@ ${userMessage}` : userMessage;
 
   const handleLogoutConfirm = (confirm) => {
     if (confirm) {
+      clearAuthData(); // Clear all auth data
       navigate("/signin");
     }
     setShowLogoutConfirm(false);
@@ -1094,6 +1225,99 @@ ${userMessage}` : userMessage;
     };
   }, [isDarkMode]);
 
+  useEffect(() => {
+    // Check authentication on mount
+    const token = getAuthToken();
+    const authStatus = validateAuthToken();
+    
+    if (!token || !authStatus.valid) {
+      console.log('Chat: Authentication check failed, redirecting to login');
+      localStorage.setItem('redirectAfterLogin', '/chat');
+      navigate('/signin', { replace: true });
+      return;
+    }
+  }, [navigate]);
+
+  // Helper to detect if last message is a report
+  const isLastMessageReport = () => {
+    if (messages.length === 0) return false;
+    const last = messages[messages.length - 1];
+    if (!last.text || last.isUser) return false;
+    const text = last.text.toLowerCase();
+    return (
+      text.includes("plausibility score") ||
+      text.includes("villy's assessment") ||
+      text.includes("villy's report") ||
+      text.includes("case summary")
+    );
+  };
+
+  // Track if initial mount is done
+  const initialMount = useRef(true);
+
+  useEffect(() => {
+    const savedConversationId = localStorage.getItem('currentConversationId');
+    const savedMessages = localStorage.getItem('chatMessages');
+    const savedMode = localStorage.getItem('selectedMode');
+    
+    if (savedConversationId) {
+      setCurrentConversationId(savedConversationId);
+    }
+    if (savedMessages) {
+      try {
+        const parsedMessages = JSON.parse(savedMessages);
+        setMessages(parsedMessages);
+      } catch (e) {
+        setMessages([]);
+      }
+    }
+    if (savedMode) {
+      setSelectedMode(savedMode);
+    }
+  }, []);
+
+  // Handler for 'This report was helpful. Thanks!'
+  const handleReportThanks = () => {
+    setShowReportThanksPopup(true);
+  };
+
+  // Handler for closing the popup and starting a new chat
+  const handleGoBackToChat = () => {
+    setShowReportThanksPopup(false);
+    // Trigger new chat logic
+    setCurrentConversationId(null);
+    setMessages([]);
+    setQuestion("");
+    setShowTimestamp(null);
+    setSelectedMode(null);
+    // Clear session from localStorage
+    localStorage.removeItem('currentConversationId');
+    localStorage.removeItem('chatMessages');
+  };
+
+  // Persist session to localStorage on change
+  useEffect(() => {
+    if (currentConversationId) {
+      localStorage.setItem('currentConversationId', currentConversationId);
+    } else {
+      localStorage.removeItem('currentConversationId');
+    }
+  }, [currentConversationId]);
+
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    } else {
+      localStorage.removeItem('chatMessages');
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (selectedMode) {
+      localStorage.setItem('selectedMode', selectedMode);
+    }
+  }, [selectedMode]);
+
   if (loading) return <LoadingScreen />;
 
   return (
@@ -1257,16 +1481,7 @@ ${userMessage}` : userMessage;
                   </div>
                   <span style={{ fontSize: '15px', fontWeight: 500 }}>Dark Mode</span>
                 </div>
-                 <button
-                  style={{
-                    ...styles.dropdownItem,
-                    color: isDarkMode ? '#fff' : '#232323',
-                  }}
-                  className="dropdown-item-hover"
-                >
-                  <FaCog style={styles.dropdownIcon} />
-                  <span style={{ fontSize: '15px' }}>Settings</span>
-                </button>
+                {/* Removed Settings button */}
                 <button
                   style={{
                     ...styles.dropdownItem,
@@ -1379,6 +1594,7 @@ ${userMessage}` : userMessage;
                     ...styles.messageWrapper,
                     flexDirection: message.isUser ? 'row-reverse' : 'row',
                     justifyContent: message.isUser ? 'flex-end' : 'flex-start',
+                    marginBottom: index === messages.length - 1 ? 20 : undefined, // Add margin to last message
                   }}
                 >
                   {message.isUser ? (
@@ -1427,12 +1643,27 @@ ${userMessage}` : userMessage;
                       cursor: "pointer",
                     }}
                     onClick={() => handleMessageClick(index)}
-                    dangerouslySetInnerHTML={{
-                      __html: message.isUser
-                        ? message.text
-                        : formatAIResponse(message.text),
-                    }}
-                  />
+                  >
+                    {!message.isUser && (
+                      message.text.toLowerCase().includes("plausibility score") ||
+                      message.text.toLowerCase().includes("case summary") ||
+                      message.text.toLowerCase().includes("legal issues") ||
+                      message.text.toLowerCase().includes("suggested next steps")
+                    ) ? (
+                      <VillyReportCard 
+                        reportText={message.text} 
+                        isDarkMode={isDarkMode} 
+                        plausibilityLabel={message.plausibilityLabel} 
+                        plausibilitySummary={message.plausibilitySummary} 
+                      />
+                    ) : (
+                      <span dangerouslySetInnerHTML={{
+                        __html: message.isUser
+                          ? message.text
+                          : formatAIResponse(message.text),
+                      }} />
+                    )}
+                  </div>
                   {showTimestamp === index && message.timestamp && (
                     <div
                       style={{
@@ -1495,94 +1726,76 @@ ${userMessage}` : userMessage;
           </div>
 
           {selectedMode && (
-          <div style={{
-            ...styles.inputWrapper,
-            backgroundColor: isDarkMode ? '#2d2d2d' : '#F6F6F8'
-          }}>
-              {/* {selectedMode === 'B' && suggestedRepliesEnabled && messages.length > 0 && !messages[messages.length - 1].isUser && dynamicSuggestions.length > 0 && (
-              <div style={styles.suggestedReplies}>
-                <div style={styles.suggestedButtonsContainer}>
-                    {dynamicSuggestions.map((question, index) => (
-                    <button
-                      key={index}
-                        style={{
-                          ...styles.suggestedButton,
-                          background: isDarkMode ? '#333' : '#ffffff',
-                          color: isDarkMode ? '#fff' : '#333',
-                          border: isDarkMode ? '1px solid #444' : '1px solid #ccc',
-                        }}
-                      onClick={() => handleSuggestedReply(question)}
-                      className="suggested-button-hover"
-                    >
-                      {question}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )} */}
-            <div style={styles.inputSection}>
-              <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
-                <textarea
-                  ref={inputRef}
-                  value={question}
-                  onChange={handleInputChange}
-                  onKeyDown={handleInputKeyDown}
-                  placeholder="Ask a question"
-                  style={{
-                    ...styles.input,
-                    backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
-                    borderColor: isDarkMode ? '#555' : '#ccc', 
-                    color: isDarkMode ? '#ffffff' : '#1a1a1a',
-                    minHeight: '40px',
-                    maxHeight: '120px',
-                    lineHeight: '40px',
-                    padding: '0 16px',
-                    boxSizing: 'border-box',
-                    width: '400px',
-                    verticalAlign: 'middle',
-                    fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    resize: 'none',
-                    overflowY: 'auto',
-                  }}
-                  rows={1}
-                  className="chat-input-no-scrollbar"
-                />
-                <button
-                  type="submit"
-                  style={{
-                    ...styles.sendButton,
-                    marginLeft: '8px',
-                    marginBottom: '2px',
-                    position: 'static',
-                    zIndex: 21,
-                  }}
-                  className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
-                >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+            <div style={{
+              ...styles.inputWrapper,
+              background: isDarkMode ? 'rgba(45,45,45,0.98)' : 'rgba(255,255,255,0.98)',
+              borderTop: isDarkMode ? '1.5px solid #444' : '1.5px solid #e0e0e0',
+              boxShadow: isDarkMode ? '0 -2px 16px 0 rgba(0,0,0,0.4)' : '0 -2px 16px 0 rgba(0,0,0,0.08)'
+            }}>
+              <div style={styles.inputSection}>
+                <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
+                  <textarea
+                    ref={inputRef}
+                    value={question}
+                    onChange={handleInputChange}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Ask a question"
+                    style={{
+                      ...styles.input,
+                      backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
+                      borderColor: isDarkMode ? '#555' : '#ccc', 
+                      color: isDarkMode ? '#ffffff' : '#1a1a1a',
+                      minHeight: '40px',
+                      maxHeight: '120px',
+                      lineHeight: '40px',
+                      padding: '0 16px',
+                      boxSizing: 'border-box',
+                      width: '400px',
+                      verticalAlign: 'middle',
+                      fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      resize: 'none',
+                      overflowY: 'auto',
+                    }}
+                    rows={1}
+                    className="chat-input-no-scrollbar"
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      ...styles.sendButton,
+                      marginLeft: '8px',
+                      marginBottom: '2px',
+                      position: 'static',
+                      zIndex: 21,
+                    }}
+                    className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
+                    disabled={!selectedMode}
                   >
-                    <path
-                      d="M12 20V4M5 11l7-7 7 7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-              </form>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M12 20V4M5 11l7-7 7 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </form>
+              </div>
+              <div style={styles.disclaimer}>
+                  Villy offers AI-powered legal insights to help you explore your
+                  situation. While it's here to assist, it's not a substitute for
+                  professional legal advice.
+              </div>
             </div>
-            <div style={styles.disclaimer}>
-                Villy offers AI-powered legal insights to help you explore your
-                situation. While it's here to assist, it's not a substitute for
-                professional legal advice.
-            </div>
-          </div>
           )}
         </div>
       </main>
@@ -1826,6 +2039,44 @@ ${userMessage}` : userMessage;
           <span> The Civilify Company, Cebu City 2025</span>
         </div>
       </footer>
+      {/* Report Thanks Popup */}
+      {showReportThanksPopup && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div style={{
+            background: isDarkMode ? '#232323' : '#fff',
+            color: isDarkMode ? '#fff' : '#1a1a1a',
+            borderRadius: '16px',
+            padding: '32px 32px 24px 32px',
+            maxWidth: 400,
+            width: '90vw',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+            textAlign: 'center',
+          }}>
+            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Villy is glad to be of assistance!</h2>
+            <div style={{ fontSize: 16, color: isDarkMode ? '#e0e0e0' : '#444', marginBottom: 24 }}>
+              {/* Add additional message here */}
+              If you have more questions or need further help, feel free to start a new conversation anytime.
+            </div>
+            <button
+              style={{ background: '#F34D01', color: '#fff', fontWeight: 600, fontSize: 16, border: 'none', borderRadius: 8, padding: '12px 20px', cursor: 'pointer' }}
+              onClick={handleGoBackToChat}
+            >
+              Go back to chat
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1969,7 +2220,7 @@ const styles = {
     flexDirection: "column",
     gap: "64px",
     alignItems: 'center',
-    paddingBottom: '96px',
+    paddingBottom: '120px', // ensure space for fixed input
     background: 'transparent',
   },
   welcomeSection: {
@@ -2054,18 +2305,29 @@ const styles = {
     textAlign: "left",
   },
   inputWrapper: {
-    position: 'absolute',
+    position: 'fixed',
     left: 0,
     right: 0,
     bottom: 0,
+    width: '100vw',
     zIndex: 20,
-    padding: '16px 32px',
-    background: 'transparent',
+    padding: '16px 0 24px 0',
     pointerEvents: 'auto',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    border: 'none',
+  },
+  disclaimer: {
+    fontSize: "11px",
+    color: "#666666",
+    textAlign: "center",
+    marginTop: "12px",
+    marginBottom: "4px",
+    fontStyle: "italic",
+    width: "100%",
+    background: 'transparent',
     boxShadow: 'none',
     border: 'none',
   },
@@ -2107,17 +2369,6 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
     transition: "background-color 0.2s ease, color 0.2s ease, transform 0.1s ease, border-color 0.2s ease",
-  },
-  disclaimer: {
-    fontSize: "11px",
-    color: "#666666",
-    textAlign: "center",
-    marginTop: "12px",
-    fontStyle: "italic",
-    width: "100%",
-    background: 'transparent',
-    boxShadow: 'none',
-    border: 'none',
   },
   footer: {
     height: "48px",

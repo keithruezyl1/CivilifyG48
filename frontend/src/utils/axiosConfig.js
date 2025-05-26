@@ -11,19 +11,31 @@ const createAuthenticatedAxios = () => {
     (config) => {
       // Check token validity
       const tokenStatus = validateAuthToken();
+      const token = getAuthToken();
       
-      if (tokenStatus.valid) {
-        const token = getAuthToken();
-        // Apply the token to the headers
-        config.headers = {
-          ...config.headers,
-          'Authorization': `Bearer ${token}`
-        };
-      } else {
+      if (!token || !tokenStatus.valid) {
         console.warn('Token validation failed:', tokenStatus.message);
-        // We still send the request, but it will likely fail with 401/403
-        // The response interceptor will handle this error
+        // Clear auth data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('tokenExpires');
+        localStorage.removeItem('user');
+        localStorage.removeItem('profileData');
+        
+        // Store current path for redirect
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/signin')) {
+          localStorage.setItem('redirectAfterLogin', currentPath);
+          window.location.href = '/#/signin';
+        }
+        
+        return Promise.reject(new Error('Authentication required'));
       }
+      
+      // Apply the token to the headers
+      config.headers = {
+        ...config.headers,
+        'Authorization': `Bearer ${token}`
+      };
       
       return config;
     },
@@ -40,16 +52,15 @@ const createAuthenticatedAxios = () => {
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.error('Authentication error:', error.response.status);
         
+        // Clear all auth data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('tokenExpires');
+        localStorage.removeItem('user');
+        localStorage.removeItem('profileData');
+        
         // Check if we're already on the signin page to prevent redirect loops
-        const currentPath = window.location.pathname + window.location.hash;
+        const currentPath = window.location.pathname;
         if (!currentPath.includes('/signin')) {
-          // Clear all auth data directly (instead of importing clearAuthData to avoid circular dependencies)
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('tokenExpires');
-          localStorage.removeItem('user');
-          localStorage.removeItem('profileData');
-          console.log('All auth data cleared due to authentication error');
-          
           // Store the current location to redirect back after login
           localStorage.setItem('redirectAfterLogin', currentPath);
           
@@ -58,10 +69,8 @@ const createAuthenticatedAxios = () => {
             window.toast.error('Your session has expired. Please sign in again.');
           }
           
-          // Redirect to signin page after a short delay - use hash-based routing
-          setTimeout(() => {
-            window.location.href = '/#/signin';
-          }, 1500);
+          // Redirect to signin page
+          window.location.href = '/#/signin';
         }
       }
       return Promise.reject(error);
@@ -95,3 +104,5 @@ export const createFormDataAxios = () => {
 };
 
 export const formDataAxios = createFormDataAxios();
+
+export default createAuthenticatedAxios;
