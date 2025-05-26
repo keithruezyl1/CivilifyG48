@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logoIconOrange from "../assets/images/logoiconorange.png";
-import { API_URL, clearAuthData } from '../utils/auth';
+import { API_URL, clearAuthData, validateAuthToken } from '../utils/auth';
 import LoadingScreen from './LoadingScreen';
 
 const SignIn = () => {
@@ -211,7 +211,14 @@ const SignIn = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      navigate('/chat');
+      // Check if there's a stored redirect path
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterLogin'); // Clear the stored path
+        navigate(redirectPath);
+      } else {
+        navigate('/chat');
+      }
     }, 1000);
   };
 
@@ -253,9 +260,7 @@ const SignIn = () => {
             text: "continue_with" 
           }
         );
-        
-        // Optional: Show the One Tap prompt
-        window.google.accounts.id.prompt();
+        // window.google.accounts.id.prompt(); // Removed to disable One Tap popup
       }
     };
 
@@ -277,6 +282,13 @@ const SignIn = () => {
       // No cleanup needed for Google Sign-In
     };
   }, []);
+
+  useEffect(() => {
+    const authStatus = validateAuthToken();
+    if (authStatus.valid) {
+      navigate('/chat');
+    }
+  }, [navigate]);
 
   const handleGoogleSignIn = (response) => {
     setIsLoading(true);

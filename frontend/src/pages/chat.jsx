@@ -1594,6 +1594,7 @@ ${userMessage}` : userMessage;
                     ...styles.messageWrapper,
                     flexDirection: message.isUser ? 'row-reverse' : 'row',
                     justifyContent: message.isUser ? 'flex-end' : 'flex-start',
+                    marginBottom: index === messages.length - 1 ? 20 : undefined, // Add margin to last message
                   }}
                 >
                   {message.isUser ? (
@@ -1724,71 +1725,78 @@ ${userMessage}` : userMessage;
             )}
           </div>
 
-          <div style={styles.inputWrapper}>
-            <div style={styles.inputSection}>
-              <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
-                <textarea
-                  ref={inputRef}
-                  value={question}
-                  onChange={handleInputChange}
-                  onKeyDown={handleInputKeyDown}
-                  placeholder="Ask a question"
-                  style={{
-                    ...styles.input,
-                    backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
-                    borderColor: isDarkMode ? '#555' : '#ccc', 
-                    color: isDarkMode ? '#ffffff' : '#1a1a1a',
-                    minHeight: '40px',
-                    maxHeight: '120px',
-                    lineHeight: '40px',
-                    padding: '0 16px',
-                    boxSizing: 'border-box',
-                    width: '400px',
-                    verticalAlign: 'middle',
-                    fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                    resize: 'none',
-                    overflowY: 'auto',
-                  }}
-                  rows={1}
-                  className="chat-input-no-scrollbar"
-                />
-                <button
-                  type="submit"
-                  style={{
-                    ...styles.sendButton,
-                    marginLeft: '8px',
-                    marginBottom: '2px',
-                    position: 'static',
-                    zIndex: 21,
-                  }}
-                  className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
-                  disabled={!selectedMode} // Optionally disable if no mode
-                >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+          {selectedMode && (
+            <div style={{
+              ...styles.inputWrapper,
+              background: isDarkMode ? 'rgba(45,45,45,0.98)' : 'rgba(255,255,255,0.98)',
+              borderTop: isDarkMode ? '1.5px solid #444' : '1.5px solid #e0e0e0',
+              boxShadow: isDarkMode ? '0 -2px 16px 0 rgba(0,0,0,0.4)' : '0 -2px 16px 0 rgba(0,0,0,0.08)'
+            }}>
+              <div style={styles.inputSection}>
+                <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
+                  <textarea
+                    ref={inputRef}
+                    value={question}
+                    onChange={handleInputChange}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Ask a question"
+                    style={{
+                      ...styles.input,
+                      backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
+                      borderColor: isDarkMode ? '#555' : '#ccc', 
+                      color: isDarkMode ? '#ffffff' : '#1a1a1a',
+                      minHeight: '40px',
+                      maxHeight: '120px',
+                      lineHeight: '40px',
+                      padding: '0 16px',
+                      boxSizing: 'border-box',
+                      width: '400px',
+                      verticalAlign: 'middle',
+                      fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      resize: 'none',
+                      overflowY: 'auto',
+                    }}
+                    rows={1}
+                    className="chat-input-no-scrollbar"
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      ...styles.sendButton,
+                      marginLeft: '8px',
+                      marginBottom: '2px',
+                      position: 'static',
+                      zIndex: 21,
+                    }}
+                    className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
+                    disabled={!selectedMode}
                   >
-                    <path
-                      d="M12 20V4M5 11l7-7 7 7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-              </form>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M12 20V4M5 11l7-7 7 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </form>
+              </div>
+              <div style={styles.disclaimer}>
+                  Villy offers AI-powered legal insights to help you explore your
+                  situation. While it's here to assist, it's not a substitute for
+                  professional legal advice.
+              </div>
             </div>
-            <div style={styles.disclaimer}>
-                Villy offers AI-powered legal insights to help you explore your
-                situation. While it's here to assist, it's not a substitute for
-                professional legal advice.
-            </div>
-          </div>
+          )}
         </div>
       </main>
 
@@ -2212,7 +2220,7 @@ const styles = {
     flexDirection: "column",
     gap: "64px",
     alignItems: 'center',
-    paddingBottom: '96px',
+    paddingBottom: '120px', // ensure space for fixed input
     background: 'transparent',
   },
   welcomeSection: {
@@ -2297,18 +2305,29 @@ const styles = {
     textAlign: "left",
   },
   inputWrapper: {
-    position: 'absolute',
+    position: 'fixed',
     left: 0,
     right: 0,
     bottom: 0,
+    width: '100vw',
     zIndex: 20,
-    padding: '16px 32px',
-    background: 'transparent',
+    padding: '16px 0 24px 0',
     pointerEvents: 'auto',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    border: 'none',
+  },
+  disclaimer: {
+    fontSize: "11px",
+    color: "#666666",
+    textAlign: "center",
+    marginTop: "12px",
+    marginBottom: "4px",
+    fontStyle: "italic",
+    width: "100%",
+    background: 'transparent',
     boxShadow: 'none',
     border: 'none',
   },
@@ -2350,17 +2369,6 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
     transition: "background-color 0.2s ease, color 0.2s ease, transform 0.1s ease, border-color 0.2s ease",
-  },
-  disclaimer: {
-    fontSize: "11px",
-    color: "#666666",
-    textAlign: "center",
-    marginTop: "12px",
-    fontStyle: "italic",
-    width: "100%",
-    background: 'transparent',
-    boxShadow: 'none',
-    border: 'none',
   },
   footer: {
     height: "48px",
