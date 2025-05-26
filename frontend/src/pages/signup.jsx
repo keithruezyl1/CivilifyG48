@@ -278,15 +278,19 @@ const Signup = () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      width: '100%',
+      width: '100vw',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: '#ffffff',
-      padding: '20px 0',
+      padding: '0',
       margin: '0',
-      overflow: 'auto', // Enable scrolling
-      position: 'relative',
+      overflow: 'hidden', // Prevent scrolling and hide scrollbars
+      position: 'fixed', // Fix the container to the viewport
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
     },
     signupContainer: {
       width: '100%',
@@ -555,6 +559,18 @@ const Signup = () => {
       background-size: 200% auto;
       animation: buttonShine 1.5s linear infinite;
     }
+    /* Hide scrollbars for the whole page */
+    html, body {
+      overflow: hidden !important;
+      height: 100vh !important;
+    }
+    ::-webkit-scrollbar {
+      width: 0 !important;
+      background: transparent !important;
+    }
+    body {
+      overscroll-behavior: none !important;
+    }
   `;
   document.head.appendChild(animationStyleSheet);
 
@@ -710,7 +726,28 @@ const Signup = () => {
                   style={styles.checkbox}
                 />
                 <span style={styles.checkboxText}>
-                  I agree to the <a href="#" style={styles.termsLink}>Terms of Service</a> and <a href="#" style={styles.termsLink}>Privacy Policy</a>
+                  I agree to the 
+                  <Link
+                    to="/civilify-documents"
+                    style={styles.termsLink}
+                    onClick={() => {
+                      window.localStorage.setItem('selectedDocSection', 'security');
+                      window.localStorage.setItem('docFromSignup', 'true');
+                    }}
+                  >
+                    Terms of Service
+                  </Link>
+                  and 
+                  <Link
+                    to="/civilify-documents"
+                    style={styles.termsLink}
+                    onClick={() => {
+                      window.localStorage.setItem('selectedDocSection', 'security');
+                      window.localStorage.setItem('docFromSignup', 'true');
+                    }}
+                  >
+                    Privacy Policy
+                  </Link>
                 </span>
               </label>
             </div>

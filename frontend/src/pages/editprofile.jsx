@@ -22,6 +22,21 @@ const EditProfile = () => {
     return stored === 'true';
   });
 
+  // Force light mode if navigated from /admin
+  useEffect(() => {
+    // Option 1: Check a flag in localStorage set by /admin
+    if (localStorage.getItem('forceLightMode') === 'true') {
+      setIsDarkMode(false);
+      localStorage.setItem('darkMode', 'false');
+      localStorage.removeItem('forceLightMode');
+    }
+    // Option 2: Check referrer or location.state (optional, fallback)
+    // if (document.referrer && document.referrer.includes('/admin')) {
+    //   setIsDarkMode(false);
+    //   localStorage.setItem('darkMode', 'false');
+    // }
+  }, []);
+
   useEffect(() => {
     // Load user data when component mounts
     const loadUserData = async () => {
