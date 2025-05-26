@@ -1,6 +1,6 @@
 # Civilify - Legal AI Assistant
 
-**Civilify** is an AI-powered legal assistant designed to help users assess the plausibility of their legal issues and determine if they have a viable case to pursue. Powered by OpenAI's GPT-4.0, Civilify offers insightful legal advice, generates sample documents, and helps users navigate their legal concerns in a conversational manner.
+**Civilify** is an AI-powered legal assistant designed to help users assess the plausibility of their legal issues and determine if they have a viable case to pursue. Powered by OpenAI's GPT-3.5 and 4o, Civilify offers insightful legal advice, generates sample documents, and helps users navigate their legal concerns in a conversational manner.
 
 ## Features
 - **AI-Powered Legal Assistance**  
