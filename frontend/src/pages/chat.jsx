@@ -1218,6 +1218,7 @@ ${userMessage}` : userMessage;
   // Auto-scroll chat to bottom on every new message (user or Villy)
   useEffect(() => {
     if (!chatContainerRef.current) return;
+    if (messages.length === 0) return; // Don't scroll if no messages (welcome screen)
     const container = chatContainerRef.current;
     container.scrollTo({
       top: container.scrollHeight,
@@ -1569,28 +1570,28 @@ ${userMessage}` : userMessage;
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: messages.length === 0 ? 'center' : 'flex-start',
+            justifyContent: 'flex-start', // always flex-start
             alignItems: 'center',
-            overflow: 'hidden', // Prevent double scrollbars
+            overflow: 'hidden',
             height: '100%',
             minHeight: 0,
           }}
         >
           {/* White background overlay for the chat area, now using isDarkMode from component scope */}
-          {(
-            <div
-              style={{
-                position: 'absolute',
-                top: '-5px',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: isDarkMode ? '#232323' : '#F7F7F9',
-                zIndex: 0,
-                pointerEvents: 'none',
-              }}
-            />
-          )}
+          {(messages.length > 0) && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-5px',
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: isDarkMode ? '#232323' : '#F7F7F9',
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
           <div
             style={{
               ...styles.chatMessages,
@@ -1599,7 +1600,14 @@ ${userMessage}` : userMessage;
               maxWidth: '100%',
               overflowY: messages.length === 0 ? 'hidden' : 'scroll',
               alignItems: 'center',
-              paddingBottom: inputHeight + 20,
+              justifyContent: messages.length === 0 ? 'center' : 'flex-start',
+              paddingTop: messages.length === 0 ? 0 : 24,
+              paddingBottom: messages.length === 0 ? 0 : (inputHeight + 20),
+              marginBottom: messages.length === 0 ? 0 : 24,
+              gap: messages.length === 0 ? 0 : 64,
+              background: 'transparent',
+              minHeight: 0,
+              height: '100%',
             }}
             className="chatMessages"
             ref={chatContainerRef}
@@ -2170,7 +2178,7 @@ ${userMessage}` : userMessage;
           justifyContent: 'flex-end',
           wordBreak: 'break-word',
         }}>
-          {selectedMode && (
+          {selectedMode && messages.length > 0 && (
             <span>
               You are in: {selectedMode === 'A' ? 'General Legal Information' : 'Case Plausibility Assessment'} Mode
             </span>
@@ -2368,6 +2376,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     textAlign: "center",
+    zIndex: 1,
   },
   welcomeTitle: {
     fontSize: "48px",
@@ -2799,6 +2808,7 @@ const styles = {
     width: '100%',
     maxWidth: '600px',
     boxSizing: 'border-box',
+    zIndex: 2,
   },
   modeIcon: {
     width: '48px',

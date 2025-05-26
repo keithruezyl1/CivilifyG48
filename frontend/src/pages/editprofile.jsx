@@ -16,6 +16,11 @@ const EditProfile = () => {
   });
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Load dark mode preference from localStorage
+    const stored = localStorage.getItem('darkMode');
+    return stored === 'true';
+  });
 
   useEffect(() => {
     // Load user data when component mounts
@@ -220,8 +225,8 @@ const EditProfile = () => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: '#FAFAF9',
-      color: 'black',
+      backgroundColor: isDarkMode ? '#232323' : '#FAFAF9',
+      color: isDarkMode ? '#ffffff' : 'black',
     },
     sidebar: {
       position: 'fixed',
@@ -229,8 +234,8 @@ const EditProfile = () => {
       width: '18rem',
       overflowY: 'auto',
       overflowX: 'hidden',
-      borderRight: '1px solid #e5e7eb',
-      backgroundColor: 'white',
+      borderRight: `1px solid ${isDarkMode ? '#444' : '#e5e7eb'}`,
+      backgroundColor: isDarkMode ? '#2d2d2d' : 'white',
       zIndex: 10,
       display: 'flex',
       flexDirection: 'column',
@@ -245,7 +250,7 @@ const EditProfile = () => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'flex-start',
-      paddingTop: '2.5rem', // Move UI up
+      paddingTop: '2.5rem',
       background: 'transparent',
       overflow: 'hidden',
     },
@@ -253,7 +258,7 @@ const EditProfile = () => {
       width: '150px',
       height: '150px',
       borderRadius: '50%',
-      backgroundColor: '#e5e7eb',
+      backgroundColor: isDarkMode ? '#444' : '#e5e7eb',
       marginBottom: '2rem',
       overflow: 'hidden',
       position: 'relative',
@@ -281,15 +286,16 @@ const EditProfile = () => {
       fontWeight: '500',
       fontSize: '1rem',
       marginBottom: '0.25rem',
-      color: '#000',
+      color: isDarkMode ? '#ffffff' : '#000',
     },
     input: {
       width: '100%',
       padding: '0.75rem',
       borderRadius: '0.375rem',
-      border: '1px solid #e5e7eb',
+      border: `1px solid ${isDarkMode ? '#444' : '#e5e7eb'}`,
       fontSize: '1rem',
-      background: '#fff',
+      background: isDarkMode ? '#2d2d2d' : '#fff',
+      color: isDarkMode ? '#ffffff' : '#000',
     },
     button: {
       width: '100%',
@@ -351,12 +357,9 @@ const EditProfile = () => {
             <li style={{ marginBottom: '1rem' }}>
               <button style={{ color: '#F34D01', fontWeight: 600, background: 'none', border: 'none', fontSize: '1rem' }}>Profile</button>
             </li>
-            <li style={{ marginBottom: '1rem' }}>
-              <button style={{ color: '#4B5563', background: 'none', border: 'none', fontSize: '1rem' }}>Settings</button>
-            </li>
           </ul>
         </nav>
-        <div style={{ position: 'absolute', bottom: '2rem', width: '100%', padding: '0.75rem', borderTop: '1px solid #f1f1f1', backgroundColor: 'white', color: '#F34D01' }}>
+        <div style={{ position: 'absolute', bottom: '2rem', width: '100%', padding: '0.75rem', borderTop: `1px solid ${isDarkMode ? '#444' : '#f1f1f1'}`, backgroundColor: isDarkMode ? '#2d2d2d' : 'white', color: '#F34D01' }}>
           <a href="#" style={{ color: '#F34D01' }} onClick={e => { e.preventDefault(); navigate('/profile'); }}>Back</a>
         </div>
       </aside>

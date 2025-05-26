@@ -13,6 +13,11 @@ const Profile = () => {
     profile_picture_url: null,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Load dark mode preference from localStorage
+    const stored = localStorage.getItem('darkMode');
+    return stored === 'true';
+  });
 
   useEffect(() => {
     // Check authentication on mount
@@ -135,8 +140,8 @@ const Profile = () => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: '#FAFAF9',
-      color: 'black',
+      backgroundColor: isDarkMode ? '#232323' : '#FAFAF9',
+      color: isDarkMode ? '#ffffff' : 'black',
     },
     sidebar: {
       position: 'fixed',
@@ -144,8 +149,8 @@ const Profile = () => {
       width: '18rem',
       overflowY: 'auto',
       overflowX: 'hidden',
-      borderRight: '1px solid #e5e7eb',
-      backgroundColor: 'white',
+      borderRight: `1px solid ${isDarkMode ? '#444' : '#e5e7eb'}`,
+      backgroundColor: isDarkMode ? '#2d2d2d' : 'white',
       zIndex: 10,
       display: 'flex',
       flexDirection: 'column',
@@ -160,7 +165,7 @@ const Profile = () => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'flex-start',
-      paddingTop: '2.5rem', // Move UI up
+      paddingTop: '2.5rem',
       background: 'transparent',
       overflow: 'hidden',
     },
@@ -168,7 +173,7 @@ const Profile = () => {
       width: '150px',
       height: '150px',
       borderRadius: '50%',
-      backgroundColor: '#e5e7eb',
+      backgroundColor: isDarkMode ? '#444' : '#e5e7eb',
       marginBottom: '1.5rem',
       overflow: 'hidden',
       display: 'flex',
@@ -191,14 +196,14 @@ const Profile = () => {
       gap: '0.25rem',
     },
     label: {
-      color: '#000',
+      color: isDarkMode ? '#ffffff' : '#000',
       fontWeight: '500',
       fontSize: '1rem',
       marginBottom: '0.25rem',
     },
     text: {
       fontSize: '1.125rem',
-      color: '#000',
+      color: isDarkMode ? '#ffffff' : '#000',
       fontWeight: 400,
       marginBottom: 0,
     },
@@ -212,6 +217,7 @@ const Profile = () => {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
+      color: isDarkMode ? '#ffffff' : '#000',
     },
   };
 
@@ -236,7 +242,7 @@ const Profile = () => {
             </li>
           </ul>
         </nav>
-        <div style={{ position: 'absolute', bottom: '2rem', width: '100%', padding: '0.75rem', borderTop: '1px solid #f1f1f1', backgroundColor: 'white', color: '#F34D01' }}>
+        <div style={{ position: 'absolute', bottom: '2rem', width: '100%', padding: '0.75rem', borderTop: `1px solid ${isDarkMode ? '#444' : '#f1f1f1'}`, backgroundColor: isDarkMode ? '#2d2d2d' : 'white', color: '#F34D01' }}>
           <a href="#" style={{ color: '#F34D01' }} onClick={e => { e.preventDefault(); navigate('/chat'); }}>Back</a>
         </div>
       </aside>
