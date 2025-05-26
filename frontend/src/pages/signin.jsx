@@ -283,6 +283,10 @@ const SignIn = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    document.title = 'Civilify | Sign In';
+  }, []);
+
   const handleGoogleSignIn = (response) => {
     setIsLoading(true);
     try {

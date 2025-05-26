@@ -273,7 +273,9 @@ const Signup = () => {
 
 
   // No Google sign-in functionality as requested
-  useEffect(() => {}, []); // Empty useEffect to replace the Google sign-in initialization
+  useEffect(() => {
+    document.title = 'Civilify | Sign Up';
+  }, []);
 
   const styles = {
     container: {

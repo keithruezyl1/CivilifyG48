@@ -402,6 +402,10 @@ const CivilifyDocuments = () => {
     };
   }, []);
 
+  useEffect(() => {
+    document.title = 'Civilify | Documents';
+  }, []);
+
   // Navigation link component to ensure consistent visibility
   const NavigationLink = ({ targetId, title }) => {
     return (

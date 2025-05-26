@@ -62,6 +62,10 @@ const Admin = () => {
     }
   }, [searchQuery, users]);
 
+  useEffect(() => {
+    document.title = 'Civilify | Admin';
+  }, []);
+
   const fetchUsers = async () => {
     setIsLoading(true);
     setError(null);

@@ -16,6 +16,7 @@ const ResetPassword = () => {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    document.title = 'Civilify | Reset Password';
     return () => {
       document.body.style.overflow = 'auto';
     };
