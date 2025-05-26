@@ -466,7 +466,7 @@ ${userMessage}` : userMessage;
       e.preventDefault();
       setSendHovered(true);
       handleSubmit(e);
-      setTimeout(() => setSendHovered(false), 150);
+      setTimeout(() => setSendHovered(false), 750);
     }
     // else allow default (newline)
   };
@@ -1441,10 +1441,29 @@ ${userMessage}` : userMessage;
             </div>
           </div>
           )} */}
-          <button style={{
-            ...styles.headerButton,
-            color: isDarkMode ? '#ffffff' : '#1a1a1a'
-          }} onClick={handleHowItWorks} className="text-button-hover">
+          <button
+            style={{
+              ...styles.headerButton,
+              color: isDarkMode ? '#ffffff' : '#1a1a1a',
+              background: 'none', // never add orange background
+              transition: 'background 0.2s, width 0.2s, height 0.2s, min-width 0.2s, transform 0.1s',
+              minWidth: howItWorksHovered ? '110px' : undefined,
+              height: howItWorksHovered ? '40px' : undefined,
+              borderRadius: howItWorksHovered ? '6px' : '6px',
+              padding: howItWorksHovered ? '8px 16px' : '8px 16px',
+              boxSizing: 'border-box',
+              fontWeight: 500,
+              fontSize: '14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: howItWorksHovered ? 'translateY(-2px)' : 'none', // lift on hover
+            }}
+            onClick={handleHowItWorks}
+            className="primary-button-hover"
+            onMouseEnter={() => setHowItWorksHovered(true)}
+            onMouseLeave={() => setHowItWorksHovered(false)}
+          >
             How it works
           </button>
           <button style={{
@@ -1548,6 +1567,13 @@ ${userMessage}` : userMessage;
             backgroundColor: isDarkMode ? '#232323' : '#F7F7F9',
             border: isDarkMode ? '1.5px solid #444' : '1.5px solid #bdbdbd',
             position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: messages.length === 0 ? 'center' : 'flex-start',
+            alignItems: 'center',
+            overflow: 'hidden', // Prevent double scrollbars
+            height: '100%',
+            minHeight: 0,
           }}
         >
           {/* White background overlay for the chat area, now using isDarkMode from component scope */}
@@ -1568,8 +1594,11 @@ ${userMessage}` : userMessage;
           <div
             style={{
               ...styles.chatMessages,
-              position: 'relative',
-              zIndex: 1,
+              flex: 1,
+              width: '100%',
+              maxWidth: '100%',
+              overflowY: messages.length === 0 ? 'hidden' : 'scroll',
+              alignItems: 'center',
               paddingBottom: inputHeight + 20,
             }}
             className="chatMessages"
@@ -1701,12 +1730,14 @@ ${userMessage}` : userMessage;
                     }}
                     onClick={() => handleMessageClick(index)}
                   >
-                    {!message.isUser && (
-                      message.text.toLowerCase().includes("plausibility score") ||
-                      message.text.toLowerCase().includes("case summary") ||
-                      message.text.toLowerCase().includes("legal issues") ||
-                      message.text.toLowerCase().includes("suggested next steps")
-                    ) ? (
+                    {!message.isUser &&
+                      selectedMode === 'B' && (
+                        message.text.toLowerCase().includes("plausibility score") ||
+                        message.text.toLowerCase().includes("case summary") ||
+                        message.text.toLowerCase().includes("legal issues") ||
+                        message.text.toLowerCase().includes("suggested next steps")
+                      )
+                    ? (
                       <VillyReportCard 
                         reportText={message.text} 
                         isDarkMode={isDarkMode} 
@@ -1775,106 +1806,115 @@ ${userMessage}` : userMessage;
                     <span></span>
                     <span></span>
                   </div>
+                  <span style={{ marginLeft: 12, color: isDarkMode ? '#bbbbbb' : '#666666', fontSize: 14 }}>Villy is thinking...</span>
                 </div>
               </div>
             )}
           </div>
-
-            {selectedMode && (
-              <div style={styles.inputWrapper} ref={inputWrapperRef}>
-                <div
-                  style={{
-                    ...styles.inputSection,
-                    background: isDarkMode ? '#363636' : '#ffffff',
-                    boxShadow: isDarkMode ? 'none' : '0 1px 2px rgba(0, 0, 0, 0.05)',
-                    border: isDarkMode ? '1px solid #555' : '1px solid #e0e0e0',
-                    borderRadius: '12px',
-                    padding: '16px',
-                  }}
-                >
-                  <form
-                    onSubmit={handleSubmit}
-                    style={{
-                      ...styles.inputForm,
-                      position: 'relative',
-                      background: 'transparent',
-                      display: 'flex',
-                      alignItems: 'flex-end',
-                      justifyContent: 'center',
-                      width: '100%',
-                    }}
-                  >
-                    <textarea
-                      ref={inputRef}
-                      value={question}
-                      onChange={handleInputChange}
-                      onKeyDown={handleInputKeyDown}
-                      placeholder="Ask a question"
-                      style={{
-                        ...styles.input,
-                        backgroundColor: isDarkMode ? '#363636' : '#ffffff',
-                        borderColor: isDarkMode ? '#555' : '#ccc',
-                        color: isDarkMode ? '#ffffff' : '#1a1a1a',
-                        minHeight: '40px',
-                        maxHeight: '120px',
-                        lineHeight: '40px',
-                        padding: '0 16px',
-                        boxSizing: 'border-box',
-                        width: '400px',
-                        verticalAlign: 'middle',
-                        fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        resize: 'none',
-                        overflowY: 'auto',
-                      }}
-                      rows={1}
-                      className="chat-input-no-scrollbar"
-                    />
-                    <button
-                      type="submit"
-                      style={{
-                        ...styles.sendButton,
-                        marginLeft: '8px',
-                        marginBottom: '2px',
-                        position: 'static',
-                        zIndex: 21,
-                        backgroundColor: isDarkMode ? '#363636' : '#ffffff',
-                        color: isDarkMode ? '#666666' : '#666666',
-                        border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                      }}
-                      className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
-                    >
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path
-                          d="M12 20V4M5 11l7-7 7 7"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </form>
-                  <div
-                    style={{
-                      ...styles.disclaimer,
-                      background: 'transparent',
-                    }}
-                  >
-                    Villy offers AI-powered legal insights to help you explore your
-                    situation. While it's here to assist, it's not a substitute for
-                    professional legal advice.
-                  </div>
-                </div>
-              </div>
-            )}
         </div>
+        {/* Only show chat input if a mode is selected AND the welcome screen is not showing */}
+        {selectedMode && messages.length > 0 && (
+          <div style={{ ...styles.inputWrapper, marginBottom: '10px' }} ref={inputWrapperRef}>
+            <div
+              style={{
+                ...styles.inputSection,
+                background: isDarkMode ? '#353535' : '#ffffff',
+                boxShadow: isDarkMode ? '0 2px 8px rgba(0,0,0,0.32)' : '0 1px 2px rgba(0, 0, 0, 0.05)',
+                border: isDarkMode ? '1.5px solid #555' : '1px solid #e0e0e0',
+                borderRadius: '12px',
+                padding: '16px',
+              }}
+            >
+              <form
+                onSubmit={handleSubmit}
+                style={{
+                  ...styles.inputForm,
+                  position: 'relative',
+                  background: 'transparent',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                  width: '100%',
+                }}
+              >
+                <textarea
+                  ref={inputRef}
+                  value={question}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
+                  placeholder="Ask a question"
+                  style={{
+                    ...styles.input,
+                    backgroundColor: isDarkMode ? '#353535' : '#ffffff',
+                    border: 'none',
+                    color: isDarkMode ? '#fff' : '#1a1a1a',
+                    minHeight: '40px',
+                    maxHeight: '120px',
+                    lineHeight: '40px',
+                    padding: '0 16px',
+                    boxSizing: 'border-box',
+                    width: '400px',
+                    verticalAlign: 'middle',
+                    fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    resize: 'none',
+                    overflowY: 'auto',
+                    '::placeholder': { color: isDarkMode ? '#ccc' : '#888' },
+                    outline: 'none',
+                  }}
+                  rows={1}
+                  className="chat-input-no-scrollbar"
+                />
+                <button
+                  type="submit"
+                  style={{
+                    ...styles.sendButton,
+                    backgroundColor: sendHovered ? '#F34D01' : '#fff',
+                    border: sendHovered ? 'none' : '2px solid #cccccc',
+                    color: sendHovered ? '#fff' : '#666',
+                    boxShadow: 'none',
+                    marginLeft: '8px',
+                    marginBottom: '2px',
+                    position: 'static',
+                    zIndex: 21,
+                    transition: 'background-color 0.2s, color 0.2s, border 0.2s',
+                  }}
+                  onMouseEnter={() => setSendHovered(true)}
+                  onMouseLeave={() => setSendHovered(false)}
+                >
+                  <svg
+                    key={sendHovered ? 'hovered' : 'not-hovered'}
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={sendHovered ? '#fff' : '#666'}
+                    strokeWidth="2"
+                    style={{ transition: 'stroke 0.2s' }}
+                  >
+                    <path
+                      d="M12 20V4M5 11l7-7 7 7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </form>
+              <div
+                style={{
+                  ...styles.disclaimer,
+                  background: 'transparent',
+                  color: isDarkMode ? '#bbbbbb' : '#666666',
+                }}
+              >
+                Villy offers AI-powered legal insights to help you explore your
+                situation. While it's here to assist, it's not a substitute for
+                professional legal advice.
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Popup Overlays */}
@@ -2111,9 +2151,30 @@ ${userMessage}` : userMessage;
       }}>
         <div style={{
           ...styles.footerLeft,
-          color: isDarkMode ? '#ffffff' : '#666666'
+          color: "#b0b0b0",
+          fontSize: "13px",
+          marginLeft: "-8px",
+          flex: 1,
+          minWidth: 0,
+          wordBreak: 'break-word',
         }}>
-          <span> The Civilify Company, Cebu City 2025</span>
+          <span>The Civilify Company, Cebu City 2025</span>
+        </div>
+        <div style={{
+          ...styles.footerRight,
+          color: "#b0b0b0",
+          fontSize: "13px",
+          marginRight: "-8px",
+          flex: 1,
+          minWidth: 0,
+          justifyContent: 'flex-end',
+          wordBreak: 'break-word',
+        }}>
+          {selectedMode && (
+            <span>
+              You are in: {selectedMode === 'A' ? 'General Legal Information' : 'Case Plausibility Assessment'} Mode
+            </span>
+          )}
         </div>
       </footer>
       {/* Report Thanks Popup */}
@@ -2362,6 +2423,7 @@ const styles = {
     marginRight: "0",
     textAlign: "left",
     alignSelf: 'flex-start',
+    boxShadow: '0 2px 8px rgba(243,77,1,0.10)', // subtle shadow
   },
   aiMessage: {
     borderBottomLeftRadius: "4px",
@@ -2369,6 +2431,9 @@ const styles = {
     marginLeft: "0",
     textAlign: "left",
     alignSelf: 'flex-start',
+    backgroundColor: '#23272f', // slightly darker for dark mode
+    color: '#e0e0e0',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.10)', // subtle shadow
   },
   timestamp: {
     fontSize: "12px",
@@ -2429,13 +2494,18 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "40px",
-    height: "40px",
-    padding: "8px",
-    borderRadius: "8px",
+    width: "44px",
+    height: "44px",
+    padding: 0,
+    borderRadius: "50%", // fully round
     cursor: "pointer",
-    transition: "background-color 0.2s ease, color 0.2s ease, transform 0.1s ease, border-color 0.2s ease",
-    // backgroundColor, color, border moved inline
+    transition: "background-color 0.2s, color 0.2s, transform 0.1s, border-color 0.2s",
+    backgroundColor: '#F34D01',
+    color: '#fff',
+    border: '2px solid #cccccc', // visible light grey outline for all modes
+    outline: 'none',
+    fontSize: '20px',
+    boxShadow: '0 2px 8px rgba(243,77,1,0.10)',
   },
   disclaimer: {
     fontSize: "11px",
@@ -2449,26 +2519,37 @@ const styles = {
     border: 'none',
   },
   footer: {
-    height: "48px",
+    height: "auto",
+    minHeight: "48px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 32px",
+    padding: "8px 32px", // increased vertical padding
     flexShrink: 0,
     borderTop: 'none',
+    flexWrap: 'wrap', // allow wrapping on small screens
   },
   footerLeft: {
     display: "flex",
     alignItems: "center",
     gap: "24px",
-    color: "#666666",
-    fontSize: "14px",
+    color: "#b0b0b0",
+    fontSize: "13px",
     marginLeft: "-8px",
+    flex: 1,
+    minWidth: 0,
+    wordBreak: 'break-word',
   },
   footerRight: {
     display: "flex",
     alignItems: "center",
     marginRight: "-8px",
+    color: "#b0b0b0",
+    fontSize: "13px",
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'flex-end',
+    wordBreak: 'break-word',
   },
   footerLink: {
     background: "none",
@@ -2764,14 +2845,14 @@ if (!document.getElementById('chat-input-no-scrollbar-style')) {
       background: transparent;
     }
     .chatMessages::-webkit-scrollbar-thumb {
-      background: #888;
+      background: #F34D01;
       border-radius: 4px;
     }
     .chatMessages::-webkit-scrollbar-thumb:hover {
-      background: #aaa;
+      background: #e04000;
     }
     .chatMessages::-webkit-scrollbar-button {
-      background: #888;
+      background: #F34D01;
       height: 8px;
     }
     .chatMessages::-webkit-scrollbar-corner {
@@ -2779,7 +2860,7 @@ if (!document.getElementById('chat-input-no-scrollbar-style')) {
     }
     .chatMessages {
       scrollbar-width: thin;
-      scrollbar-color: #888 transparent;
+      scrollbar-color: #F34D01 transparent;
     }
   `;
   document.head.appendChild(style);
