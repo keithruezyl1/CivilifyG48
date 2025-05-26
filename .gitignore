@@ -1,9 +1,10 @@
 # Project-wide .gitignore file
 
 # Environment files
-#.env
-#.env.*
-#!.env.example
+.env
+.env.*
+!.env.example
+
 
 # Firebase service account
 *firebase*.json
@@ -48,6 +49,9 @@ target/
 
 # Windsurf rules
 .windsurfrules
-.windsurfrules
+.windsurfrules.*
+*.windsurfrules
+.windsurf/
+.windsurf/**
 
 frontend-reference
