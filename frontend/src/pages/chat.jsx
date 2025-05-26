@@ -12,6 +12,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { auth, onAuthStateChanged } from '../firebase-config';
 import VillyReportCard from '../components/VillyReportCard';
 import { validateAuthToken, getAuthToken } from '../utils/auth';
+import ReactMarkdown from 'react-markdown';
 
 // System prompts for different modes
 const GLI_SYSTEM_PROMPT = "You are Villy, a helpful assistant providing general information.";
@@ -186,6 +187,34 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
   // Remove system prompt echoes (blockquotes or quoted system prompt)
   text = text.replace(/^>\s*"I am Villy[^"]*"[\s\S]*?(?=\n|$)/gi, '').trim();
   return text.trim();
+};
+
+const markdownComponents = {
+  h1: ({node, ...props}) => <h1 style={{fontSize: '1.3em', fontWeight: 700, margin: '12px 0 6px 0', color: '#F34D01'}} {...props} />,
+  h2: ({node, ...props}) => <h2 style={{fontSize: '1.15em', fontWeight: 700, margin: '10px 0 5px 0', color: '#F34D01'}} {...props} />,
+  h3: ({node, ...props}) => <h3 style={{fontSize: '1.05em', fontWeight: 700, margin: '8px 0 4px 0', color: '#F34D01'}} {...props} />,
+  p: ({node, children, ...props}) => {
+    if (typeof children[0] === 'string' && children[0].startsWith('Note:')) {
+      return <p style={{background: '#fffbe6', color: '#b45309', padding: '6px 10px', borderRadius: 6, margin: '8px 0'}}>{children}</p>;
+    }
+    return <p style={{margin: 0, padding: 0, lineHeight: '1.5'}} {...props}>{children}</p>;
+  },
+  ul: ({node, ...props}) => <ul style={{margin: 0, paddingLeft: 22, lineHeight: '1.5'}} {...props} />,
+  ol: ({node, ...props}) => <ol style={{margin: 0, paddingLeft: 22, lineHeight: '1.5'}} {...props} />,
+  li: ({node, ...props}) => <li style={{margin: '0 0 2px 0', padding: 0, lineHeight: '1.5'}} {...props} />,
+  a: ({node, ...props}) => (
+    <a
+      style={{
+        color: '#2563eb',
+        textDecoration: 'underline',
+        fontWeight: 500,
+        wordBreak: 'break-all',
+      }}
+      target="_blank"
+      rel="noopener noreferrer"
+      {...props}
+    />
+  ),
 };
 
 // 1. VillyReportUI component
@@ -1161,14 +1190,39 @@ ${userMessage}` : userMessage;
     };
   }, [isDarkMode]); // Add isDarkMode dependency for hover styles
 
-  // Auto-scroll to bottom on new message
+  // Track if initial mount is done
+  const initialMount = useRef(true);
+
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTo({
-        top: chatContainerRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
+    const savedConversationId = localStorage.getItem('currentConversationId');
+    const savedMessages = localStorage.getItem('chatMessages');
+    const savedMode = localStorage.getItem('selectedMode');
+    
+    if (savedConversationId) {
+      setCurrentConversationId(savedConversationId);
     }
+    if (savedMessages) {
+      try {
+        const parsedMessages = JSON.parse(savedMessages);
+        setMessages(parsedMessages);
+        initialMount.current = true; // Set flag for initial load
+      } catch (e) {
+        setMessages([]);
+      }
+    }
+    if (savedMode) {
+      setSelectedMode(savedMode);
+    }
+  }, []);
+
+  // Auto-scroll chat to bottom on every new message (user or Villy)
+  useEffect(() => {
+    if (!chatContainerRef.current) return;
+    const container = chatContainerRef.current;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth',
+    });
   }, [messages]);
 
   useEffect(() => {
@@ -1252,30 +1306,6 @@ ${userMessage}` : userMessage;
     );
   };
 
-  // Track if initial mount is done
-  const initialMount = useRef(true);
-
-  useEffect(() => {
-    const savedConversationId = localStorage.getItem('currentConversationId');
-    const savedMessages = localStorage.getItem('chatMessages');
-    const savedMode = localStorage.getItem('selectedMode');
-    
-    if (savedConversationId) {
-      setCurrentConversationId(savedConversationId);
-    }
-    if (savedMessages) {
-      try {
-        const parsedMessages = JSON.parse(savedMessages);
-        setMessages(parsedMessages);
-      } catch (e) {
-        setMessages([]);
-      }
-    }
-    if (savedMode) {
-      setSelectedMode(savedMode);
-    }
-  }, []);
-
   // Handler for 'This report was helpful. Thanks!'
   const handleReportThanks = () => {
     setShowReportThanksPopup(true);
@@ -1317,6 +1347,16 @@ ${userMessage}` : userMessage;
       localStorage.setItem('selectedMode', selectedMode);
     }
   }, [selectedMode]);
+
+  const inputWrapperRef = useRef(null);
+  const [inputHeight, setInputHeight] = useState(0);
+
+  // Track input wrapper height
+  useEffect(() => {
+    if (inputWrapperRef.current) {
+      setInputHeight(inputWrapperRef.current.offsetHeight || 0);
+    }
+  });
 
   if (loading) return <LoadingScreen />;
 
@@ -1482,16 +1522,6 @@ ${userMessage}` : userMessage;
                   <span style={{ fontSize: '15px', fontWeight: 500 }}>Dark Mode</span>
                 </div>
                 {/* Removed Settings button */}
-                <button
-                  style={{
-                    ...styles.dropdownItem,
-                    color: isDarkMode ? '#fff' : '#232323',
-                  }}
-                  className="dropdown-item-hover"
-                >
-                  <FaQuestionCircle style={styles.dropdownIcon} />
-                  <span style={{ fontSize: '15px' }}>Support</span>
-                </button>
                 <div style={{...styles.dropdownSeparatorBase, backgroundColor: isDarkMode ? '#444' : 'rgba(0, 0, 0, 0.12)', margin: '6px 0'}}></div>
                 <button
                   style={{
@@ -1512,12 +1542,39 @@ ${userMessage}` : userMessage;
 
       {/* Main Chat Area */}
       <main style={styles.mainContent}>
-        <div style={{
-          ...styles.chatContainer,
-          backgroundColor: "transparent",
-          border: isDarkMode ? '1.5px solid #444' : '1.5px solid #bdbdbd'
-        }}>
-          <div style={styles.chatMessages} className="chatMessages" ref={chatContainerRef}>
+        <div
+          style={{
+            ...styles.chatContainer,
+            backgroundColor: isDarkMode ? '#232323' : '#F7F7F9',
+            border: isDarkMode ? '1.5px solid #444' : '1.5px solid #bdbdbd',
+            position: 'relative',
+          }}
+        >
+          {/* White background overlay for the chat area, now using isDarkMode from component scope */}
+          {(
+            <div
+              style={{
+                position: 'absolute',
+                top: '-5px',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: isDarkMode ? '#232323' : '#F7F7F9',
+                zIndex: 0,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          <div
+            style={{
+              ...styles.chatMessages,
+              position: 'relative',
+              zIndex: 1,
+              paddingBottom: inputHeight + 20,
+            }}
+            className="chatMessages"
+            ref={chatContainerRef}
+          >
             {messages.length === 0 ? (
               <div style={styles.welcomeSection}>
                 <h1 style={{
@@ -1594,7 +1651,7 @@ ${userMessage}` : userMessage;
                     ...styles.messageWrapper,
                     flexDirection: message.isUser ? 'row-reverse' : 'row',
                     justifyContent: message.isUser ? 'flex-end' : 'flex-start',
-                    marginBottom: index === messages.length - 1 ? 20 : undefined, // Add margin to last message
+                    marginBottom: index === messages.length - 1 ? 20 : undefined,
                   }}
                 >
                   {message.isUser ? (
@@ -1657,11 +1714,9 @@ ${userMessage}` : userMessage;
                         plausibilitySummary={message.plausibilitySummary} 
                       />
                     ) : (
-                      <span dangerouslySetInnerHTML={{
-                        __html: message.isUser
-                          ? message.text
-                          : formatAIResponse(message.text),
-                      }} />
+                      <ReactMarkdown components={markdownComponents}>
+                        {message.isUser ? message.text : message.text}
+                      </ReactMarkdown>
                     )}
                   </div>
                   {showTimestamp === index && message.timestamp && (
@@ -1725,78 +1780,100 @@ ${userMessage}` : userMessage;
             )}
           </div>
 
-          {selectedMode && (
-            <div style={{
-              ...styles.inputWrapper,
-              background: isDarkMode ? 'rgba(45,45,45,0.98)' : 'rgba(255,255,255,0.98)',
-              borderTop: isDarkMode ? '1.5px solid #444' : '1.5px solid #e0e0e0',
-              boxShadow: isDarkMode ? '0 -2px 16px 0 rgba(0,0,0,0.4)' : '0 -2px 16px 0 rgba(0,0,0,0.08)'
-            }}>
-              <div style={styles.inputSection}>
-                <form onSubmit={handleSubmit} style={{ ...styles.inputForm, position: 'relative', background: 'transparent', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', width: '100%' }}>
-                  <textarea
-                    ref={inputRef}
-                    value={question}
-                    onChange={handleInputChange}
-                    onKeyDown={handleInputKeyDown}
-                    placeholder="Ask a question"
+            {selectedMode && (
+              <div style={styles.inputWrapper} ref={inputWrapperRef}>
+                <div
+                  style={{
+                    ...styles.inputSection,
+                    background: isDarkMode ? '#363636' : '#ffffff',
+                    boxShadow: isDarkMode ? 'none' : '0 1px 2px rgba(0, 0, 0, 0.05)',
+                    border: isDarkMode ? '1px solid #555' : '1px solid #e0e0e0',
+                    borderRadius: '12px',
+                    padding: '16px',
+                  }}
+                >
+                  <form
+                    onSubmit={handleSubmit}
                     style={{
-                      ...styles.input,
-                      backgroundColor: isDarkMode ? '#363636' : '#ffffff', 
-                      borderColor: isDarkMode ? '#555' : '#ccc', 
-                      color: isDarkMode ? '#ffffff' : '#1a1a1a',
-                      minHeight: '40px',
-                      maxHeight: '120px',
-                      lineHeight: '40px',
-                      padding: '0 16px',
-                      boxSizing: 'border-box',
-                      width: '400px',
-                      verticalAlign: 'middle',
-                      fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
-                      scrollbarWidth: 'none',
-                      msOverflowStyle: 'none',
-                      resize: 'none',
-                      overflowY: 'auto',
+                      ...styles.inputForm,
+                      position: 'relative',
+                      background: 'transparent',
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      width: '100%',
                     }}
-                    rows={1}
-                    className="chat-input-no-scrollbar"
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      ...styles.sendButton,
-                      marginLeft: '8px',
-                      marginBottom: '2px',
-                      position: 'static',
-                      zIndex: 21,
-                    }}
-                    className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
-                    disabled={!selectedMode}
                   >
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
+                    <textarea
+                      ref={inputRef}
+                      value={question}
+                      onChange={handleInputChange}
+                      onKeyDown={handleInputKeyDown}
+                      placeholder="Ask a question"
+                      style={{
+                        ...styles.input,
+                        backgroundColor: isDarkMode ? '#363636' : '#ffffff',
+                        borderColor: isDarkMode ? '#555' : '#ccc',
+                        color: isDarkMode ? '#ffffff' : '#1a1a1a',
+                        minHeight: '40px',
+                        maxHeight: '120px',
+                        lineHeight: '40px',
+                        padding: '0 16px',
+                        boxSizing: 'border-box',
+                        width: '400px',
+                        verticalAlign: 'middle',
+                        fontFamily: 'Lato, system-ui, Avenir, Helvetica, Arial, sans-serif',
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                        resize: 'none',
+                        overflowY: 'auto',
+                      }}
+                      rows={1}
+                      className="chat-input-no-scrollbar"
+                    />
+                    <button
+                      type="submit"
+                      style={{
+                        ...styles.sendButton,
+                        marginLeft: '8px',
+                        marginBottom: '2px',
+                        position: 'static',
+                        zIndex: 21,
+                        backgroundColor: isDarkMode ? '#363636' : '#ffffff',
+                        color: isDarkMode ? '#666666' : '#666666',
+                        border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                      }}
+                      className={sendHovered ? "send-button-hover hovered" : "send-button-hover"}
                     >
-                      <path
-                        d="M12 20V4M5 11l7-7 7 7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                </form>
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path
+                          d="M12 20V4M5 11l7-7 7 7"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </form>
+                  <div
+                    style={{
+                      ...styles.disclaimer,
+                      background: 'transparent',
+                    }}
+                  >
+                    Villy offers AI-powered legal insights to help you explore your
+                    situation. While it's here to assist, it's not a substitute for
+                    professional legal advice.
+                  </div>
+                </div>
               </div>
-              <div style={styles.disclaimer}>
-                  Villy offers AI-powered legal insights to help you explore your
-                  situation. While it's here to assist, it's not a substitute for
-                  professional legal advice.
-              </div>
-            </div>
-          )}
+            )}
         </div>
       </main>
 
@@ -2220,7 +2297,7 @@ const styles = {
     flexDirection: "column",
     gap: "64px",
     alignItems: 'center',
-    paddingBottom: '120px', // ensure space for fixed input
+    paddingBottom: '96px',
     background: 'transparent',
   },
   welcomeSection: {
@@ -2305,49 +2382,37 @@ const styles = {
     textAlign: "left",
   },
   inputWrapper: {
-    position: 'fixed',
+    position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100vw',
     zIndex: 20,
-    padding: '16px 0 24px 0',
+    padding: '16px 32px',
+    background: 'transparent',
     pointerEvents: 'auto',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    border: 'none',
-  },
-  disclaimer: {
-    fontSize: "11px",
-    color: "#666666",
-    textAlign: "center",
-    marginTop: "12px",
-    marginBottom: "4px",
-    fontStyle: "italic",
-    width: "100%",
-    background: 'transparent',
     boxShadow: 'none',
     border: 'none',
   },
   inputSection: {
     display: "flex",
-    flexDirection: "row",
-    alignItems: "flex-end",
+    flexDirection: "column",
+    alignItems: "center",
     justifyContent: "center",
     width: '100%',
-    background: 'transparent',
-    boxShadow: 'none',
-    border: 'none',
+    maxWidth: '900px',
+    margin: '0 auto',
+    // background, boxShadow, border, borderRadius, padding moved inline
   },
   inputForm: {
     width: "100%",
-    maxWidth: '900px',
-    margin: '0 auto',
     display: "flex",
     gap: "12px",
     alignItems: "center",
+    // background moved inline
   },
   input: {
     flex: 1,
@@ -2358,6 +2423,7 @@ const styles = {
     outline: "none",
     height: "40px",
     lineHeight: "40px",
+    // backgroundColor, borderColor, color moved inline
   },
   sendButton: {
     display: "flex",
@@ -2369,6 +2435,18 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
     transition: "background-color 0.2s ease, color 0.2s ease, transform 0.1s ease, border-color 0.2s ease",
+    // backgroundColor, color, border moved inline
+  },
+  disclaimer: {
+    fontSize: "11px",
+    color: "#666666",
+    textAlign: "center",
+    marginTop: "12px",
+    fontStyle: "italic",
+    width: "100%",
+    // background moved inline
+    boxShadow: 'none',
+    border: 'none',
   },
   footer: {
     height: "48px",
