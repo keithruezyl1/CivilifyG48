@@ -24,6 +24,10 @@ export const clearAuthData = () => {
   localStorage.removeItem('tokenExpires');
   localStorage.removeItem('user');
   localStorage.removeItem('profileData');
+  localStorage.removeItem('currentConversationId');
+  localStorage.removeItem('chatMessages');
+  localStorage.removeItem('selectedMode');
+  localStorage.removeItem('redirectAfterLogin');
   console.log('All auth data cleared');
 };
 

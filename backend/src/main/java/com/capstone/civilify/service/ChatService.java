@@ -321,24 +321,28 @@ public class ChatService {
     
     // Delete all previous conversations for a user by email
     public int deleteAllUserConversations(String userEmail) throws ExecutionException, InterruptedException {
+        return deleteAllUserConversationsExcept(userEmail, null);
+    }
+
+    // Delete all previous conversations for a user by email, except one
+    public int deleteAllUserConversationsExcept(String userEmail, String excludeConversationId) throws ExecutionException, InterruptedException {
         Firestore db = FirestoreClient.getFirestore();
-        
         // Query all conversations for the user
         Query query = db.collection(CONVERSATIONS_COLLECTION)
                        .whereEqualTo("userEmail", userEmail);
-        
         ApiFuture<QuerySnapshot> future = query.get();
         List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-        
         int deletedCount = 0;
         for (QueryDocumentSnapshot document : documents) {
             String conversationId = document.getId();
+            if (excludeConversationId != null && conversationId.equals(excludeConversationId)) {
+                continue; // skip the current conversation
+            }
             if (deleteConversation(conversationId)) {
                 deletedCount++;
             }
         }
-        
-        logger.info("Deleted {} conversations for user: {}", deletedCount, userEmail);
+        logger.info("Deleted {} conversations for user: {} (excluding {})", deletedCount, userEmail, excludeConversationId);
         return deletedCount;
     }
 }

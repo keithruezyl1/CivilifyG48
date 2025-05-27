@@ -32,6 +32,7 @@ public class OpenAIController {
     public ResponseEntity<?> deleteAllPreviousConversations(@RequestBody Map<String, String> request) {
         try {
             String userEmail = request.get("userEmail");
+            String excludeConversationId = request.get("excludeConversationId");
             
             if (userEmail == null || userEmail.trim().isEmpty()) {
                 logger.warn("No user email provided for deleting conversations");
@@ -44,8 +45,12 @@ public class OpenAIController {
             // Only proceed with deletion if conversations exist
             int deletedCount = 0;
             if (hasConversations) {
-                deletedCount = chatService.deleteAllUserConversations(userEmail);
-                logger.info("Deleted {} previous conversations for user: {}", deletedCount, userEmail);
+                if (excludeConversationId != null && !excludeConversationId.trim().isEmpty()) {
+                    deletedCount = chatService.deleteAllUserConversationsExcept(userEmail, excludeConversationId);
+                } else {
+                    deletedCount = chatService.deleteAllUserConversations(userEmail);
+                }
+                logger.info("Deleted {} previous conversations for user: {} (excluding {})", deletedCount, userEmail, excludeConversationId);
             } else {
                 logger.info("No conversations found to delete for user: {}", userEmail);
             }
