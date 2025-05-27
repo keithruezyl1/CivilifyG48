@@ -60,12 +60,56 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
-      // Call the backend forgot password endpoint
-      console.log("Sending forgot password request for:", email);
+      // First check if the email exists in the database
+      console.log("Checking if email exists:", email);
+      
+      // Prepare the URL for checking email existence
+      const emailCheckUrl = `${API_URL}/users/email/${encodeURIComponent(email)}`;
+      console.log('Checking email at URL:', emailCheckUrl);
+      
+      let emailExists = false;
+      
+      try {
+        // Call the getUserByEmail endpoint to check if email exists
+        const checkResponse = await axios.get(emailCheckUrl);
+        console.log('Email check response:', checkResponse);
+        
+        // Check if we got a valid user object back (not empty)
+        // The API returns an empty object if the email doesn't exist
+        if (checkResponse.status === 200 && checkResponse.data) {
+          // Check if the data object contains any properties besides 'error'
+          // If it has email or other user properties, the user exists
+          if (checkResponse.data.email && Object.keys(checkResponse.data).length > 0) {
+            emailExists = true;
+            console.log('Valid user found with this email');
+          } else {
+            console.log('Empty user data returned, email likely does not exist');
+            emailExists = false;
+          }
+        }
+      } catch (emailErr) {
+        console.error('Email check error:', emailErr);
+        
+        // If we get a 404, it means the email doesn't exist
+        if (emailErr.response && emailErr.response.status === 404) {
+          emailExists = false;
+        } else {
+          // For other errors, we'll still say email verification failed
+          throw new Error('Email verification failed. Please try again.');
+        }
+      }
+      
+      // If email doesn't exist, show error toast and stop
+      if (!emailExists) {
+        showErrorToast("Email does not exist in our system.");
+        return;
+      }
+      
+      // If we get here, the email exists, so proceed with password reset
+      console.log("Email exists. Sending forgot password request for:", email);
       
       const response = await axios.post(`${API_URL}/auth/forgot-password`, 
         { email },
@@ -77,7 +121,7 @@ const ForgotPassword = () => {
         }
       );
       
-      console.log('Response:', response);
+      console.log('Password reset response:', response);
       
       if (response.data && response.data.success) {
         showSuccessToast("Password reset email sent successfully. Please check your inbox.");
@@ -87,13 +131,12 @@ const ForgotPassword = () => {
         }, 3000);
       } else {
         const errorMessage = response.data?.message || "Failed to send reset link. Please try again.";
-        setError(errorMessage);
         showErrorToast(errorMessage);
       }
     } catch (err) {
-      console.error("Error sending password reset email:", err);
-      setError("Failed to send reset link. Please try again.");
-      showErrorToast("Failed to send reset link. Please try again.");
+      console.error("Error in forgot password flow:", err);
+      const errorMessage = err.message || "Failed to process your request. Please try again.";
+      showErrorToast(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +196,6 @@ const ForgotPassword = () => {
               required
             />
           </div>
-          {error && <p style={styles.error}>{error}</p>}
           <button
             type="submit"
             style={styles.submitButton}

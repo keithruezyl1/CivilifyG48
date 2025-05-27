@@ -13,9 +13,9 @@ const SignIn = () => {
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordClicked, setForgotPasswordClicked] = useState(false);
 
   // Example toast functions for future use
   const showSuccessToast = (message) => {
@@ -104,7 +104,6 @@ const SignIn = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
     
     console.log('Attempting to sign in with:', { email: formData.email, password: '******' });
@@ -143,7 +142,14 @@ const SignIn = () => {
       }
       
       if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed');
+        // Extract specific error message from response if available
+        let errorMessage = 'Authentication failed';
+        if (data && data.error) {
+          errorMessage = data.error;
+        } else if (data && data.message) {
+          errorMessage = data.message;
+        }
+        throw new Error(errorMessage);
       }
       
       console.log('Authentication successful:', data);
@@ -200,8 +206,43 @@ const SignIn = () => {
       }
     } catch (err) {
       console.error('Authentication error:', err);
-      showErrorToast(err.message || 'Invalid email or password. Please try again.');
-      setError(err.message || 'Invalid email or password. Please try again.');
+      
+      // Handle different error scenarios with appropriate toast messages
+      const errorMessage = err.message || '';
+      const lowerCaseError = errorMessage.toLowerCase();
+      
+      // Specific error handling based on the error message
+      if (lowerCaseError.includes('network') || lowerCaseError.includes('connection')) {
+        // Network or connection error - critical (red)
+        showErrorToast('Unable to connect to the server. Please check your internet connection.');
+      } else if (lowerCaseError.includes('empty response')) {
+        // Server error - critical (red)
+        showErrorToast('The server is not responding. Please try again later.');
+      } else if (lowerCaseError.includes('invalid response format')) {
+        // Data format error - critical (red)
+        showErrorToast('Received an invalid response from the server. Please try again later.');
+      } else if (lowerCaseError.includes('email not found') || lowerCaseError.includes('user not found')) {
+        // Email doesn't exist - informational (yellow)
+        showWarningToast('This email is not registered. Please check your email or sign up for a new account.');
+      } else if (lowerCaseError.includes('incorrect password') || lowerCaseError.includes('wrong password')) {
+        // Wrong password - informational (yellow)
+        showWarningToast('Incorrect password. Please try again or use the forgot password option.');
+      } else if (lowerCaseError.includes('account locked') || lowerCaseError.includes('too many attempts')) {
+        // Account locked - critical (red)
+        showErrorToast('Your account has been temporarily locked due to too many failed attempts. Please try again later or reset your password.');
+      } else if (lowerCaseError.includes('invalid') && lowerCaseError.includes('email')) {
+        // Invalid email format - informational (yellow)
+        showWarningToast('Please enter a valid email address.');
+      } else if (lowerCaseError.includes('password') && (lowerCaseError.includes('short') || lowerCaseError.includes('weak'))) {
+        // Password requirements - informational (yellow)
+        showWarningToast('Your password does not meet the required criteria.');
+      } else if (lowerCaseError.includes('account') && lowerCaseError.includes('disabled')) {
+        // Account disabled - critical (red)
+        showErrorToast('Your account has been disabled. Please contact support for assistance.');
+      } else {
+        // Generic authentication error - critical (red)
+        showErrorToast('Authentication failed. Please check your email and password.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -216,6 +257,7 @@ const SignIn = () => {
   };
 
   const handleForgotPassword = () => {
+    setForgotPasswordClicked(true);
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
@@ -386,8 +428,6 @@ const SignIn = () => {
           <h2 style={styles.title}>Welcome back</h2>
           <p style={styles.subtitle}>Sign in to continue</p>
 
-          {error && <div style={styles.error}>{error}</div>}
-
           <form onSubmit={handleSubmit} style={styles.form}>
             <div style={styles.inputGroup}>
               <label style={styles.label}>Email</label>
@@ -451,7 +491,10 @@ const SignIn = () => {
               <button
                 type="button"
                 onClick={handleForgotPassword}
-                style={styles.forgotPassword}
+                style={{
+                  ...styles.forgotPassword,
+                  ...(forgotPasswordClicked && styles.forgotPasswordClicked)
+                }}
               >
                 Forgot password?
               </button>
@@ -667,6 +710,12 @@ const styles = {
     marginBottom: "16px",
     fontWeight: "500",
     textDecoration: "none",
+    outline: "none", // Remove default outline
+  },
+  forgotPasswordClicked: {
+    color: "#d43f01", // Darker orange for clicked state
+    fontWeight: "600",
+    textDecoration: "underline",
   },
 };
 
