@@ -51,7 +51,7 @@ public class AuthController {
         if (loginRequest.getEmail() == null || loginRequest.getPassword() == null) {
             logger.error("Login failed: Email or password is null");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("Email and password are required"));
+                .body(Map.of("error", "Email and password are required"));
         }
         
         try {
@@ -60,10 +60,34 @@ public class AuthController {
             logger.debug("Password length: {}", loginRequest.getPassword().length());
             
             // Authenticate with Firebase and log the token (shortened for security)
-            String firebaseToken = firebaseAuthService.signInWithEmailAndPassword(
-                loginRequest.getEmail(), 
-                loginRequest.getPassword()
-            );
+            String firebaseToken;
+            try {
+                firebaseToken = firebaseAuthService.signInWithEmailAndPassword(
+                    loginRequest.getEmail(), 
+                    loginRequest.getPassword()
+                );
+            } catch (RuntimeException authEx) {
+                logger.error("Authentication failed: {}", authEx.getMessage());
+                
+                // Check for common authentication errors
+                String errorMessage = authEx.getMessage();
+                if (errorMessage.contains("INVALID_PASSWORD")) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication failed: Incorrect password"));
+                } else if (errorMessage.contains("EMAIL_NOT_FOUND")) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication failed: Email not found"));
+                } else if (errorMessage.contains("USER_DISABLED")) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication failed: Account has been disabled"));
+                } else if (errorMessage.contains("TOO_MANY_ATTEMPTS_TRY_LATER")) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication failed: Too many attempts. Please try again later"));
+                } else {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication failed: " + errorMessage));
+                }
+            }
             
             // Log that we received a token (but don't log the actual token for security)
             if (firebaseToken != null && !firebaseToken.isEmpty()) {
@@ -102,8 +126,18 @@ public class AuthController {
             return ResponseEntity.ok(new AuthResponse(jwtToken, userDetails, expiresAt, null));
         } catch (Exception e) {
             logger.error("Authentication failed: {}", e.getMessage(), e);
+            // Create a safe error message that doesn't expose internal details
+            String userFacingMessage = "Authentication failed. Please try again later.";
+            
+            // For specific known exceptions, provide more helpful messages
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("network") || e.getMessage().contains("connection")) {
+                    userFacingMessage = "Unable to connect to authentication service. Please try again later.";
+                }
+            }
+            
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "Authentication failed: " + e.getMessage()));
+                .body(Map.of("error", userFacingMessage));
         }
     }
     
@@ -113,6 +147,20 @@ public class AuthController {
         logger.info("Processing forgot password request for email: {}", email);
         
         try {
+            // First check if the email exists in our database
+            logger.info("Checking if email exists in database: {}", email);
+            Map<String, Object> userDetails = firestoreService.getUserByEmail(email);
+            
+            // Check if the user exists - email should be present in the returned data
+            if (userDetails == null || userDetails.isEmpty() || !userDetails.containsKey("email")) {
+                logger.warn("Email not found in database: {}", email);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("success", false, "message", "Email address not found in our system"));
+            }
+            
+            // Email exists, proceed with password reset
+            logger.info("Email found in database, proceeding with password reset: {}", email);
+            
             // Get the Firebase API key from application.properties
             String apiKey = "AIzaSyD2ZLktr7HvwqWizK_e6f4KF3A_2jB6leg";
             
