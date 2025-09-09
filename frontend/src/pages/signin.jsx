@@ -3,8 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import logoIconOrange from "../assets/images/logoiconorange.png";
-import { API_URL, clearAuthData, validateAuthToken } from '../utils/auth';
-import LoadingScreen from './LoadingScreen';
+import { API_URL, clearAuthData, validateAuthToken } from "../utils/auth";
+import LoadingScreen from "./LoadingScreen";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -105,45 +105,48 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    console.log('Attempting to sign in with:', { email: formData.email, password: '******' });
-  
+
+    console.log("Attempting to sign in with:", {
+      email: formData.email,
+      password: "******",
+    });
+
     try {
       // Call your backend API for authentication
       const response = await fetch(`${API_URL}/auth/signin`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email: formData.email,
-          password: formData.password
+          password: formData.password,
         }),
       });
-      
-      console.log('Response status:', response.status);
-      
+
+      console.log("Response status:", response.status);
+
       // Get the response text first to debug
       const responseText = await response.text();
-      console.log('Response text:', responseText);
-      
+      console.log("Response text:", responseText);
+
       // If response is empty or not valid JSON, handle accordingly
       if (!responseText) {
-        throw new Error('Server returned an empty response');
+        throw new Error("Server returned an empty response");
       }
-      
+
       // Parse the response text into JSON
       let data;
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
-        throw new Error('Invalid response format from server');
+        console.error("Error parsing JSON:", parseError);
+        throw new Error("Invalid response format from server");
       }
-      
+
       if (!response.ok) {
         // Extract specific error message from response if available
-        let errorMessage = 'Authentication failed';
+        let errorMessage = "Authentication failed";
         if (data && data.error) {
           errorMessage = data.error;
         } else if (data && data.message) {
@@ -151,97 +154,140 @@ const SignIn = () => {
         }
         throw new Error(errorMessage);
       }
-      
-      console.log('Authentication successful:', data);
-      
+
+      console.log("Authentication successful:", data);
+
       // Clear any existing auth data to prevent conflicts
       clearAuthData();
-      
+
       // Store the token and expiration info in localStorage
       if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        
+        localStorage.setItem("authToken", data.token);
+
         // Store token expiration information if available
         if (data.expiresAt) {
-          localStorage.setItem('tokenExpires', new Date(data.expiresAt).getTime().toString());
-          console.log('Auth token stored with expiration:', new Date(data.expiresAt));
+          localStorage.setItem(
+            "tokenExpires",
+            new Date(data.expiresAt).getTime().toString()
+          );
+          console.log(
+            "Auth token stored with expiration:",
+            new Date(data.expiresAt)
+          );
         }
-        
-        console.log('Auth token stored in localStorage');
+
+        console.log("Auth token stored in localStorage");
       } else {
-        console.warn('No token received from server');
+        console.warn("No token received from server");
       }
-      
+
       // If user data is already in the response, use it
       if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('User data stored from response:', data.user);
-        showSuccessToast('Successfully signed in!');
+        localStorage.setItem("user", JSON.stringify(data.user));
+        console.log("User data stored from response:", data.user);
+        showSuccessToast("Successfully signed in!");
         handleChatRedirect();
         return;
       }
-      
+
       // Otherwise, get user profile data separately
       try {
-        const userResponse = await fetch(`${API_URL}/users/email/${formData.email}`);
-        console.log('User data response status:', userResponse.status);
-        
+        const userResponse = await fetch(
+          `${API_URL}/users/email/${formData.email}`
+        );
+        console.log("User data response status:", userResponse.status);
+
         if (!userResponse.ok) {
-          throw new Error('Failed to fetch user data');
+          throw new Error("Failed to fetch user data");
         }
-        
+
         const userData = await userResponse.json();
-        console.log('User data received:', userData);
-        
+        console.log("User data received:", userData);
+
         // Store user data
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        showSuccessToast('Successfully signed in!');
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        showSuccessToast("Successfully signed in!");
         handleChatRedirect();
       } catch (userError) {
-        console.error('Error fetching user data:', userError);
+        console.error("Error fetching user data:", userError);
         // Continue even if user data fetch fails, since authentication was successful
-        showSuccessToast('Signed in, but user data could not be loaded');
+        showSuccessToast("Signed in, but user data could not be loaded");
         handleChatRedirect();
       }
     } catch (err) {
-      console.error('Authentication error:', err);
-      
+      console.error("Authentication error:", err);
+
       // Handle different error scenarios with appropriate toast messages
-      const errorMessage = err.message || '';
+      const errorMessage = err.message || "";
       const lowerCaseError = errorMessage.toLowerCase();
-      
+
       // Specific error handling based on the error message
-      if (lowerCaseError.includes('network') || lowerCaseError.includes('connection')) {
+      if (
+        lowerCaseError.includes("network") ||
+        lowerCaseError.includes("connection")
+      ) {
         // Network or connection error - critical (red)
-        showErrorToast('Unable to connect to the server. Please check your internet connection.');
-      } else if (lowerCaseError.includes('empty response')) {
+        showErrorToast(
+          "Unable to connect to the server. Please check your internet connection."
+        );
+      } else if (lowerCaseError.includes("empty response")) {
         // Server error - critical (red)
-        showErrorToast('The server is not responding. Please try again later.');
-      } else if (lowerCaseError.includes('invalid response format')) {
+        showErrorToast("The server is not responding. Please try again later.");
+      } else if (lowerCaseError.includes("invalid response format")) {
         // Data format error - critical (red)
-        showErrorToast('Received an invalid response from the server. Please try again later.');
-      } else if (lowerCaseError.includes('email not found') || lowerCaseError.includes('user not found')) {
+        showErrorToast(
+          "Received an invalid response from the server. Please try again later."
+        );
+      } else if (
+        lowerCaseError.includes("email not found") ||
+        lowerCaseError.includes("user not found")
+      ) {
         // Email doesn't exist - informational (yellow)
-        showWarningToast('This email is not registered. Please check your email or sign up for a new account.');
-      } else if (lowerCaseError.includes('incorrect password') || lowerCaseError.includes('wrong password')) {
+        showWarningToast(
+          "This email is not registered. Please check your email or sign up for a new account."
+        );
+      } else if (
+        lowerCaseError.includes("incorrect password") ||
+        lowerCaseError.includes("wrong password")
+      ) {
         // Wrong password - informational (yellow)
-        showWarningToast('Incorrect password. Please try again or use the forgot password option.');
-      } else if (lowerCaseError.includes('account locked') || lowerCaseError.includes('too many attempts')) {
+        showWarningToast(
+          "Incorrect password. Please try again or use the forgot password option."
+        );
+      } else if (
+        lowerCaseError.includes("account locked") ||
+        lowerCaseError.includes("too many attempts")
+      ) {
         // Account locked - critical (red)
-        showErrorToast('Your account has been temporarily locked due to too many failed attempts. Please try again later or reset your password.');
-      } else if (lowerCaseError.includes('invalid') && lowerCaseError.includes('email')) {
+        showErrorToast(
+          "Your account has been temporarily locked due to too many failed attempts. Please try again later or reset your password."
+        );
+      } else if (
+        lowerCaseError.includes("invalid") &&
+        lowerCaseError.includes("email")
+      ) {
         // Invalid email format - informational (yellow)
-        showWarningToast('Please enter a valid email address.');
-      } else if (lowerCaseError.includes('password') && (lowerCaseError.includes('short') || lowerCaseError.includes('weak'))) {
+        showWarningToast("Please enter a valid email address.");
+      } else if (
+        lowerCaseError.includes("password") &&
+        (lowerCaseError.includes("short") || lowerCaseError.includes("weak"))
+      ) {
         // Password requirements - informational (yellow)
-        showWarningToast('Your password does not meet the required criteria.');
-      } else if (lowerCaseError.includes('account') && lowerCaseError.includes('disabled')) {
+        showWarningToast("Your password does not meet the required criteria.");
+      } else if (
+        lowerCaseError.includes("account") &&
+        lowerCaseError.includes("disabled")
+      ) {
         // Account disabled - critical (red)
-        showErrorToast('Your account has been disabled. Please contact support for assistance.');
+        showErrorToast(
+          "Your account has been disabled. Please contact support for assistance."
+        );
       } else {
         // Generic authentication error - critical (red)
-        showErrorToast('Authentication failed. Please check your email and password.');
+        showErrorToast(
+          "Authentication failed. Please check your email and password."
+        );
       }
     } finally {
       setIsLoading(false);
@@ -252,7 +298,7 @@ const SignIn = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      navigate('/chat');
+      navigate("/chat");
     }, 1000);
   };
 
@@ -268,65 +314,63 @@ const SignIn = () => {
   useEffect(() => {
     const initGoogleSignIn = () => {
       if (window.google && !window.googleSignInInitialized) {
-        console.log('Initializing Google Sign-In in signin page...');
+        console.log("Initializing Google Sign-In in signin page...");
         window.google.accounts.id.initialize({
-          client_id: "433624047904-ea5ipm4k3ogi6fumrpjdu9c59hq1119l.apps.googleusercontent.com",
+          client_id:
+            "433624047904-ea5ipm4k3ogi6fumrpjdu9c59hq1119l.apps.googleusercontent.com",
           callback: handleGoogleSignIn,
           prompt_parent_id: "googleSignInButton",
           ux_mode: "popup",
-          // Add allowed origins to match Google Cloud Console settings
           allowed_origins: [
-            window.location.origin, // Current origin automatically included
+            window.location.origin,
             "http://localhost:3000",
-            "http://127.0.0.1:3000"
-          ]
+            "http://127.0.0.1:3000",
+          ],
         });
         window.googleSignInInitialized = true;
-        console.log('Google Sign-In initialized with origin:', window.location.origin);
+        console.log(
+          "Google Sign-In initialized with origin:",
+          window.location.origin
+        );
       }
 
-      // Always render the button, even if already initialized
       if (window.google) {
         window.google.accounts.id.renderButton(
           document.getElementById("googleSignInButton"),
-          { 
-            theme: "outline", 
+          {
+            theme: "outline",
             size: "large",
-            text: "continue_with" 
+            text: "signin_with",
+            shape: "pill",
+            width: "100%",
           }
         );
-        // window.google.accounts.id.prompt(); // Removed to disable One Tap popup
       }
     };
 
-    // Check if Google script is already loaded
     if (window.google) {
       initGoogleSignIn();
     } else {
-      // Load the script dynamically
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
       script.async = true;
       script.defer = true;
       script.onload = initGoogleSignIn;
       document.body.appendChild(script);
     }
 
-    // Cleanup function
-    return () => {
-      // No cleanup needed for Google Sign-In
-    };
+    return () => {};
   }, []);
 
   useEffect(() => {
     const authStatus = validateAuthToken();
     if (authStatus.valid) {
-      navigate('/chat');
+      navigate("/chat");
     }
   }, [navigate]);
 
   useEffect(() => {
-    document.title = 'Civilify | Sign In';
+    document.title = "Civilify | Sign In";
   }, []);
 
   const handleGoogleSignIn = (response) => {
@@ -334,73 +378,80 @@ const SignIn = () => {
     try {
       // Clear any existing auth data to prevent conflicts
       clearAuthData();
-      
+
       const { credential } = response;
       let payload;
-      
+
       try {
         // Parse the JWT payload
-        payload = JSON.parse(atob(credential.split('.')[1]));
-        console.log('Google Sign-In payload:', payload);
+        payload = JSON.parse(atob(credential.split(".")[1]));
+        console.log("Google Sign-In payload:", payload);
       } catch (parseError) {
-        console.error('Error parsing Google credential:', parseError);
-        showErrorToast('Error processing Google sign-in data');
+        console.error("Error parsing Google credential:", parseError);
+        showErrorToast("Error processing Google sign-in data");
         setIsLoading(false);
         return;
       }
-      
+
       // Create user data from Google payload
       const userToSave = {
-        username: payload.name || 'Google User',
-        email: payload.email || 'user@example.com',
-        profile_picture_url: payload.picture || 'https://randomuser.me/api/portraits/lego/1.jpg'
+        username: payload.name || "Google User",
+        email: payload.email || "user@example.com",
+        profile_picture_url:
+          payload.picture || "https://randomuser.me/api/portraits/lego/1.jpg",
       };
-      
+
       // Save to localStorage immediately to ensure data is available
-      localStorage.setItem('user', JSON.stringify(userToSave));
-      console.log('Saved Google user data to localStorage:', userToSave);
-      
+      localStorage.setItem("user", JSON.stringify(userToSave));
+      console.log("Saved Google user data to localStorage:", userToSave);
+
       // Send to your backend
       fetch(`${API_URL}/auth/google`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ token: credential })
+        body: JSON.stringify({ token: credential }),
       })
-      .then(response => response.json())
-      .then(data => {
-        // If backend provides additional user data, update localStorage
-        if (data && data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-          console.log('Updated user data from backend:', data.user);
-        } else if (data) {
-          localStorage.setItem('user', JSON.stringify(data));
-          console.log('Updated user data from backend:', data);
-        }
-        
-        // Store the token and expiration data
-        if (data && data.token) {
-          localStorage.setItem('authToken', data.token);
-          
-          // Store token expiration information if available
-          if (data.expiresAt) {
-            localStorage.setItem('tokenExpires', new Date(data.expiresAt).getTime().toString());
-            console.log('Auth token stored with expiration:', new Date(data.expiresAt));
+        .then((response) => response.json())
+        .then((data) => {
+          // If backend provides additional user data, update localStorage
+          if (data && data.user) {
+            localStorage.setItem("user", JSON.stringify(data.user));
+            console.log("Updated user data from backend:", data.user);
+          } else if (data) {
+            localStorage.setItem("user", JSON.stringify(data));
+            console.log("Updated user data from backend:", data);
           }
-        }
-        
-        showSuccessToast('Successfully signed in with Google!');
-        handleChatRedirect();
-      })
-      .catch(error => {
-        console.error('Google sign-in API error:', error);
-        showErrorToast('Google sign-in failed');
-      })
-      .finally(() => setIsLoading(false));
+
+          // Store the token and expiration data
+          if (data && data.token) {
+            localStorage.setItem("authToken", data.token);
+
+            // Store token expiration information if available
+            if (data.expiresAt) {
+              localStorage.setItem(
+                "tokenExpires",
+                new Date(data.expiresAt).getTime().toString()
+              );
+              console.log(
+                "Auth token stored with expiration:",
+                new Date(data.expiresAt)
+              );
+            }
+          }
+
+          showSuccessToast("Successfully signed in with Google!");
+          handleChatRedirect();
+        })
+        .catch((error) => {
+          console.error("Google sign-in API error:", error);
+          showErrorToast("Google sign-in failed");
+        })
+        .finally(() => setIsLoading(false));
     } catch (error) {
-      console.error('Error processing Google sign-in:', error);
-      showErrorToast('Error processing Google sign-in');
+      console.error("Error processing Google sign-in:", error);
+      showErrorToast("Error processing Google sign-in");
       setIsLoading(false);
     }
   };
@@ -423,12 +474,21 @@ const SignIn = () => {
       />
       <div style={styles.signinContainer}>
         <div style={styles.formContent}>
-          <img src={logoIconOrange} alt="Civilify" style={styles.logo} />
+          <img
+            src={logoIconOrange}
+            alt="Civilify"
+            style={styles.logo}
+            className="logo"
+          />
 
-          <h2 style={styles.title}>Welcome back</h2>
-          <p style={styles.subtitle}>Sign in to continue</p>
+          <h2 style={styles.title} className="title">
+            Welcome back
+          </h2>
+          <p style={styles.subtitle} className="subtitle">
+            Sign in to continue
+          </p>
 
-          <form onSubmit={handleSubmit} style={styles.form}>
+          <form onSubmit={handleSubmit} style={styles.form} className="form">
             <div style={styles.inputGroup}>
               <label style={styles.label}>Email</label>
               <input
@@ -493,7 +553,7 @@ const SignIn = () => {
                 onClick={handleForgotPassword}
                 style={{
                   ...styles.forgotPassword,
-                  ...(forgotPasswordClicked && styles.forgotPasswordClicked)
+                  ...(forgotPasswordClicked && styles.forgotPasswordClicked),
                 }}
               >
                 Forgot password?
@@ -513,7 +573,10 @@ const SignIn = () => {
             <span style={styles.dividerText}>or</span>
           </div>
 
-          <div id="googleSignInButton" style={styles.googleButtonContainer}></div>
+          <div
+            id="googleSignInButton"
+            style={styles.googleButtonContainer}
+          ></div>
 
           <p style={styles.signupText}>
             Don't have an account?{" "}
@@ -529,8 +592,8 @@ const SignIn = () => {
 
 const styles = {
   container: {
-    height: "100vh",
-    width: "100vw",
+    height: "auto",
+    width: "auto",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -633,11 +696,11 @@ const styles = {
     transition: "all 0.3s ease",
     position: "relative",
     overflow: "hidden",
-    '&:hover': {
+    "&:hover": {
       background: "linear-gradient(90deg, #F34D01, #ff6b3d, #F34D01)",
       backgroundSize: "200% auto",
       animation: "buttonShine 1.5s linear infinite",
-    }
+    },
   },
   divider: {
     position: "relative",
@@ -735,6 +798,47 @@ animationStyleSheet.textContent = `
     background: linear-gradient(90deg, #F34D01, #ff6b3d, #F34D01);
     background-size: 200% auto;
     animation: buttonShine 1.5s linear infinite;
+  }
+
+  @media (max-width: 375px){
+    .form {
+      gap: 1px !important;
+    }
+    .logo{
+      margin-top: 50px;
+      margin-bottom: 5px !important;
+    }
+    .title{
+      margin-top: 0px !important;
+      margin-bottom: 0px !important;
+    }
+    .subtitle{
+
+    }
+
+    .input {
+      font-size: 14px;
+    }
+
+    .submitButton {
+      font-size: 14px;
+    }
+
+    .dividerText {
+      font-size: 12px;
+    }
+
+    .signupText {
+      font-size: 12px;
+    }
+
+    .error {
+      font-size: 12px;
+    }
+
+    .forgotPassword {
+      font-size: 12px;
+    }
   }
 `;
 document.head.appendChild(animationStyleSheet);
