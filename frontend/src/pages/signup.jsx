@@ -579,12 +579,12 @@ const Signup = () => {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div style={styles.container}>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
+      <div style={styles.container}>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
