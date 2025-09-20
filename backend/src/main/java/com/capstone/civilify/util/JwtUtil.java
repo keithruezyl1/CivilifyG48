@@ -29,6 +29,10 @@ public class JwtUtil {
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
+    
+    public String extractUserId(String token) {
+        return extractUsername(token); // For now, use username as userId
+    }
 
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);

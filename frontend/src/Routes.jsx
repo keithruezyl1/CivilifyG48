@@ -11,6 +11,7 @@ import EditProfile from "./pages/editprofile";
 import Profile from "./pages/profile";
 import DiagnosticsPage from "./pages/diagnostics";
 import Admin from "./pages/admin";
+import AdminKnowledgeBase from "./pages/admin/knowledge-base";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const AppRoutes = () => {
@@ -43,6 +44,11 @@ const AppRoutes = () => {
       <Route path="/admin" element={
         <ProtectedRoute>
           <Admin />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/knowledge-base" element={
+        <ProtectedRoute>
+          <AdminKnowledgeBase />
         </ProtectedRoute>
       } />
     </Routes>

@@ -194,6 +194,48 @@ const Admin = () => {
         </div>
       </div>
       <div style={styles.content}>
+        {/* Admin Navigation */}
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          marginBottom: '24px',
+          padding: '16px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px',
+          border: '1px solid #e0e0e0'
+        }}>
+          <button
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#ff7a59',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+            onClick={() => navigate('/admin/knowledge-base')}
+          >
+            Knowledge Base
+          </button>
+          <button
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+            onClick={() => window.open('/law-entry-extension', '_blank')}
+          >
+            Law Entry Extension
+          </button>
+        </div>
+
         <div style={styles.titleSection}>
           <h1 style={styles.title}>User Management</h1>
           <div style={styles.searchContainer}>

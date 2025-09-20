@@ -206,10 +206,14 @@ public class OpenAIController {
                 })
                 .collect(Collectors.toList());
             
-            // Generate AI response with mode-specific API key and model
-            String aiResponse = openAIService.generateResponse(userMessage, systemPrompt, conversationHistoryForAI, mode);
-            
-            logger.info("Generated AI response using mode: {}", mode);
+            // Generate the primary AI response FIRST using the system prompt for the selected mode
+            String aiResponse = openAIService.generateResponse(
+                userMessage,
+                systemPrompt,
+                conversationHistoryForAI,
+                mode
+            );
+            logger.info("Primary AI response generated with mode {} using system prompt.", mode);
             
             // For development, you can use the mock response instead
             // String aiResponse = openAIService.generateMockResponse(userMessage);
@@ -219,11 +223,31 @@ public class OpenAIController {
                 conversationId, null, "villy@civilify.com", aiResponse, false);
             logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
             
+            // Query KB AFTER the AI answer to enrich with sources (answer proceeds even if none)
+            java.util.List<com.capstone.civilify.dto.KnowledgeBaseEntry> kbEntries = openAIService.getKnowledgeBaseSources(userMessage);
+            logger.info("Knowledge base lookup complete. Entries found: {}", kbEntries != null ? kbEntries.size() : 0);
+
+            java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
+            if (kbEntries != null) {
+                for (com.capstone.civilify.dto.KnowledgeBaseEntry entry : kbEntries) {
+                    Map<String, Object> source = new HashMap<>();
+                    source.put("entryId", entry.getEntryId());
+                    source.put("title", entry.getTitle());
+                    source.put("type", entry.getType());
+                    source.put("canonicalCitation", entry.getCanonicalCitation());
+                    source.put("summary", entry.getSummary());
+                    sources.add(source);
+                }
+            }
+            logger.info("Knowledge base sources included in response: {}", sources.size());
+            
             // Prepare response
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("response", aiResponse);
             responseBody.put("conversationId", conversationId);
             responseBody.put("success", true);
+            responseBody.put("sources", sources);
+            responseBody.put("hasKnowledgeBaseContext", !sources.isEmpty());
 
             // Extract plausibility score label and summary from the AI response (for mode B)
             String plausibilityLabel = null;

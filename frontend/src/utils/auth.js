@@ -1,4 +1,5 @@
 // src/utils/auth.js
+import React from 'react';
 import axios from 'axios';
 // Import the pre-configured axios instances - but we'll use direct axios for profile operations
 // to avoid circular dependencies
@@ -250,6 +251,55 @@ export const updateUserProfile = async (profileData) => {
     console.error('Error updating user profile:', error);
     throw error;
   }
+};
+
+// Custom hook for authentication state
+export const useAuth = () => {
+  const [user, setUser] = React.useState(null);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const tokenStatus = validateAuthToken();
+        if (tokenStatus.valid) {
+          const userData = getUserData();
+          if (userData) {
+            setUser(userData);
+            // Check if user is admin based on role or email
+            const adminStatus = userData.role === 'admin' || 
+                               userData.email?.includes('admin') ||
+                               userData.isAdmin === true;
+            setIsAdmin(adminStatus);
+          } else {
+            // Try to fetch user data from backend
+            const fetchedUser = await fetchUserProfile();
+            if (fetchedUser) {
+              setUser(fetchedUser);
+              const adminStatus = fetchedUser.role === 'admin' || 
+                                 fetchedUser.email?.includes('admin') ||
+                                 fetchedUser.isAdmin === true;
+              setIsAdmin(adminStatus);
+            }
+          }
+        } else {
+          setUser(null);
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        setUser(null);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  return { user, isAdmin, loading };
 };
 
 // Upload profile picture to Cloudinary via backend

@@ -1,7 +1,10 @@
 package com.capstone.civilify.service;
 
+import com.capstone.civilify.dto.KnowledgeBaseChatResponse;
+import com.capstone.civilify.dto.KnowledgeBaseEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +22,9 @@ import java.util.Map;
 @Service
 public class OpenAIService {
     private static final Logger logger = LoggerFactory.getLogger(OpenAIService.class);
+    
+    @Autowired
+    private KnowledgeBaseService knowledgeBaseService;
     
     // Default OpenAI settings (fallback)
     @Value("${openai.api.key}")
@@ -254,6 +260,35 @@ public class OpenAIService {
         } catch (Exception e) {
             logger.error("Error generating OpenAI response: {}", e.getMessage(), e);
             return "I'm sorry, an error occurred while processing your request: " + e.getMessage();
+        }
+    }
+    
+    // This method is no longer used by the controller for generation-first flow,
+    // but kept for potential future features.
+    public String chatWithKnowledgeBase(String userMessage, String mode) {
+        String systemPrompt = mode != null && mode.equals("B") ? getCpaSystemPrompt() : getGliSystemPrompt();
+        return generateResponse(userMessage, systemPrompt, new ArrayList<>(), mode);
+    }
+
+    private String getGliSystemPrompt() {
+        // Keep in sync with OpenAIController; minimal duplication to ensure fallback always has a system prompt
+        return "You are Villy, Civilify's AI-powered legal assistant. Provide clear legal information with sources when possible.";
+    }
+
+    private String getCpaSystemPrompt() {
+        return "You are Villy, assisting with case plausibility pre-assessment. Ask clarifying questions then produce a concise report.";
+    }
+    
+    /**
+     * Get knowledge base sources for a given query.
+     * Used for displaying source references in the chat interface.
+     */
+    public List<KnowledgeBaseEntry> getKnowledgeBaseSources(String query) {
+        try {
+            return knowledgeBaseService.searchKnowledgeBase(query, 5);
+        } catch (Exception e) {
+            logger.error("Error retrieving knowledge base sources", e);
+            return new ArrayList<>();
         }
     }
     

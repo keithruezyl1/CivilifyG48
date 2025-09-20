@@ -85,6 +85,8 @@ const fetchGPTResponse = async (
         conversationId: response.data.conversationId, // Get the conversation ID from the response
         plausibilityLabel: response.data.plausibilityLabel,
         plausibilitySummary: response.data.plausibilitySummary,
+        sources: response.data.sources || [], // Knowledge base sources
+        hasKnowledgeBaseContext: response.data.hasKnowledgeBaseContext || false,
       };
     } else {
       console.error("Error in AI response:", response.data);
@@ -95,6 +97,8 @@ const fetchGPTResponse = async (
         conversationId: conversationId,
         plausibilityLabel: null,
         plausibilitySummary: null,
+        sources: [],
+        hasKnowledgeBaseContext: false,
       };
     }
   } catch (error) {
@@ -654,11 +658,8 @@ const Chat = () => {
 
     // Prepare to send the request with conversation context
     let aiResponse;
-    const messageToSend = prependSystem
-      ? `${prependSystem}
-
-${userMessage}`
-      : userMessage;
+    // Do NOT include the system hint in the text sent to backend; send plain user message
+    const messageToSend = userMessage;
 
     if (userData) {
       aiResponse = await fetchGPTResponse(
@@ -1109,6 +1110,10 @@ ${userMessage}`
         hour: "2-digit",
         minute: "2-digit",
       }),
+      sources: aiResponse.sources || [],
+      hasKnowledgeBaseContext: aiResponse.hasKnowledgeBaseContext || false,
+      plausibilityLabel: aiResponse.plausibilityLabel,
+      plausibilitySummary: aiResponse.plausibilitySummary,
     };
     const finalMessages = [...updatedMessages, aiMessage];
     setMessages(finalMessages);
@@ -2145,9 +2150,71 @@ ${userMessage}`
                         plausibilitySummary={message.plausibilitySummary}
                       />
                     ) : (
-                      <ReactMarkdown components={markdownComponents}>
-                        {message.isUser ? message.text : message.text}
-                      </ReactMarkdown>
+                      <div>
+                        <ReactMarkdown components={markdownComponents}>
+                          {message.isUser ? message.text : message.text}
+                        </ReactMarkdown>
+                        {!message.isUser && message.sources && message.sources.length > 0 && (
+                          <div style={{
+                            marginTop: '12px',
+                            padding: '8px 12px',
+                            backgroundColor: isDarkMode ? '#2a2a2a' : '#f8f9fa',
+                            borderRadius: '8px',
+                            border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`,
+                            fontSize: '12px'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              marginBottom: '6px',
+                              color: isDarkMode ? '#888' : '#666'
+                            }}>
+                              <FaCheckCircle style={{ marginRight: '6px', color: '#10b981' }} />
+                              <strong>Knowledge Base Sources:</strong>
+                            </div>
+                            {message.sources.slice(0, 3).map((source, idx) => (
+                              <div key={idx} style={{
+                                marginBottom: '4px',
+                                padding: '4px 8px',
+                                backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
+                                borderRadius: '4px',
+                                border: `1px solid ${isDarkMode ? '#333' : '#e0e0e0'}`
+                              }}>
+                                <div style={{ fontWeight: 'bold', color: isDarkMode ? '#fff' : '#333' }}>
+                                  {source.title}
+                                </div>
+                                {source.canonicalCitation && (
+                                  <div style={{ color: isDarkMode ? '#888' : '#666', fontSize: '11px' }}>
+                                    {source.canonicalCitation}
+                                  </div>
+                                )}
+                                {source.type && (
+                                  <div style={{ 
+                                    display: 'inline-block',
+                                    padding: '2px 6px',
+                                    backgroundColor: '#ff7a59',
+                                    color: 'white',
+                                    borderRadius: '12px',
+                                    fontSize: '10px',
+                                    marginTop: '2px'
+                                  }}>
+                                    {source.type.replace('_', ' ').toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {message.sources.length > 3 && (
+                              <div style={{
+                                color: isDarkMode ? '#888' : '#666',
+                                fontSize: '11px',
+                                fontStyle: 'italic'
+                              }}>
+                                +{message.sources.length - 3} more sources
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                   {showTimestamp === index && message.timestamp && (
