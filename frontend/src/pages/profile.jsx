@@ -1,229 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ProfileAvatar from '../components/ProfileAvatar';
-import { getUserData, fetchUserProfile, clearAuthData, validateAuthToken, getAuthToken } from '../utils/auth';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+"use client";
+
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import logoIconOrange from "../assets/images/logoiconorange.png";
+import {
+  fetchUserProfile,
+  clearAuthData,
+  validateAuthToken,
+  getAuthToken,
+} from "../utils/auth";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import LoadingScreen from "./LoadingScreen";
 
 const Profile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({
-    username: '',
-    email: '',
+    username: "",
+    email: "",
     profile_picture_url: null,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Load dark mode preference from localStorage
-    const stored = localStorage.getItem('darkMode');
-    return stored === 'true';
+    const stored = localStorage.getItem("darkMode");
+    return stored === "true";
   });
 
   useEffect(() => {
-    // Check authentication on mount
+    localStorage.setItem("darkMode", isDarkMode);
+  }, [isDarkMode]);
+
+  useEffect(() => {
     const token = getAuthToken();
     const authStatus = validateAuthToken();
-    
     if (!token || !authStatus.valid) {
-      console.log('Profile: Authentication check failed, redirecting to login');
-      localStorage.setItem('redirectAfterLogin', '/profile');
-      navigate('/signin', { replace: true });
+      console.log("Profile: Authentication check failed, redirecting to login");
+      localStorage.setItem("redirectAfterLogin", "/profile");
+      navigate("/signin", { replace: true });
       return;
     }
-
-    // Load user profile data from backend
     const loadProfileData = async () => {
       try {
         setIsLoading(true);
-        // Try to fetch fresh data from the backend
         const userData = await fetchUserProfile();
-        
         if (userData) {
-          // Successfully fetched profile from API
           setProfile({
-            username: userData.username || '',
-            email: userData.email || '',
+            username: userData.username || "",
+            email: userData.email || "",
             profile_picture_url: userData.profile_picture_url || null,
           });
         } else {
-          // No userData means authentication failed
-          console.error('Authentication failed, redirecting to signin');
-          toast.error('Please sign in to view your profile');
-          // Redirect to signin after a short delay
-          setTimeout(() => navigate('/#/signin'), 1500);
-          return; // Exit early
+          console.error("Authentication failed, redirecting to signin");
+          toast.error("Please sign in to view your profile");
+          setTimeout(() => navigate("/#/signin"), 1500);
+          return;
         }
       } catch (error) {
-        console.error('Error loading profile data:', error);
-        
-        // Check if this is an authentication error (401/403)
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          toast.error('Authentication failed. Please sign in again.');
-          // Clear all auth data
+        console.error("Error loading profile data:", error);
+        if (
+          error.response &&
+          (error.response.status === 401 || error.response.status === 403)
+        ) {
+          toast.error("Authentication failed. Please sign in again.");
           clearAuthData();
-          // Redirect to signin after a short delay
-          setTimeout(() => navigate('/#/signin'), 1500);
+          setTimeout(() => navigate("/#/signin"), 1500);
         } else {
-          toast.error('Failed to load profile data');
+          toast.error("Failed to load profile data");
         }
       } finally {
         setIsLoading(false);
       }
     };
-    
     loadProfileData();
-    
-    // Add animated orange button style and disable scrollbars
-    const style = document.createElement('style');
-    style.textContent = `
-      .orange-animated-btn {
-        padding: 12px 24px;
-        font-size: 16px;
-        font-weight: 600;
-        background-color: #F34D01;
-        color: white;
-        border-radius: 30px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border: none;
-        box-shadow: 0 4px 10px rgba(243, 77, 1, 0.25), 1px 1px 2px rgba(255, 255, 255, 0.3) inset;
-        display: inline-block;
-        position: relative;
-      }
-      .orange-animated-btn:hover {
-        transform: translateY(-2px);
-        background: linear-gradient(90deg, #F34D01, #ff6b3d, #F34D01);
-        background-size: 200% auto;
-        animation: buttonShine 1.5s linear infinite;
-        box-shadow: 0 6px 15px rgba(243, 77, 1, 0.3), 1px 1px 2px rgba(255, 255, 255, 0.3) inset;
-      }
-      .orange-animated-btn:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 5px rgba(243, 77, 1, 0.2), 1px 1px 1px rgba(255, 255, 255, 0.3) inset;
-      }
-      @keyframes buttonShine {
-        0% { background-position: -100% center; }
-        100% { background-position: 200% center; }
-      }
-      ::-webkit-scrollbar { display: none; }
-      main, html, body { scrollbar-width: none; -ms-overflow-style: none; }
-      button:focus, a:focus { outline: none !important; box-shadow: none !important; }
-    `;
-    document.head.appendChild(style);
-    document.body.style.overflow = 'hidden';
-    document.body.style.height = '100vh';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.title = 'Civilify | Profile';
-    return () => {
-      if (document.head.contains(style)) document.head.removeChild(style);
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, []);
+    document.title = "Civilify | Profile";
+  }, [navigate]);
 
-  const styles = {
-    page: {
-      maxWidth: 'none',
-      margin: 0,
-      padding: 0,
-      textAlign: 'left',
-      display: 'flex',
-      flexDirection: 'row',
-      justifyContent: 'flex-start',
-      alignItems: 'stretch',
-      width: '100%',
-      height: '100vh',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: isDarkMode ? '#232323' : '#FAFAF9',
-      color: isDarkMode ? '#ffffff' : 'black',
-    },
-    sidebar: {
-      position: 'fixed',
-      height: '100vh',
-      width: '18rem',
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      borderRight: `1px solid ${isDarkMode ? '#444' : '#e5e7eb'}`,
-      backgroundColor: isDarkMode ? '#2d2d2d' : 'white',
-      zIndex: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'flex-start',
-      padding: '1.5rem 1rem 0 1rem',
-    },
-    content: {
-      marginLeft: '18rem',
-      width: 'calc(100% - 18rem)',
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      paddingTop: '2.5rem',
-      background: 'transparent',
-      overflow: 'hidden',
-    },
-    avatar: {
-      width: '150px',
-      height: '150px',
-      borderRadius: '50%',
-      backgroundColor: isDarkMode ? '#444' : '#e5e7eb',
-      marginBottom: '1.5rem',
-      overflow: 'hidden',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    form: {
-      width: '100%',
-      maxWidth: '350px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '1.5rem',
-    },
-    formGroup: {
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-start',
-      gap: '0.25rem',
-    },
-    label: {
-      color: isDarkMode ? '#ffffff' : '#000',
-      fontWeight: '500',
-      fontSize: '1rem',
-      marginBottom: '0.25rem',
-    },
-    text: {
-      fontSize: '1.125rem',
-      color: isDarkMode ? '#ffffff' : '#000',
-      fontWeight: 400,
-      marginBottom: 0,
-    },
-    button: {
-      width: '100%',
-      marginTop: '0.5rem',
-    },
-    loadingContainer: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100%',
-      color: isDarkMode ? '#ffffff' : '#000',
-    },
-  };
+  if (isLoading) {
+    return <LoadingScreen isDarkMode={isDarkMode} />;
+  }
 
   return (
-    <div style={styles.page}>
+    <div className="profile-container">
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -234,73 +91,328 @@ const Profile = () => {
         pauseOnFocusLoss
         draggable
         pauseOnHover
+        theme={isDarkMode ? "dark" : "light"}
       />
-      <aside style={styles.sidebar}>
-        <nav style={{ paddingTop: '1.5rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
-          <ul style={{ listStyleType: 'none', paddingLeft: 0, marginLeft: 0 }}>
-            <li style={{ marginBottom: '1rem' }}>
-              <button style={{ color: '#F34D01', fontWeight: 600, background: 'none', border: 'none', fontSize: '1rem' }}>Profile</button>
-            </li>
-          </ul>
-        </nav>
-        <div style={{ position: 'absolute', bottom: '2rem', width: '100%', padding: '0.75rem', borderTop: `1px solid ${isDarkMode ? '#444' : '#f1f1f1'}`, backgroundColor: isDarkMode ? '#2d2d2d' : 'white', color: '#F34D01' }}>
-          <a href="#" style={{ color: '#F34D01' }} onClick={e => { e.preventDefault(); navigate('/chat'); }}>Back</a>
+
+      <div className="header">
+        <div className="back-button">
+          <button onClick={() => navigate("/chat")} className="back-btn">
+            <svg
+              style={{ width: "20px", height: "20px", marginRight: "8px" }}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span className="full-text">Back to Chat</span>
+            <span className="short-text">Chat</span>
+          </button>
         </div>
-      </aside>
-      <main style={styles.content}>
-        {isLoading ? (
-          <div style={styles.loadingContainer}>
-            <p>Loading profile data...</p>
+        <div>
+          <img
+            src={logoIconOrange}
+            alt="Civilify"
+            style={{ width: "45px", height: "auto", paddingRight: "1em" }}
+          />
+        </div>
+      </div>
+
+      <div className="content">
+        <div className="avatar-section">
+          <div className="avatar">
+            {profile.profile_picture_url ? (
+              <img
+                src={profile.profile_picture_url || "/placeholder.svg"}
+                alt={profile.username}
+                className="avatar-img"
+              />
+            ) : (
+              <div className="avatar-placeholder">
+                {profile.username.substring(0, 2).toUpperCase()}
+              </div>
+            )}
           </div>
-        ) : (
-          <div style={styles.form}>
-            <div style={styles.avatar}>
-              {profile.profile_picture_url ? (
-                <img 
-                  src={profile.profile_picture_url} 
-                  alt={profile.username} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.style.display = 'none';
-                    // Show ProfileAvatar as fallback
-                    const avatarContainer = e.target.parentNode;
-                    if (avatarContainer) {
-                      const avatar = document.createElement('div');
-                      avatar.style.width = '100%';
-                      avatar.style.height = '100%';
-                      avatar.style.display = 'flex';
-                      avatar.style.alignItems = 'center';
-                      avatar.style.justifyContent = 'center';
-                      avatarContainer.appendChild(avatar);
-                      // We can't render React components directly here, so we'll show a placeholder
-                      avatar.innerHTML = profile.username.substring(0, 2).toUpperCase();
-                    }
-                  }}
-                />
-              ) : (
-                <ProfileAvatar size="large" />
-              )}
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Username</label>
-              <div style={styles.text}>{profile.username}</div>
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Email</label>
-              <div style={styles.text}>{profile.email}</div>
-            </div>
+          <h1>{profile.username || "User Name"}</h1>
+          <p>{profile.email}</p>
+          <div className="action-buttons">
             <button
-              type="button"
-              className="orange-animated-btn"
-              style={styles.button}
-              onClick={() => navigate('/edit-profile', { state: profile })}
+              onClick={() => navigate("/edit-profile", { state: profile })}
+              className="action-btn edit-btn"
             >
               Edit Profile
             </button>
+            <button className="action-btn change-password-btn">
+              Change Password
+            </button>
           </div>
-        )}
-      </main>
+        </div>
+
+        <div className="settings-section">
+          <h2>Account Settings</h2>
+          <div className="settings">
+            <div className="setting">
+              <div>
+                <h3>Language</h3>
+                <p>English (US)</p>
+              </div>
+              <button className="change-btn">Change</button>
+            </div>
+            <div className="setting">
+              <div>
+                <h3>Theme</h3>
+                <p>{isDarkMode ? "Dark Mode" : "Light Mode"}</p>
+              </div>
+              <div className="theme-toggle">
+                <div
+                  className="toggle-switch"
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                >
+                  <div
+                    className="toggle-slider"
+                    style={{ left: isDarkMode ? "22px" : "2px" }}
+                  />
+                </div>
+                <span
+                  className="toggle-label"
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                >
+                  {isDarkMode ? "Dark" : "Light"}
+                </span>
+              </div>
+            </div>
+            <div className="delete-section">
+              <div>
+                <h3>Delete Account</h3>
+                <p>Permanently delete your account and all data.</p>
+              </div>
+              <button className="delete-btn">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>{`
+        .profile-container {
+          min-height: 100vh;
+          background-color: ${isDarkMode ? "#2d2d2d" : "#F7F7F9"};
+          color: ${isDarkMode ? "#ffffff" : "#1a1a1a"};
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .header {
+          padding: 24px 24px 0 24px;
+          margin: 0 auto;
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;
+        }
+
+        .back-button, .logo { flex: 1; }
+        .logo { display: flex; justify-content: flex-end; }
+
+        .back-btn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: ${isDarkMode ? "#ffffff" : "#64748b"};
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s ease;
+}
+
+.full-text {
+  display: inline;
+}
+
+.short-text {
+  display: none;
+}
+
+.back-btn:hover {
+  color: ${isDarkMode ? "#cccccc" : "#334155"};
+}
+
+/* Mobile and below (≤431px) */
+@media (max-width: 431px) {
+  .full-text {
+    display: none;
+  }
+  .short-text {
+    display: inline;
+  }
+  h1 { font-size: 24px; }
+  h2 { font-size: 18px; }
+  h3 { font-size: 14px; }
+  p, label, button, input { font-size: 12px; }
+}
+
+        .content { max-width: 600px; margin: 0 auto; padding: 40px 24px 60px; }
+        .avatar-section { text-align: center; margin-bottom: 48px; }
+        .avatar { position: relative; display: inline-block; margin-bottom: 24px; }
+        .avatar-img, .avatar-placeholder {
+          width: 120px;
+          height: 120px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 4px solid ${isDarkMode ? "#404040" : "#ffffff"};
+          box-shadow: ${
+            isDarkMode
+              ? "0 8px 32px rgba(0, 0, 0, 0.3)"
+              : "0 8px 32px rgba(0, 0, 0, 0.1)"
+          };
+        }
+        .avatar-placeholder {
+          background: linear-gradient(135deg, #f24c00 0%, #ea580c 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 36px;
+          font-weight: 700;
+          color: #ffffff;
+        }
+
+        .action-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .action-btn {
+          padding: 12px 24px;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .edit-btn {
+          background-color: #f24c00;
+          color: #ffffff;
+          box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
+        }
+        .edit-btn:hover {
+          background-color: #d64500;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(242, 76, 0, 0.4);
+        }
+        .edit-btn:not(:hover) {
+          background-color: #f24c00;
+          transform: translateY(0);
+          box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
+        }
+        .change-password-btn {
+          background-color: ${isDarkMode ? "#404040" : "#f1f5f9"};
+          color: ${isDarkMode ? "#ffffff" : "#475569"};
+        }
+        .change-password-btn:hover {
+          background-color: ${isDarkMode ? "#555555" : "#e2e8f0"};
+          transform: translateY(-1px);
+        }
+        .change-password-btn:not(:hover) {
+          background-color: ${isDarkMode ? "#404040" : "#f1f5f9"};
+          transform: translateY(0);
+        }
+
+        .settings-section { margin-top: 24px; }
+        .settings { display: flex; flex-direction: column; gap: 16px; }
+        .setting { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; border-bottom: 1px solid ${
+          isDarkMode ? "#404040" : "#e2e8f0"
+        }; }
+        .change-btn {
+          background: none;
+          border: none;
+          color: #f24c00;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: color 0.2s ease;
+        }
+        .change-btn:hover { color: #d64500; }
+        .theme-toggle { display: flex; align-items: center; gap: 12px; }
+        .toggle-switch {
+          width: 44px;
+          height: 24px;
+          background-color: ${isDarkMode ? "#f24c00" : "#e2e8f0"};
+          border-radius: 12px;
+          position: relative;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+        .toggle-slider {
+          width: 20px;
+          height: 20px;
+          background-color: #ffffff;
+          border-radius: 50%;
+          position: absolute;
+          top: 2px;
+          transition: left 0.2s ease;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .toggle-label {
+          font-size: 16px;
+          font-weight: 600;
+          color: #f24c00;
+          cursor: pointer;
+        }
+
+        .delete-section {
+          background-color: ${isDarkMode ? "#4a1a1a" : "#fef2f2"};
+          border: 1px solid ${isDarkMode ? "#7f1d1d" : "#fecaca"};
+          border-radius: 12px;
+          padding: 24px;
+        }
+        .delete-btn {
+          padding: 12px 20px;
+          background-color: #dc2626;
+          color: #ffffff;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .delete-btn:hover {
+          background-color: #b91c1c;
+          transform: translateY(-1px);
+        }
+        .delete-btn:not(:hover) {
+          background-color: #dc2626;
+          transform: translateY(0);
+        }
+
+        /* Base font sizes */
+        h1 { font-size: 32px; }
+        h2 { font-size: 24px; }
+        h3 { font-size: 18px; }
+        p, label, button, input { font-size: 16px; }
+
+        /* Tablet and below (≤768px) */
+        @media (max-width: 768px) {
+          h1 { font-size: 28px; }
+          h2 { font-size: 20px; }
+          h3 { font-size: 16px; }
+          p, label, button, input { font-size: 14px; }
+        }
+
+        /* Mobile and below (≤431px) */
+        @media (max-width: 431px) {
+          h1 { font-size: 24px; }
+          h2 { font-size: 18px; }
+          h3 { font-size: 14px; }
+          p, label, button, input { font-size: 12px; }
+        }
+
+        #root:not(:has(.docs-page)) {
+          padding: 0 !important;
+          display: block !important;
+          overflow-y: hidden scroll !important;
+        }
+      `}</style>
     </div>
   );
 };

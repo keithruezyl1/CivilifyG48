@@ -1449,12 +1449,14 @@ const Chat = () => {
            transform: scale(0.97);
         }
     
-        .avatar-button-hover:hover > div { /* Target the circle */
-           background-color: #e04000;
-        }
-        .avatar-button-hover:active {
-           transform: scale(0.95);
-        }
+        .avatar-button-hover:hover {
+      transform: scale(1.1); /* Scale down to 0.5 */
+      box-shadow: 0 0 8px 4px rgba(243, 77, 1, 0.5); /* Orange glow */
+    }
+    .avatar-button-hover:active {
+      transform: scale(0.48); /* Slightly smaller on click */
+      box-shadow: 0 0 6px 3px rgba(243, 77, 1, 0.4); /* Slightly dimmer glow */
+    }
     
         .dropdown-item-hover:hover {
            background-color: ${isDarkMode ? "#404040" : "#f0f0f0"};
@@ -2618,6 +2620,8 @@ const Chat = () => {
               alignItems: "center",
               textAlign: "center",
               position: "relative",
+              overflowY: "hidden", // Enable scrolling if content overflows
+              animation: "popUpAnimationHIW 0.3s ease-out forwards",
             }}
           >
             <div style={{ width: "100%" }}>
@@ -2914,7 +2918,7 @@ const styles = {
     cursor: "pointer",
     display: "flex",
     padding: 0,
-    transition: "background-color 0.2s ease",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease", // Updated to include transform and box-shadow
   },
   avatarCircle: {
     alignItems: "center",
@@ -3145,6 +3149,7 @@ const styles = {
     lineHeight: "25px",
     outline: "none",
     padding: "0 16px",
+
     // backgroundColor, borderColor, color moved inline
   },
   inputForm: {
@@ -3161,6 +3166,7 @@ const styles = {
     justifyContent: "center",
     maxWidth: "700px",
     width: "100%",
+
     // margin: "0 auto",
     // background, boxShadow, border, borderRadius, padding moved inline
   },
@@ -3169,7 +3175,7 @@ const styles = {
     background: "transparent",
     border: "none",
     bottom: 0,
-    boxShadow: "none",
+
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
@@ -3211,6 +3217,7 @@ const styles = {
     padding: "12px 16px",
     textAlign: "left",
     wordBreak: "break-word",
+    animation: "fadeIn 0.5s ease-out",
   },
   messageAvatar: {
     borderRadius: "50%",
@@ -3304,7 +3311,7 @@ const styles = {
     flexWrap: "wrap",
     justifyContent: "center",
     left: 0,
-    overflowY: "scroll",
+    overflowY: "auto",
     position: "fixed",
     right: 0,
     top: 0,
@@ -3318,6 +3325,9 @@ const styles = {
     maxWidth: "600px",
     padding: "32px",
     width: "90%",
+    opacity: 0, // Starts invisible
+    transform: "scale(0.5)", // Starts scaled down
+    animation: "popUpAnimation 0.3s ease-out forwards", // Trigger the animation
   },
   popupSubtitle: {
     color: "#666666",
@@ -3505,9 +3515,19 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
   const style = document.createElement("style");
   style.id = "chat-input-no-scrollbar-style";
   style.textContent = `
+    /* Hide Scrollbars for Textarea and General Elements */
     .chat-input-no-scrollbar::-webkit-scrollbar {
       display: none;
     }
+    .hide-scrollbar {
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, and Opera */
+    }
+
+    /* Custom Scrollbar for Chat Messages */
     .chatMessages::-webkit-scrollbar {
       width: 8px;
       background: transparent;
@@ -3530,54 +3550,115 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
       scrollbar-width: thin;
       scrollbar-color: #F34D01 transparent;
     }
-  .mobile-to-header {
-    display: none !important;
-  }
 
+    /* Mobile Header Visibility */
+    .mobile-to-header {
+      display: none !important;
+    }
+
+    /* Animations */
+    /* Pop-up Animation for General Popups */
+    @keyframes popUpAnimation {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    /* Fade-in Animation for Messages */
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      60% {
+        opacity: 1;
+        transform: translateY(-5px) scale(1.02);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Pop-up Animation for How It Works (Default for Larger Screens) */
+    @keyframes popUpAnimationHIW {
+      0% {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Mobile Styles (max-width: 431px) */
     @media (max-width: 431px) {
       .welcome-title {
         font-size: 1.5rem !important;
         margin-bottom: 2rem !important;
         padding: 1rem 1rem 0rem 1rem !important;
       }
-      .mode-option-hover{
+      .mode-option-hover {
         gap: 0px !important;
         padding: 12px !important;
       }
       .main-content {
         padding: 12px 16px !important;
       }
-      .message-wrapper{
+      .message-wrapper {
         gap: 5px !important;
       }
-        .footer-left{
-         flex-direction: column !important;
-        }
-        .header-to-mobile {
-          display: none !important;
-        }
-        .mobile-to-header { 
+      .footer-left {
+        flex-direction: column !important;
+      }
+      .header-to-mobile {
+        display: none !important;
+      }
+      .mobile-to-header {
         display: inline-flex !important;
+      }
+      .right-section {
+        gap: 12px !important;
+      }
+      /* Override popUpAnimationHIW for Fade-Only on Mobile */
+      @keyframes popUpAnimationHIW {
+        0% {
+          opacity: 0;
         }
-        .right-section {
-          gap: 12px !important;
+        100% {
+          opacity: 1;
         }
+      }
     }
 
+    /* Tablet Styles (min-width: 432px and max-width: 785px) */
     @media (min-width: 432px) and (max-width: 785px) {
       .welcome-title {
         font-size: 2rem !important;
         margin-bottom: 2rem !important;
         padding: 1rem 1rem 0rem 1rem !important;
       }
-      .mode-option-hover{
+      .mode-option-hover {
         gap: 0px !important;
         padding: 12px !important;
       }
       .main-content {
         padding: 12px 16px !important;
       }
-
     }
   `;
   document.head.appendChild(style);
