@@ -1,11 +1,11 @@
 package com.capstone.civilify.service;
 
-import com.capstone.civilify.dto.KnowledgeBaseChatResponse;
 import com.capstone.civilify.dto.KnowledgeBaseEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -217,7 +217,12 @@ public class OpenAIService {
             logger.info("Request body: {}", requestBody);
             
             try {
-                ResponseEntity<Map> response = restTemplate.exchange(apiUrl, HttpMethod.POST, requestEntity, Map.class);
+                ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                        apiUrl,
+                        HttpMethod.POST,
+                        requestEntity,
+                        new ParameterizedTypeReference<Map<String, Object>>() {}
+                );
                 
                 logger.info("Response status code: {}", response.getStatusCode());
                 logger.info("Response headers: {}", response.getHeaders());

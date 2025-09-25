@@ -5,6 +5,7 @@ import com.capstone.civilify.dto.KnowledgeBaseChatResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -12,14 +13,10 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
 import java.util.*;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Date;
 
 /**
@@ -122,14 +119,25 @@ public class KnowledgeBaseService {
             
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
             
-            ResponseEntity<Map> response = restTemplate.exchange(
-                url, HttpMethod.POST, request, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 
                 if (Boolean.TRUE.equals(responseBody.get("success"))) {
-                    List<Map<String, Object>> results = (List<Map<String, Object>>) responseBody.get("results");
+                    Object resultsObj = responseBody.get("results");
+                    List<Map<String, Object>> results = new ArrayList<>();
+                    if (resultsObj instanceof List<?>) {
+                        for (Object item : (List<?>) resultsObj) {
+                            if (item instanceof Map<?, ?>) {
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> casted = (Map<String, Object>) item;
+                                results.add(casted);
+                            }
+                        }
+                    }
                     return convertToKnowledgeBaseEntries(results);
                 } else {
                     logger.warn("Knowledge base search failed: {}", responseBody.get("error"));
@@ -174,14 +182,25 @@ public class KnowledgeBaseService {
             
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
             
-            ResponseEntity<Map> response = restTemplate.exchange(
-                url, HttpMethod.POST, request, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
                 
                 String answer = (String) responseBody.get("answer");
-                List<Map<String, Object>> sources = (List<Map<String, Object>>) responseBody.get("sources");
+                Object sourcesObj = responseBody.get("sources");
+                List<Map<String, Object>> sources = new ArrayList<>();
+                if (sourcesObj instanceof List<?>) {
+                    for (Object item : (List<?>) sourcesObj) {
+                        if (item instanceof Map<?, ?>) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> casted = (Map<String, Object>) item;
+                            sources.add(casted);
+                        }
+                    }
+                }
                 
                 return new KnowledgeBaseChatResponse(
                     answer != null ? answer : "",
@@ -276,9 +295,13 @@ public class KnowledgeBaseService {
                 
                 // Handle tags array
                 Object tagsObj = result.get("tags");
-                if (tagsObj instanceof List) {
-                    entry.setTags((List<String>) tagsObj);
+            if (tagsObj instanceof List<?>) {
+                List<String> tags = new ArrayList<>();
+                for (Object t : (List<?>) tagsObj) {
+                    if (t instanceof String) tags.add((String) t);
                 }
+                entry.setTags(tags);
+            }
                 
                 // Handle similarity score
                 Object similarityObj = result.get("similarity");
@@ -320,11 +343,11 @@ public class KnowledgeBaseService {
             }
             
             HttpEntity<String> entity = new HttpEntity<>(headers);
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 knowledgeBaseApiUrl + "/kb/entries/" + entryId,
                 HttpMethod.GET,
                 entity,
-                Map.class
+                new ParameterizedTypeReference<Map<String, Object>>() {}
             );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
@@ -341,7 +364,7 @@ public class KnowledgeBaseService {
     /**
      * Convert a single map response to KnowledgeBaseEntry.
      */
-    private KnowledgeBaseEntry mapToKnowledgeBaseEntry(Map result) {
+    private KnowledgeBaseEntry mapToKnowledgeBaseEntry(Map<String, Object> result) {
         try {
             KnowledgeBaseEntry entry = new KnowledgeBaseEntry();
             
@@ -354,8 +377,12 @@ public class KnowledgeBaseService {
             
             // Handle tags array
             Object tagsObj = result.get("tags");
-            if (tagsObj instanceof List) {
-                entry.setTags((List<String>) tagsObj);
+            if (tagsObj instanceof List<?>) {
+                List<String> tags = new ArrayList<>();
+                for (Object t : (List<?>) tagsObj) {
+                    if (t instanceof String) tags.add((String) t);
+                }
+                entry.setTags(tags);
             }
             
             // Handle similarity score
@@ -380,9 +407,9 @@ public class KnowledgeBaseService {
     private String sanitizeUserText(String text) {
         if (text == null) return "";
         // Strip any local meta/system steering added by UI before sending to KB
-        String cleaned = text.replaceAll("(?is)The user\'s input fits the current mode.*?reply\\.", "").trim();
+        String cleaned = text.replaceAll("(?is)The user\\'s input fits the current mode.*?reply\\.", "").trim();
         // collapse excessive whitespace
-        cleaned = cleaned.replaceAll("\n+", "\n").replaceAll("\s{2,}", " ").trim();
+        cleaned = cleaned.replaceAll("\n+", "\n").replaceAll("\\s{2,}", " ").trim();
         return cleaned.isEmpty() ? text : cleaned;
     }
 

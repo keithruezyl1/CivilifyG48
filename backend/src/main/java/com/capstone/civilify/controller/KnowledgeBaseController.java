@@ -3,8 +3,6 @@ package com.capstone.civilify.controller;
 import com.capstone.civilify.dto.KnowledgeBaseChatResponse;
 import com.capstone.civilify.dto.KnowledgeBaseSearchResult;
 import com.capstone.civilify.dto.KnowledgeBaseEntry;
-import com.capstone.civilify.dto.ChatRequest;
-import com.capstone.civilify.dto.SearchRequest;
 import com.capstone.civilify.service.KnowledgeBaseService;
 import com.capstone.civilify.util.JwtUtil;
 import org.slf4j.Logger;
@@ -138,6 +136,54 @@ public class KnowledgeBaseController {
         }
     }
     
+    /**
+     * Knowledge base statistics for admin dashboard.
+     */
+    @GetMapping("/statistics")
+    public ResponseEntity<?> statistics(HttpServletRequest httpRequest) {
+        try {
+            String token = extractToken(httpRequest);
+            if (token == null || jwtUtil.extractUserId(token) == null) {
+                return ResponseEntity.status(401).body("Unauthorized");
+            }
+            // Minimal placeholder: count-only stats since external service owns full stats
+            boolean kbUp = knowledgeBaseService.isHealthy();
+            int sample = kbUp ? 1 : 0; // we don't have direct counts; keep placeholder fields stable for UI
+            java.util.Map<String, Object> stats = new java.util.HashMap<>();
+            stats.put("totalEntries", 0);
+            stats.put("verifiedEntries", 0);
+            stats.put("pendingEntries", 0);
+            stats.put("recentActivity", sample);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error");
+        }
+    }
+
+    /**
+     * Test RAG system (smoke test endpoint used by admin UI).
+     */
+    @PostMapping("/test")
+    public ResponseEntity<?> testRag(@RequestBody SearchRequest request, HttpServletRequest httpRequest) {
+        try {
+            String token = extractToken(httpRequest);
+            if (token == null || jwtUtil.extractUserId(token) == null) {
+                return ResponseEntity.status(401).body("Unauthorized");
+            }
+            java.util.List<KnowledgeBaseEntry> entries = knowledgeBaseService.searchKnowledgeBase(
+                request.getQuery() != null ? request.getQuery() : "Rule 114 Section 20",
+                Math.max(1, request.getLimit())
+            );
+            java.util.Map<String, Object> result = new java.util.HashMap<>();
+            result.put("query", request.getQuery());
+            result.put("results", entries);
+            result.put("count", entries != null ? entries.size() : 0);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error");
+        }
+    }
+
     /**
      * Health check for knowledge base service.
      */

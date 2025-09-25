@@ -24,6 +24,8 @@ import {
   Assessment as AssessmentIcon
 } from '@mui/icons-material';
 
+const VILLY_BASE = import.meta.env.VITE_VILLY_BASE_URL || 'https://law-entry-extension.onrender.com';
+
 /**
  * Admin Knowledge Base Management Page
  * Provides access to law-entry extension features for admin users only.
@@ -82,22 +84,22 @@ const AdminKnowledgeBase = () => {
 
   const handleCreateEntry = () => {
     // Navigate to law entry creation form
-    window.open('/law-entry-extension', '_blank');
+    window.open(`${VILLY_BASE}/admin/entries/new`, '_blank');
   };
 
   const handleSearchEntries = () => {
     // Navigate to law entry search/browse
-    window.open('/law-entry-extension/entries', '_blank');
+    window.open(`${VILLY_BASE}/entries`, '_blank');
   };
 
   const handleChatWithKB = () => {
     // Open knowledge base chat interface
-    window.open('/law-entry-extension/chat', '_blank');
+    window.open(`${VILLY_BASE}/chat`, '_blank');
   };
 
   const handleManageEntries = () => {
     // Navigate to entry management
-    window.open('/law-entry-extension/admin', '_blank');
+    window.open(`${VILLY_BASE}/admin`, '_blank');
   };
 
   if (loading) {
@@ -309,28 +311,16 @@ const AdminKnowledgeBase = () => {
           Quick Actions
         </Typography>
         <Box display="flex" gap={2} flexWrap="wrap">
-          <Button
-            variant="outlined"
-            onClick={() => window.open('/law-entry-extension/import', '_blank')}
-          >
+          <Button variant="outlined" onClick={() => window.open(`${VILLY_BASE}/admin/import`, '_blank')}>
             Import Entries
           </Button>
-          <Button
-            variant="outlined"
-            onClick={() => window.open('/law-entry-extension/export', '_blank')}
-          >
+          <Button variant="outlined" onClick={() => window.open(`${VILLY_BASE}/admin/export`, '_blank')}>
             Export Data
           </Button>
-          <Button
-            variant="outlined"
-            onClick={() => window.open('/law-entry-extension/analytics', '_blank')}
-          >
+          <Button variant="outlined" onClick={() => window.open(`${VILLY_BASE}/analytics`, '_blank')}>
             View Analytics
           </Button>
-          <Button
-            variant="outlined"
-            onClick={() => window.open('/law-entry-extension/backup', '_blank')}
-          >
+          <Button variant="outlined" onClick={() => window.open(`${VILLY_BASE}/admin/backup`, '_blank')}>
             Backup System
           </Button>
         </Box>
