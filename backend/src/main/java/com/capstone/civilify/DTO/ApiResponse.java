@@ -1,4 +1,4 @@
-package com.capstone.civilify.dto;
+package com.capstone.civilify.DTO;
 
 /**
  * Generic API response wrapper for all REST endpoints.

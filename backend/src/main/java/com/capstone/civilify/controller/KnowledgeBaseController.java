@@ -1,8 +1,8 @@
 package com.capstone.civilify.controller;
 
-import com.capstone.civilify.dto.KnowledgeBaseChatResponse;
-import com.capstone.civilify.dto.KnowledgeBaseSearchResult;
-import com.capstone.civilify.dto.KnowledgeBaseEntry;
+import com.capstone.civilify.DTO.KnowledgeBaseChatResponse;
+import com.capstone.civilify.DTO.KnowledgeBaseSearchResult;
+import com.capstone.civilify.DTO.KnowledgeBaseEntry;
 import com.capstone.civilify.service.KnowledgeBaseService;
 import com.capstone.civilify.util.JwtUtil;
 import org.slf4j.Logger;

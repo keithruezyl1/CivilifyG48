@@ -1,4 +1,4 @@
-package com.capstone.civilify.dto;
+package com.capstone.civilify.DTO;
 
 /**
  * Data Transfer Object for search requests.

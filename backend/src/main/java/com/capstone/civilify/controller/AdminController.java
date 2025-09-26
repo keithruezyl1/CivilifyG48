@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.capstone.civilify.dto.ApiResponse;
-import com.capstone.civilify.dto.UserDTO;
+import com.capstone.civilify.DTO.ApiResponse;
+import com.capstone.civilify.DTO.UserDTO;
 import com.capstone.civilify.service.AdminService;
 
 /**

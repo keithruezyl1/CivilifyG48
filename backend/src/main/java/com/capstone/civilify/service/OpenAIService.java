@@ -1,6 +1,6 @@
 package com.capstone.civilify.service;
 
-import com.capstone.civilify.dto.KnowledgeBaseEntry;
+import com.capstone.civilify.DTO.KnowledgeBaseEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

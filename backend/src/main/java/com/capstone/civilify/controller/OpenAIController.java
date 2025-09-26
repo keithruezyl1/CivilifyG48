@@ -224,12 +224,12 @@ public class OpenAIController {
             logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
             
             // Query KB AFTER the AI answer to enrich with sources (answer proceeds even if none)
-            java.util.List<com.capstone.civilify.dto.KnowledgeBaseEntry> kbEntries = openAIService.getKnowledgeBaseSources(userMessage);
+            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbEntries = openAIService.getKnowledgeBaseSources(userMessage);
             logger.info("Knowledge base lookup complete. Entries found: {}", kbEntries != null ? kbEntries.size() : 0);
 
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
             if (kbEntries != null) {
-                for (com.capstone.civilify.dto.KnowledgeBaseEntry entry : kbEntries) {
+                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbEntries) {
                     Map<String, Object> source = new HashMap<>();
                     source.put("entryId", entry.getEntryId());
                     source.put("title", entry.getTitle());

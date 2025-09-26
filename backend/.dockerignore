@@ -1,0 +1,29 @@
+# Docker ignore for backend image builds
+
+# VCS
+.git
+.gitignore
+
+# Monorepo other package(s)
+frontend/
+kb-token/
+
+# Node artifacts
+node_modules/
+
+# Maven/IDE
+**/target/
+**/.project
+**/.classpath
+**/.settings/
+**/.idea/
+**/*.iml
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+*.log
+
+# Local env files
+.env
+.env.*
