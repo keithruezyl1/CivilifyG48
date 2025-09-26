@@ -33,9 +33,16 @@ COPY --from=build /app/target/civilify-0.0.1-SNAPSHOT.jar app.jar
 # Create startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
+    echo 'echo "Starting Civilify backend..."' >> /app/start.sh && \
+    echo 'echo "FIREBASE_SERVICE_ACCOUNT_JSON length: ${#FIREBASE_SERVICE_ACCOUNT_JSON}"' >> /app/start.sh && \
     echo 'if [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then' >> /app/start.sh && \
+    echo '  echo "Writing Firebase service account JSON to /app/firebase.json"' >> /app/start.sh && \
     echo '  echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /app/firebase.json' >> /app/start.sh && \
     echo '  chmod 600 /app/firebase.json' >> /app/start.sh && \
+    echo '  echo "Firebase JSON file created successfully"' >> /app/start.sh && \
+    echo '  ls -la /app/firebase.json' >> /app/start.sh && \
+    echo 'else' >> /app/start.sh && \
+    echo '  echo "ERROR: FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set!"' >> /app/start.sh && \
     echo 'fi' >> /app/start.sh && \
     echo 'exec java -jar app.jar --server.port=${PORT}' >> /app/start.sh && \
     chmod +x /app/start.sh
