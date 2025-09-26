@@ -30,10 +30,20 @@ EXPOSE 8081
 # Copy built artifact
 COPY --from=build /app/target/civilify-0.0.1-SNAPSHOT.jar app.jar
 
+# Create startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo 'if [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then' >> /app/start.sh && \
+    echo '  echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /app/firebase.json' >> /app/start.sh && \
+    echo '  chmod 600 /app/firebase.json' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    echo 'exec java -jar app.jar --server.port=${PORT}' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 # JVM options: enable container-aware settings and smaller footprint
 ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0"
 
 # Run the application, binding to Render's provided PORT
-CMD ["java", "-jar", "app.jar", "--server.port=${PORT}"]
+CMD ["/app/start.sh"]
 
 
