@@ -45,18 +45,28 @@ public class FirebaseConfig {
             // Remove 'classpath:' prefix if present
             String resourcePath = serviceAccountPath.replace("classpath:", "");
             
-            // Check if the resource exists before trying to open it
-            ClassPathResource resource = new ClassPathResource(resourcePath);
             logger.info("Attempting to load Firebase service account from: {}", resourcePath);
             
-            if (!resource.exists()) {
-                logger.error("Service account file not found: {}", resourcePath);
-                throw new IOException("Service account file not found: " + resourcePath);
+            InputStream serviceAccount = null;
+            
+            // First, try to load from filesystem (for Docker deployments)
+            java.io.File file = new java.io.File(resourcePath);
+            if (file.exists() && file.isFile()) {
+                logger.info("Loading Firebase service account from filesystem: {}", resourcePath);
+                serviceAccount = new java.io.FileInputStream(file);
+            } else {
+                // Fallback to classpath resource
+                ClassPathResource resource = new ClassPathResource(resourcePath);
+                if (resource.exists()) {
+                    logger.info("Loading Firebase service account from classpath: {}", resourcePath);
+                    serviceAccount = resource.getInputStream();
+                } else {
+                    logger.error("Service account file not found in filesystem or classpath: {}", resourcePath);
+                    throw new IOException("Service account file not found: " + resourcePath);
+                }
             }
             
             logger.info("Service account file found successfully");
-            
-            InputStream serviceAccount = resource.getInputStream();
             
             FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
