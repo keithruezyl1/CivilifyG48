@@ -41,9 +41,20 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo '  chmod 600 /app/firebase.json' >> /app/start.sh && \
     echo '  echo "Firebase JSON file created successfully"' >> /app/start.sh && \
     echo '  ls -la /app/firebase.json' >> /app/start.sh && \
+    echo '  echo "Waiting 2 seconds to ensure file is fully written..."' >> /app/start.sh && \
+    echo '  sleep 2' >> /app/start.sh && \
+    echo '  echo "Verifying file exists and is readable..."' >> /app/start.sh && \
+    echo '  if [ -f /app/firebase.json ] && [ -r /app/firebase.json ]; then' >> /app/start.sh && \
+    echo '    echo "Firebase JSON file is ready!"' >> /app/start.sh && \
+    echo '  else' >> /app/start.sh && \
+    echo '    echo "ERROR: Firebase JSON file is not accessible!"' >> /app/start.sh && \
+    echo '    exit 1' >> /app/start.sh && \
+    echo '  fi' >> /app/start.sh && \
     echo 'else' >> /app/start.sh && \
     echo '  echo "ERROR: FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set!"' >> /app/start.sh && \
+    echo '  exit 1' >> /app/start.sh && \
     echo 'fi' >> /app/start.sh && \
+    echo 'echo "Starting Spring Boot application..."' >> /app/start.sh && \
     echo 'exec java -jar app.jar --server.port=${PORT}' >> /app/start.sh && \
     chmod +x /app/start.sh
 
