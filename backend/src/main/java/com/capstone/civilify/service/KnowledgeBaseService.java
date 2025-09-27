@@ -18,6 +18,8 @@ import io.jsonwebtoken.security.Keys;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service for interacting with the knowledge base system.
@@ -44,9 +46,24 @@ public class KnowledgeBaseService {
     @Value("${knowledge.base.max.results:5}")
     private int maxResults;
     
+    @Value("${knowledge.base.retry.attempts:3}")
+    private int knowledgeBaseRetryAttempts;
+    
+    @Value("${knowledge.base.retry.delay:1000}")
+    private long knowledgeBaseRetryDelay;
+    
     private final RestTemplate restTemplate;
     private volatile String cachedServiceToken;
     private volatile long cachedServiceTokenExpiryMs = 0L;
+    
+    // Simple in-memory cache and in-flight de-duplication
+    private static class CacheEntry<T> {
+        final T value; final long expiryMs;
+        CacheEntry(T value, long expiryMs) { this.value = value; this.expiryMs = expiryMs; }
+        boolean isExpired() { return System.currentTimeMillis() > expiryMs; }
+    }
+    private final Map<String, CacheEntry<List<KnowledgeBaseEntry>>> resultCache = new ConcurrentHashMap<>();
+    private final Map<String, Object> inFlightLocks = new ConcurrentHashMap<>();
     
     public KnowledgeBaseService() {
         this.restTemplate = new RestTemplate();
@@ -104,57 +121,116 @@ public class KnowledgeBaseService {
             logger.debug("Knowledge base is disabled, returning empty results");
             return new ArrayList<>();
         }
+        if (query == null || query.trim().length() < 3) {
+            return new ArrayList<>();
+        }
+        String normalizedQuery = sanitizeUserText(query).toLowerCase(Locale.ROOT).trim();
+        int effectiveLimit = Math.min(Math.max(1, limit), Math.max(1, maxResults));
+        String cacheKey = normalizedQuery + "::" + effectiveLimit;
         
-        try {
-            logger.info("Searching knowledge base for query: {}", query);
-            
-            String url = knowledgeBaseApiUrl + "/kb/search";
-            
-            HttpHeaders headers = buildAuthHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            Map<String, Object> requestBody = new HashMap<String, Object>();
-            requestBody.put("query", sanitizeUserText(query));
-            requestBody.put("limit", Math.min(limit, maxResults));
-            
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-            
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {}
-            );
-            
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> responseBody = response.getBody();
-                
-                if (Boolean.TRUE.equals(responseBody.get("success"))) {
-                    Object resultsObj = responseBody.get("results");
-                    List<Map<String, Object>> results = new ArrayList<>();
-                    if (resultsObj instanceof List<?>) {
-                        for (Object item : (List<?>) resultsObj) {
-                            if (item instanceof Map<?, ?>) {
-                                @SuppressWarnings("unchecked")
-                                Map<String, Object> casted = (Map<String, Object>) item;
-                                results.add(casted);
-                            }
-                        }
-                    }
-                    return convertToKnowledgeBaseEntries(results);
-                } else {
-                    logger.warn("Knowledge base search failed: {}", responseBody.get("error"));
-                }
-            }
-            
-        } catch (org.springframework.web.client.ResourceAccessException e) {
-            logger.warn("Knowledge base service is not available (connection refused). This is expected if the Villy service is not running. Falling back to empty results.");
-        } catch (HttpClientErrorException e) {
-            logger.error("Client error when searching knowledge base: {}", e.getMessage());
-        } catch (HttpServerErrorException e) {
-            logger.error("Server error when searching knowledge base: {}", e.getMessage());
-        } catch (Exception e) {
-            logger.error("Unexpected error when searching knowledge base", e);
+        CacheEntry<List<KnowledgeBaseEntry>> cached = resultCache.get(cacheKey);
+        if (cached != null && !cached.isExpired()) {
+            return cached.value;
         }
         
+        Object lock = inFlightLocks.computeIfAbsent(cacheKey, k -> new Object());
+        synchronized (lock) {
+            try {
+                cached = resultCache.get(cacheKey);
+                if (cached != null && !cached.isExpired()) {
+                    return cached.value;
+                }
+                return executeSearchWithRetry(normalizedQuery, effectiveLimit, cacheKey);
+            } finally {
+                inFlightLocks.remove(cacheKey);
+            }
+        }
+    }
+
+    private List<KnowledgeBaseEntry> executeSearchWithRetry(String query, int limit, String cacheKey) {
+        int attempts = Math.max(1, knowledgeBaseRetryAttempts);
+        long baseDelay = Math.max(100, knowledgeBaseRetryDelay);
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            try {
+                return doSearch(query, limit, cacheKey);
+            } catch (HttpClientErrorException.TooManyRequests e429) {
+                long delayMs = parseRetryAfterMs(e429.getResponseHeaders(), baseDelay, attempt);
+                logger.warn("KB 429 Too Many Requests. Attempt {}/{}. Backing off for {} ms", attempt, attempts, delayMs);
+                sleepQuietly(delayMs);
+            } catch (org.springframework.web.client.ResourceAccessException e) {
+                if (attempt < attempts) {
+                    long delayMs = jitteredDelay(baseDelay, attempt);
+                    logger.warn("KB connection issue. Attempt {}/{}. Backing off for {} ms", attempt, attempts, delayMs);
+                    sleepQuietly(delayMs);
+                } else {
+                    logger.warn("Knowledge base service is not available (connection refused). Returning empty results.");
+                }
+            } catch (Exception e) {
+                logger.error("Unexpected KB error on attempt {}/{}", attempt, attempts, e);
+                break;
+            }
+        }
         return new ArrayList<>();
+    }
+
+    private List<KnowledgeBaseEntry> doSearch(String query, int limit, String cacheKey) {
+        logger.info("Searching knowledge base for query: {}", query);
+        String url = knowledgeBaseApiUrl + "/kb/search";
+        HttpHeaders headers = buildAuthHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        Map<String, Object> requestBody = new HashMap<String, Object>();
+        requestBody.put("query", query);
+        requestBody.put("limit", limit);
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+            url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            Map<String, Object> responseBody = response.getBody();
+            if (Boolean.TRUE.equals(responseBody.get("success"))) {
+                Object resultsObj = responseBody.get("results");
+                List<Map<String, Object>> results = new ArrayList<>();
+                if (resultsObj instanceof List<?>) {
+                    for (Object item : (List<?>) resultsObj) {
+                        if (item instanceof Map<?, ?>) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> casted = (Map<String, Object>) item;
+                            results.add(casted);
+                        }
+                    }
+                }
+                List<KnowledgeBaseEntry> entries = convertToKnowledgeBaseEntries(results);
+                resultCache.put(cacheKey, new CacheEntry<>(entries, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60)));
+                return entries;
+            } else {
+                logger.warn("Knowledge base search failed: {}", responseBody.get("error"));
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    private long parseRetryAfterMs(HttpHeaders headers, long baseDelay, int attempt) {
+        if (headers != null) {
+            List<String> retryAfter = headers.get("Retry-After");
+            if (retryAfter != null && !retryAfter.isEmpty()) {
+                try {
+                    long seconds = Long.parseLong(retryAfter.get(0).trim());
+                    return TimeUnit.SECONDS.toMillis(Math.max(1, seconds));
+                } catch (NumberFormatException ignore) { }
+            }
+        }
+        return jitteredDelay(baseDelay, attempt);
+    }
+
+    private long jitteredDelay(long baseDelay, int attempt) {
+        long exp = (long) (baseDelay * Math.pow(2, attempt - 1));
+        long jitter = (long) (Math.random() * baseDelay);
+        return Math.min(TimeUnit.SECONDS.toMillis(10), exp + jitter);
+    }
+
+    private void sleepQuietly(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
     }
     
     /**
