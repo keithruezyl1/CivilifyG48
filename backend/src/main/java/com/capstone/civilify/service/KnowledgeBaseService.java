@@ -336,11 +336,8 @@ public class KnowledgeBaseService {
         }
         
         try {
-            HttpHeaders headers = new HttpHeaders();
+            HttpHeaders headers = buildAuthHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            if (knowledgeBaseApiKey != null && !knowledgeBaseApiKey.isEmpty()) {
-                headers.set("Authorization", "Bearer " + knowledgeBaseApiKey);
-            }
             
             HttpEntity<String> entity = new HttpEntity<>(headers);
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(

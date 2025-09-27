@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.DependsOn;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
@@ -32,6 +33,7 @@ import com.google.firebase.FirebaseApp;
 import javax.annotation.PostConstruct;
 
 @Service
+@DependsOn("firebaseApp")
 public class FirebaseAuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(FirebaseAuthService.class);
@@ -43,16 +45,21 @@ public class FirebaseAuthService {
     private String projectId;
     
     private boolean mockMode = false;
+    private final FirebaseApp firebaseApp;
+
+    public FirebaseAuthService(FirebaseApp firebaseApp) {
+        this.firebaseApp = firebaseApp;
+    }
     
     @PostConstruct
     public void init() {
         try {
             // Try to get FirebaseAuth instance to check if Firebase is initialized
-            FirebaseAuth auth = FirebaseAuth.getInstance();
+            FirebaseAuth auth = FirebaseAuth.getInstance(firebaseApp);
             logger.info("Successfully connected to Firebase Auth for project: {}", projectId);
             
             // Verify connection by getting app name
-            String appName = FirebaseApp.getInstance().getName();
+            String appName = firebaseApp.getName();
             logger.info("Firebase App name: {}", appName);
             
             // Force mockMode to be false regardless of app name
@@ -85,7 +92,7 @@ public class FirebaseAuthService {
                     .setPassword(password);
 
             // Create the user in Firebase Authentication
-            UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+            UserRecord userRecord = FirebaseAuth.getInstance(firebaseApp).createUser(request);
 
             // Log and return the UID of the created user
             logger.info("Successfully created new user: {}", userRecord.getUid());
@@ -104,7 +111,7 @@ public class FirebaseAuthService {
      */
     public void deleteUser(String uid) throws FirebaseAuthException {
         try {
-            FirebaseAuth.getInstance().deleteUser(uid);
+            FirebaseAuth.getInstance(firebaseApp).deleteUser(uid);
             logger.info("Successfully deleted user: {}", uid);
         } catch (FirebaseAuthException e) {
             logger.error("Error deleting user in Firebase Authentication: {}", e.getMessage());
@@ -280,9 +287,9 @@ public class FirebaseAuthService {
                         .build();
                     
                     logger.info("Using Firebase project: {}", projectId);
-                    logger.info("Firebase app name: {}", FirebaseApp.getInstance().getName());
+                    logger.info("Firebase app name: {}", firebaseApp.getName());
                     
-                    String resetLink = FirebaseAuth.getInstance().generatePasswordResetLink(email, actionCodeSettings);
+                    String resetLink = FirebaseAuth.getInstance(firebaseApp).generatePasswordResetLink(email, actionCodeSettings);
                     logger.info("Password reset link generated: {}", resetLink);
                     logger.info("Password reset email sent successfully via Firebase Admin SDK to: {}", email);
                     return true;
@@ -357,7 +364,7 @@ public class FirebaseAuthService {
         try {
             // Try to get the user by email first
             try {
-                UserRecord userRecord = FirebaseAuth.getInstance().getUserByEmail(email);
+                UserRecord userRecord = FirebaseAuth.getInstance(firebaseApp).getUserByEmail(email);
                 logger.info("Found existing user for Google auth: {}", email);
                 return userRecord.getUid();
             } catch (FirebaseAuthException e) {
@@ -372,7 +379,7 @@ public class FirebaseAuthService {
                         .setEmailVerified(true);
 
                 // Create the user in Firebase Authentication
-                UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+                UserRecord userRecord = FirebaseAuth.getInstance(firebaseApp).createUser(request);
                 logger.info("Successfully created new user from Google auth: {}", userRecord.getUid());
                 return userRecord.getUid();
             }
@@ -397,7 +404,7 @@ public class FirebaseAuthService {
         
         try {
             // Create a custom token for the specified user ID
-            String customToken = FirebaseAuth.getInstance().createCustomToken(uid);
+            String customToken = FirebaseAuth.getInstance(firebaseApp).createCustomToken(uid);
             logger.info("Created custom token for user: {}", uid);
             return customToken;
         } catch (FirebaseAuthException e) {
@@ -427,14 +434,14 @@ public class FirebaseAuthService {
             logger.info("Attempting to update password for user: {}", email);
             
             // First, get the user by email to get their UID
-            UserRecord userRecord = FirebaseAuth.getInstance().getUserByEmail(email);
+            UserRecord userRecord = FirebaseAuth.getInstance(firebaseApp).getUserByEmail(email);
             String uid = userRecord.getUid();
             
             // Update the user's password
             UserRecord.UpdateRequest request = new UserRecord.UpdateRequest(uid)
                     .setPassword(newPassword);
             
-            FirebaseAuth.getInstance().updateUser(request);
+            FirebaseAuth.getInstance(firebaseApp).updateUser(request);
             
             logger.info("Password updated successfully for user: {}", email);
             return true;

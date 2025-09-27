@@ -83,6 +83,13 @@ public class OpenAIService {
     @Value("${openai.cpa.stream:false}")
     private boolean cpaStream;
     
+    // Optional org/project headers (useful for sk-proj-* keys and org-scoped usage)
+    @Value("${openai.organization:}")
+    private String openAiOrganization;
+    
+    @Value("${openai.project:}")
+    private String openAiProject;
+    
     private final RestTemplate restTemplate;
     
     public OpenAIService() {
@@ -171,8 +178,13 @@ public class OpenAIService {
             String authHeader = "Bearer " + apiKey;
             headers.set("Authorization", authHeader);
             
-            // Add OpenAI-Organization header if needed
-            // headers.set("OpenAI-Organization", "your-organization-id");
+            // Optional scoping headers
+            if (openAiOrganization != null && !openAiOrganization.isBlank()) {
+                headers.set("OpenAI-Organization", openAiOrganization.trim());
+            }
+            if (openAiProject != null && !openAiProject.isBlank()) {
+                headers.set("OpenAI-Project", openAiProject.trim());
+            }
             
             // Prepare messages for the API call
             List<Map<String, Object>> messages = new ArrayList<>();
@@ -213,7 +225,13 @@ public class OpenAIService {
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
             
             logger.info("Making API request to: {}", apiUrl);
-            logger.info("Request headers: {}", headers);
+            // Mask Authorization header in logs
+            HttpHeaders masked = new HttpHeaders();
+            masked.putAll(headers);
+            if (masked.containsKey("Authorization")) {
+                masked.set("Authorization", "Bearer ****");
+            }
+            logger.info("Request headers: {}", masked);
             logger.info("Request body: {}", requestBody);
             
             try {
