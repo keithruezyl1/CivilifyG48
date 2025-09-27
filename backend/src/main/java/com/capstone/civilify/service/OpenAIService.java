@@ -13,8 +13,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +93,7 @@ public class OpenAIService {
     private String openAiProject;
     
     private final RestTemplate restTemplate;
+    private final ObjectMapper jsonMapper = new ObjectMapper();
     
     public OpenAIService() {
         this.restTemplate = new RestTemplate();
@@ -121,7 +124,8 @@ public class OpenAIService {
                     frequencyPenalty = gliFrequencyPenalty;
                     presencePenalty = gliPresencePenalty;
                     maxTokens = gliMaxTokens;
-                    stream = gliStream;
+                    // Force non-streaming responses to avoid SSE content type
+                    stream = false;
                     logger.info("Using GLI mode with model: {}, temperature: {}, max tokens: {}", model, temperature, maxTokens);
                 } else if (mode.equals("B")) { // Case Plausibility Assessment mode
                     apiKey = cpaApiKey;
@@ -131,7 +135,8 @@ public class OpenAIService {
                     frequencyPenalty = cpaFrequencyPenalty;
                     presencePenalty = cpaPresencePenalty;
                     maxTokens = cpaMaxTokens;
-                    stream = cpaStream;
+                    // Force non-streaming responses to avoid SSE content type
+                    stream = false;
                     logger.info("Using CPA mode with model: {}, temperature: {}, max tokens: {}", model, temperature, maxTokens);
                 } else {
                     // Fallback to default for unknown modes
@@ -173,6 +178,7 @@ public class OpenAIService {
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
             
             // Handle different API key formats
             String authHeader = "Bearer " + apiKey;
@@ -276,6 +282,18 @@ public class OpenAIService {
                 }
             } catch (Exception e) {
                 logger.error("Error during API call: {}", e.getMessage());
+                // Fallback: handle servers that (incorrectly) return text/event-stream
+                if (e.getMessage() != null && e.getMessage().toLowerCase().contains("text/event-stream")) {
+                    try {
+                        String sseContent = trySseFallback(apiUrl, headers, requestBody);
+                        if (sseContent != null) {
+                            logger.info("Parsed SSE fallback content: {}", sseContent);
+                            return sseContent;
+                        }
+                    } catch (Exception suppressed) {
+                        logger.warn("SSE fallback parsing failed: {}", suppressed.getMessage());
+                    }
+                }
                 throw e; // Rethrow to be caught by the outer try-catch block
             }
             
@@ -293,6 +311,50 @@ public class OpenAIService {
         return generateResponse(userMessage, systemPrompt, new ArrayList<>(), mode);
     }
 
+    // Attempt to parse a text/event-stream (SSE) response by reading the 'data:' lines
+    private String trySseFallback(String apiUrl, HttpHeaders headers, Map<String, Object> requestBody) throws Exception {
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<String> response = restTemplate.exchange(
+            apiUrl,
+            HttpMethod.POST,
+            requestEntity,
+            String.class
+        );
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            String body = response.getBody();
+            StringBuilder assembled = new StringBuilder();
+            for (String line : body.split("\n")) {
+                String trimmed = line.trim();
+                if (!trimmed.startsWith("data:")) continue;
+                String payload = trimmed.substring(5).trim();
+                if ("[DONE]".equals(payload)) break;
+                if (payload.isEmpty()) continue;
+                try {
+                    Map<?, ?> evt = jsonMapper.readValue(payload, Map.class);
+                    Object choicesObj = evt.get("choices");
+                    if (choicesObj instanceof List<?> choices && !choices.isEmpty()) {
+                        Object first = choices.get(0);
+                        if (first instanceof Map<?, ?> cm) {
+                            // Try delta.content (streaming chunks)
+                            Object delta = cm.get("delta");
+                            if (delta instanceof Map<?, ?> dm) {
+                                Object dc = dm.get("content");
+                                if (dc instanceof String s) assembled.append(s);
+                            }
+                            // Fallback to message.content if present
+                            Object msg = cm.get("message");
+                            if (msg instanceof Map<?, ?> mm) {
+                                Object content = mm.get("content");
+                                if (content instanceof String s) assembled.append(s);
+                            }
+                        }
+                    }
+                } catch (Exception ignore) { /* skip malformed event */ }
+            }
+            if (assembled.length() > 0) return assembled.toString();
+        }
+        return null;
+    }
     private String getGliSystemPrompt() {
         // Keep in sync with OpenAIController; minimal duplication to ensure fallback always has a system prompt
         return "You are Villy, Civilify's AI-powered legal assistant. Provide clear legal information with sources when possible.";
