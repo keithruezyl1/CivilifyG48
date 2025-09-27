@@ -176,38 +176,70 @@ public class KnowledgeBaseService {
     private List<KnowledgeBaseEntry> doSearch(String query, int limit, String cacheKey) {
         logger.info("Searching knowledge base for query: {}", query);
         String url = knowledgeBaseApiUrl + "/kb/search";
-        HttpHeaders headers = buildAuthHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         Map<String, Object> requestBody = new HashMap<String, Object>();
         requestBody.put("query", query);
         requestBody.put("limit", limit);
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-            url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {}
-        );
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            Map<String, Object> responseBody = response.getBody();
-            if (Boolean.TRUE.equals(responseBody.get("success"))) {
-                Object resultsObj = responseBody.get("results");
-                List<Map<String, Object>> results = new ArrayList<>();
-                if (resultsObj instanceof List<?>) {
-                    for (Object item : (List<?>) resultsObj) {
-                        if (item instanceof Map<?, ?>) {
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> casted = (Map<String, Object>) item;
-                            results.add(casted);
+
+        // Try auth variants: minted/jwt -> raw bearer -> x-api-key
+        List<String> variants = Arrays.asList("minted", "raw", "x-api-key");
+        for (String variant : variants) {
+            try {
+                ResponseEntity<Map<String, Object>> response = postWithVariant(url, requestBody, variant);
+                if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    Map<String, Object> responseBody = response.getBody();
+                    if (Boolean.TRUE.equals(responseBody.get("success"))) {
+                        Object resultsObj = responseBody.get("results");
+                        List<Map<String, Object>> results = new ArrayList<>();
+                        if (resultsObj instanceof List<?>) {
+                            for (Object item : (List<?>) resultsObj) {
+                                if (item instanceof Map<?, ?>) {
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> casted = (Map<String, Object>) item;
+                                    results.add(casted);
+                                }
+                            }
                         }
+                        List<KnowledgeBaseEntry> entries = convertToKnowledgeBaseEntries(results);
+                        resultCache.put(cacheKey, new CacheEntry<>(entries, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60)));
+                        return entries;
                     }
                 }
-                List<KnowledgeBaseEntry> entries = convertToKnowledgeBaseEntries(results);
-                resultCache.put(cacheKey, new CacheEntry<>(entries, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60)));
-                return entries;
-            } else {
-                logger.warn("Knowledge base search failed: {}", responseBody.get("error"));
+            } catch (HttpClientErrorException.Forbidden e403) {
+                logger.warn("KB auth variant '{}' failed with 403: {}", variant, e403.getResponseBodyAsString());
+                // fallthrough to next variant
+            } catch (Exception e) {
+                logger.warn("KB variant '{}' failed: {}", variant, e.getMessage());
             }
         }
         return new ArrayList<>();
+    }
+
+    private ResponseEntity<Map<String, Object>> postWithVariant(String url, Map<String, Object> body, String variant) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        headers.set("User-Agent", "Civilify/1.0 KB Client");
+
+        try {
+            if ("minted".equals(variant)) {
+                HttpHeaders auth = buildAuthHeaders();
+                headers.putAll(auth);
+            } else if ("raw".equals(variant)) {
+                if (knowledgeBaseApiKey != null && !knowledgeBaseApiKey.trim().isEmpty()) {
+                    headers.set("Authorization", "Bearer " + knowledgeBaseApiKey.trim());
+                }
+            } else if ("x-api-key".equals(variant)) {
+                if (knowledgeBaseApiKey != null && !knowledgeBaseApiKey.trim().isEmpty()) {
+                    headers.set("x-api-key", knowledgeBaseApiKey.trim());
+                }
+            }
+        } catch (Exception e) {
+            // If minting fails due to weak key, continue without throwing
+            logger.debug("Auth header build error for variant '{}': {}", variant, e.getMessage());
+        }
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        return restTemplate.exchange(url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {});
     }
 
     private long parseRetryAfterMs(HttpHeaders headers, long baseDelay, int attempt) {
