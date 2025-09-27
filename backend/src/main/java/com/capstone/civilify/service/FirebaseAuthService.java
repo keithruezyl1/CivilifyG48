@@ -44,6 +44,9 @@ public class FirebaseAuthService {
     @Value("${firebase.project.id}")
     private String projectId;
     
+    @Value("${spring.security.oauth2.client.registration.google.client-id:433624047904-ea5ipm4k3ogi6fumrpjdu9c59hq1119l.apps.googleusercontent.com}")
+    private String googleClientId;
+    
     private boolean mockMode = false;
     private final FirebaseApp firebaseApp;
 
@@ -226,7 +229,7 @@ public class FirebaseAuthService {
         try {
             // Create a verifier for the Google ID token
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                    .setAudience(Collections.singletonList("433624047904-ea5ipm4k3ogi6fumrpjdu9c59hq1119l.apps.googleusercontent.com"))
+                    .setAudience(Collections.singletonList(googleClientId))
                     .build();
 
             // Verify the token
