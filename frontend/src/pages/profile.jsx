@@ -197,222 +197,226 @@ const Profile = () => {
         </div>
       </div>
       <style>{`
-        .profile-container {
-          min-height: 100vh;
-          background-color: ${isDarkMode ? "#2d2d2d" : "#F7F7F9"};
-          color: ${isDarkMode ? "#ffffff" : "#1a1a1a"};
-          padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-
-        .header {
-          padding: 24px 24px 0 24px;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: row;
-          justify-content: space-between;
-        }
-
-        .back-button, .logo { flex: 1; }
-        .logo { display: flex; justify-content: flex-end; }
-
-        .back-btn {
-  display: flex;
-  align-items: center;
-  background: none;
-  border: none;
-  color: ${isDarkMode ? "#ffffff" : "#64748b"};
-  font-size: 16px;
-  cursor: pointer;
-  padding: 8px 0;
-  transition: color 0.2s ease;
-}
-
-.full-text {
-  display: inline;
-}
-
-.short-text {
-  display: none;
-}
-
-.back-btn:hover {
-  color: ${isDarkMode ? "#cccccc" : "#334155"};
-}
-
-/* Mobile and below (≤431px) */
-@media (max-width: 431px) {
-  .full-text {
-    display: none;
+  .profile-container {
+    min-height: 100vh;
+    background-color: ${isDarkMode ? "#0a0a0a" : "#ffffff"};
+    background-image: radial-gradient(circle, ${
+      isDarkMode ? "rgba(255, 255, 255, 0.2) 1px" : "rgba(0, 0, 0, 0.1) 1px"
+    }, transparent 1px);
+    background-size: 20px 20px; /* Adjusts spacing of dots */
+    color: ${isDarkMode ? "#ffffff" : "#1a1a1a"};
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  .short-text {
+
+  .header {
+    padding: 24px 24px 0 24px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .back-button, .logo { flex: 1; }
+  .logo { display: flex; justify-content: flex-end; }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: ${isDarkMode ? "#ffffff" : "#64748b"};
+    font-size: 16px;
+    cursor: pointer;
+    padding: 8px 0;
+    transition: color 0.2s ease;
+  }
+
+  .full-text {
     display: inline;
   }
-  h1 { font-size: 24px; }
-  h2 { font-size: 18px; }
-  h3 { font-size: 14px; }
-  p, label, button, input { font-size: 12px; }
-}
 
-        .content { max-width: 600px; margin: 0 auto; padding: 40px 24px 60px; }
-        .avatar-section { text-align: center; margin-bottom: 48px; }
-        .avatar { position: relative; display: inline-block; margin-bottom: 24px; }
-        .avatar-img, .avatar-placeholder {
-          width: 120px;
-          height: 120px;
-          border-radius: 50%;
-          object-fit: cover;
-          border: 4px solid ${isDarkMode ? "#404040" : "#ffffff"};
-          box-shadow: ${
-            isDarkMode
-              ? "0 8px 32px rgba(0, 0, 0, 0.3)"
-              : "0 8px 32px rgba(0, 0, 0, 0.1)"
-          };
-        }
-        .avatar-placeholder {
-          background: linear-gradient(135deg, #f24c00 0%, #ea580c 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 36px;
-          font-weight: 700;
-          color: #ffffff;
-        }
+  .short-text {
+    display: none;
+  }
 
-        .action-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-        .action-btn {
-          padding: 12px 24px;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .edit-btn {
-          background-color: #f24c00;
-          color: #ffffff;
-          box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
-        }
-        .edit-btn:hover {
-          background-color: #d64500;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(242, 76, 0, 0.4);
-        }
-        .edit-btn:not(:hover) {
-          background-color: #f24c00;
-          transform: translateY(0);
-          box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
-        }
-        .change-password-btn {
-          background-color: ${isDarkMode ? "#404040" : "#f1f5f9"};
-          color: ${isDarkMode ? "#ffffff" : "#475569"};
-        }
-        .change-password-btn:hover {
-          background-color: ${isDarkMode ? "#555555" : "#e2e8f0"};
-          transform: translateY(-1px);
-        }
-        .change-password-btn:not(:hover) {
-          background-color: ${isDarkMode ? "#404040" : "#f1f5f9"};
-          transform: translateY(0);
-        }
+  .back-btn:hover {
+    color: ${isDarkMode ? "#cccccc" : "#334155"};
+  }
 
-        .settings-section { margin-top: 24px; }
-        .settings { display: flex; flex-direction: column; gap: 16px; }
-        .setting { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; border-bottom: 1px solid ${
-          isDarkMode ? "#404040" : "#e2e8f0"
-        }; }
-        .change-btn {
-          background: none;
-          border: none;
-          color: #f24c00;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: color 0.2s ease;
-        }
-        .change-btn:hover { color: #d64500; }
-        .theme-toggle { display: flex; align-items: center; gap: 12px; }
-        .toggle-switch {
-          width: 44px;
-          height: 24px;
-          background-color: ${isDarkMode ? "#f24c00" : "#e2e8f0"};
-          border-radius: 12px;
-          position: relative;
-          cursor: pointer;
-          transition: background-color 0.2s ease;
-        }
-        .toggle-slider {
-          width: 20px;
-          height: 20px;
-          background-color: #ffffff;
-          border-radius: 50%;
-          position: absolute;
-          top: 2px;
-          transition: left 0.2s ease;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        .toggle-label {
-          font-size: 16px;
-          font-weight: 600;
-          color: #f24c00;
-          cursor: pointer;
-        }
+  /* Mobile and below (≤431px) */
+  @media (max-width: 431px) {
+    .full-text {
+      display: none;
+    }
+    .short-text {
+      display: inline;
+    }
+    h1 { font-size: 24px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 14px; }
+    p, label, button, input { font-size: 12px; }
+  }
 
-        .delete-section {
-          background-color: ${isDarkMode ? "#4a1a1a" : "#fef2f2"};
-          border: 1px solid ${isDarkMode ? "#7f1d1d" : "#fecaca"};
-          border-radius: 12px;
-          padding: 24px;
-        }
-        .delete-btn {
-          padding: 12px 20px;
-          background-color: #dc2626;
-          color: #ffffff;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .delete-btn:hover {
-          background-color: #b91c1c;
-          transform: translateY(-1px);
-        }
-        .delete-btn:not(:hover) {
-          background-color: #dc2626;
-          transform: translateY(0);
-        }
+  .content { max-width: 600px; margin: 0 auto; padding: 0px 30px 30px 30px; }
+  .avatar-section { text-align: center; margin-bottom: 24px; }
+  .avatar { position: relative; display: inline-block }
+  .avatar-img, .avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid ${isDarkMode ? "#404040" : "#ffffff"};
+    box-shadow: ${
+      isDarkMode
+        ? "0 8px 32px rgba(0, 0, 0, 0.3)"
+        : "0 8px 32px rgba(0, 0, 0, 0.1)"
+    };
+  }
+  .avatar-placeholder {
+    background: linear-gradient(135deg, #f24c00 0%, #ea580c 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffffff;
+  }
 
-        /* Base font sizes */
-        h1 { font-size: 32px; }
-        h2 { font-size: 24px; }
-        h3 { font-size: 18px; }
-        p, label, button, input { font-size: 16px; }
+  .action-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .action-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .edit-btn {
+    background-color: #f24c00;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
+  }
+  .edit-btn:hover {
+    background-color: #d64500;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(242, 76, 0, 0.4);
+  }
+  .edit-btn:not(:hover) {
+    background-color: #f24c00;
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
+  }
+  .change-password-btn {
+    background-color: ${isDarkMode ? "#404040" : "#f1f5f9"};
+    color: ${isDarkMode ? "#ffffff" : "#475569"};
+  }
+  .change-password-btn:hover {
+    background-color: ${isDarkMode ? "#555555" : "#e2e8f0"};
+    transform: translateY(-1px);
+  }
+  .change-password-btn:not(:hover) {
+    background-color: ${isDarkMode ? "#404040" : "#f1f5f9"};
+    transform: translateY(0);
+  }
 
-        /* Tablet and below (≤768px) */
-        @media (max-width: 768px) {
-          h1 { font-size: 28px; }
-          h2 { font-size: 20px; }
-          h3 { font-size: 16px; }
-          p, label, button, input { font-size: 14px; }
-        }
+  .settings-section { margin-top: 24px; }
+  .settings { display: flex; flex-direction: column; gap: 16px; }
+  .setting { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid ${
+    isDarkMode ? "#404040" : "#e2e8f0"
+  }; }
+  .change-btn {
+    background: none;
+    border: none;
+    color: #f24c00;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+  .change-btn:hover { color: #d64500; }
+  .theme-toggle { display: flex; align-items: center; gap: 12px; }
+  .toggle-switch {
+    width: 44px;
+    height: 24px;
+    background-color: ${isDarkMode ? "#f24c00" : "#e2e8f0"};
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .toggle-slider {
+    width: 20px;
+    height: 20px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    transition: left 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  .toggle-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #f24c00;
+    cursor: pointer;
+  }
 
-        /* Mobile and below (≤431px) */
-        @media (max-width: 431px) {
-          h1 { font-size: 24px; }
-          h2 { font-size: 18px; }
-          h3 { font-size: 14px; }
-          p, label, button, input { font-size: 12px; }
-        }
+  .delete-section {
+    background-color: ${isDarkMode ? "#4a1a1a" : "#fef2f2"};
+    border: 1px solid ${isDarkMode ? "#7f1d1d" : "#fecaca"};
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .delete-btn {
+    padding: 12px 20px;
+    background-color: #dc2626;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .delete-btn:hover {
+    background-color: #b91c1c;
+    transform: translateY(-1px);
+  }
+  .delete-btn:not(:hover) {
+    background-color: #dc2626;
+    transform: translateY(0);
+  }
 
-        #root:not(:has(.docs-page)) {
-          padding: 0 !important;
-          display: block !important;
-          overflow-y: hidden scroll !important;
-        }
-      `}</style>
+  /* Base font sizes */
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; }
+  h3 { font-size: 18px; }
+  p, label, button, input { font-size: 16px; }
+
+  /* Tablet and below (≤768px) */
+  @media (max-width: 768px) {
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; }
+    p, label, button, input { font-size: 14px; }
+  }
+
+  /* Mobile and below (≤431px) */
+  @media (max-width: 431px) {
+    h1 { font-size: 24px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 14px; }
+    p, label, button, input { font-size: 12px; }
+  }
+
+  #root:not(:has(.docs-page)) {
+    padding: 0 !important;
+    display: block !important;
+    overflow-y: hidden scroll !important;
+  }
+`}</style>
     </div>
   );
 };

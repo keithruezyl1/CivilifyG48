@@ -335,209 +335,212 @@ const EditProfile = () => {
         </form>
       </div>
       <style>{`
-        .edit-profile-container {
-          min-height: 100vh;
-          background-color: ${isDarkMode ? "#2d2d2d" : "#F7F7F9"};
-          color: ${isDarkMode ? "#ffffff" : "#1a1a1a"};
-          padding: 0;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-
-        .header {
-          padding: 24px 24px 0 24px;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: row;
-          justify-content: space-between;
-        }
-
-        .back-button, .logo { flex: 1; }
-        .logo { display: flex; justify-content: flex-end; }
-
-        .back-btn {
-  display: flex;
-  align-items: center;
-  background: none;
-  border: none;
-  color: ${isDarkMode ? "#ffffff" : "#64748b"};
-  font-size: 16px;
-  cursor: pointer;
-  padding: 8px 0;
-  transition: color 0.2s ease;
-}
-
-.full-text {
-  display: inline;
-}
-
-.short-text {
-  display: none;
-}
-
-.back-btn:hover {
-  color: ${isDarkMode ? "#cccccc" : "#334155"};
-}
-
-/* Mobile and below (≤431px) */
-@media (max-width: 431px) {
-  .full-text {
-    display: none;
+  .edit-profile-container {
+    min-height: 100vh;
+    background-color: ${isDarkMode ? "#0a0a0a" : "#ffffff"};
+    background-image: radial-gradient(circle, ${
+      isDarkMode ? "rgba(255, 255, 255, 0.2) 1px" : "rgba(0, 0, 0, 0.1) 1px"
+    }, transparent 1px);
+    background-size: 20px 20px; /* Adjusts spacing of dots */
+    color: ${isDarkMode ? "#ffffff" : "#1a1a1a"};
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  .short-text {
+
+  .header {
+    padding: 24px 24px 0 24px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .back-button, .logo { flex: 1; }
+  .logo { display: flex; justify-content: flex-end; }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: ${isDarkMode ? "#ffffff" : "#64748b"};
+    font-size: 16px;
+    cursor: pointer;
+    padding: 8px 0;
+    transition: color 0.2s ease;
+  }
+
+  .full-text {
     display: inline;
   }
-  h1 { font-size: 24px; }
-  h2 { font-size: 18px; }
-  h3 { font-size: 14px; }
-  p, label, button, input { font-size: 12px; }
-}
 
-        .avatar-section { text-align: center; margin-bottom: 48px; }
-        .avatar {
-  position: relative;
-  display: inline-block;
-  margin-bottom: 24px;
-  cursor: pointer;
-}
+  .short-text {
+    display: none;
+  }
 
-.avatar-img,
-.avatar-placeholder {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid ${isDarkMode ? "#404040" : "#ffffff"};
-  box-shadow: ${
-    isDarkMode
-      ? "0 8px 32px rgba(0, 0, 0, 0.3)"
-      : "0 8px 32px rgba(0, 0, 0, 0.1)"
-  };
-  transition: transform 0.2s ease;
-}
+  .back-btn:hover {
+    color: ${isDarkMode ? "#cccccc" : "#334155"};
+  }
 
-.avatar-placeholder {
-  background: linear-gradient(135deg, #f24c00 0%, #ea580c 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 36px;
-  font-weight: 700;
-  color: #ffffff;
-}
+  /* Mobile and below (≤431px) */
+  @media (max-width: 431px) {
+    .full-text {
+      display: none;
+    }
+    .short-text {
+      display: inline;
+    }
+    h1 { font-size: 24px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 14px; }
+    p, label, button, input { font-size: 12px; }
+  }
 
-.avatar:hover .avatar-img,
-.avatar:hover .avatar-placeholder .avatar-overlay:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 0 3px rgba(242, 76, 0, 0.1), 0 0 20px rgba(242, 76, 0, 0.3);
-}
+  .avatar-section { text-align: center; margin-bottom: 0px; }
+  .avatar {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+  }
 
-.avatar-overlay {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 125px;
-  height: 125px;
-  border-radius: 50%;
-  background: rgba(242, 76, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-}
+  .avatar-img,
+  .avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid ${isDarkMode ? "#404040" : "#ffffff"};
+    box-shadow: ${
+      isDarkMode
+        ? "0 8px 32px rgba(0, 0, 0, 0.3)"
+        : "0 8px 32px rgba(0, 0, 0, 0.1)"
+    };
+    transition: transform 0.2s ease;
+  }
 
-.avatar:hover .avatar-overlay {
-  opacity: 1;
-}
+  .avatar-placeholder {
+    background: linear-gradient(135deg, #f24c00 0%, #ea580c 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffffff;
+  }
 
-        .content { max-width: 600px; margin: 0 auto; padding: 40px 24px 60px; }
-        .form-fields { display: flex; flex-direction: column; gap: 24px; }
-        .form-group { display: block; }
-        .form-input {
-          width: 100%;
-          padding: 16px 20px;
-          border-radius: 12px;
-          border: 2px solid ${isDarkMode ? "#404040" : "#e2e8f0"};
-          font-size: 16px;
-          background-color: ${isDarkMode ? "#232323" : "#ffffff"};
-          color: ${isDarkMode ? "#ffffff" : "#1f2937"};
-          transition: all 0.3s ease;
-          box-sizing: border-box;
-        }
-        .form-input:focus { 
-          border-color: #f24c00; 
-          box-shadow: 0 0 0 3px rgba(242, 76, 0, 0.1), 0 0 20px rgba(242, 76, 0, 0.3);
-          outline: none;
-        }
-        
-        .form-input:hover:not(:focus) {
-          border-color: #f24c00;
-          box-shadow: 0 0 10px rgba(242, 76, 0, 0.2);
-        }
+  .avatar:hover .avatar-img,
+  .avatar:hover .avatar-placeholder .avatar-overlay:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 3px rgba(242, 76, 0, 0.1), 0 0 20px rgba(242, 76, 0, 0.3);
+  }
 
-        .error { color: #dc2626; font-size: 14px; margin-top: 4px; }
+  .avatar-overlay {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 125px;
+    height: 125px;
+    border-radius: 50%;
+    background: rgba(242, 76, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+  }
 
-        .submit-button { text-align: center; margin-top: 48px; }
-        .submit-btn {
-          padding: 16px 32px;
-          background-color: #f24c00;
-          color: #ffffff;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
-          opacity: 1;
-          min-width: 200px;
-        }
-        .submit-btn:disabled {
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-        .submit-btn:hover:not(:disabled) {
-          background-color: #d64500;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(242, 76, 0, 0.4);
-        }
-        .submit-btn:not(:hover):not(:disabled) {
-          background-color: #f24c00;
-          transform: translateY(0);
-          box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
-        }
+  .avatar:hover .avatar-overlay {
+    opacity: 1;
+  }
 
-        /* Base font sizes */
-        h1 { font-size: 32px; }
-        h2 { font-size: 24px; }
-        h3 { font-size: 18px; }
-        p, label, button, input { font-size: 16px; }
+  .content { max-width: 600px; margin: 0 auto; padding: 0px 30px 30px 30px; }
+  .form-fields { display: flex; flex-direction: column; gap: 24px; }
+  .form-group { display: block; }
+  .form-input {
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 2px solid ${isDarkMode ? "#404040" : "#e2e8f0"};
+    font-size: 16px;
+    background-color: ${isDarkMode ? "#232323" : "#ffffff"};
+    color: ${isDarkMode ? "#ffffff" : "#1f2937"};
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+  }
+  .form-input:focus { 
+    border-color: #f24c00; 
+    box-shadow: 0 0 0 3px rgba(242, 76, 0, 0.1), 0 0 20px rgba(242, 76, 0, 0.3);
+    outline: none;
+  }
+  
+  .form-input:hover:not(:focus) {
+    border-color: #f24c00;
+    box-shadow: 0 0 10px rgba(242, 76, 0, 0.2);
+  }
 
-        /* Tablet and below (≤768px) */
-        @media (max-width: 768px) {
-          h1 { font-size: 28px; }
-          h2 { font-size: 20px; }
-          h3 { font-size: 16px; }
-          p, label, button, input { font-size: 14px; }
-        }
+  .error { color: #dc2626; font-size: 14px; margin-top: 4px; }
 
-        /* Mobile and below (≤431px) */
-        @media (max-width: 431px) {
-          h1 { font-size: 24px; }
-          h2 { font-size: 18px; }
-          h3 { font-size: 14px; }
-          p, label, button, input { font-size: 12px; }
-        }
+  .submit-button { text-align: center; margin-top: 48px; }
+  .submit-btn {
+    padding: 16px 32px;
+    background-color: #f24c00;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
+    opacity: 1;
+    min-width: 200px;
+  }
+  .submit-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  .submit-btn:hover:not(:disabled) {
+    background-color: #d64500;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(242, 76, 0, 0.4);
+  }
+  .submit-btn:not(:hover):not(:disabled) {
+    background-color: #f24c00;
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(242, 76, 0, 0.3);
+  }
 
-        #root:not(:has(.docs-page)) {
-          padding: 0 !important;
-          display: block !important;
-          overflow-y: hidden scroll !important;
-        }
-      `}</style>
+  /* Base font sizes */
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; }
+  h3 { font-size: 18px; }
+  p, label, button, input { font-size: 16px; }
+
+  /* Tablet and below (≤768px) */
+  @media (max-width: 768px) {
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; }
+    p, label, button, input { font-size: 14px; }
+  }
+
+  /* Mobile and below (≤431px) */
+  @media (max-width: 431px) {
+    h1 { font-size: 24px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 14px; }
+    p, label, button, input { font-size: 12px; }
+  }
+
+  #root:not(:has(.docs-page)) {
+    padding: 0 !important;
+    display: block !important;
+    overflow-y: hidden scroll !important;
+  }
+`}</style>
     </div>
   );
 };
