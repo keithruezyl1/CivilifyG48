@@ -229,7 +229,8 @@ public class OpenAIService {
             requestBody.put("top_p", topP);
             requestBody.put("frequency_penalty", frequencyPenalty);
             requestBody.put("presence_penalty", presencePenalty);
-            requestBody.put("max_tokens", maxTokens);
+            // Some org/project gateways for GPT-4o family require 'max_completion_tokens'
+            requestBody.put("max_completion_tokens", maxTokens);
             requestBody.put("stream", stream);
             
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
