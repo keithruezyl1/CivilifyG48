@@ -95,6 +95,10 @@ public class OpenAIService {
     private final RestTemplate restTemplate;
     private final ObjectMapper jsonMapper = new ObjectMapper();
     
+    // How many KB sources to request (clamped by KnowledgeBaseService.maxResults)
+    @Value("${knowledge.base.sources.limit:${knowledge.base.max.results:5}}")
+    private int knowledgeBaseSourcesLimit;
+    
     public OpenAIService() {
         this.restTemplate = new RestTemplate();
     }
@@ -370,7 +374,7 @@ public class OpenAIService {
      */
     public List<KnowledgeBaseEntry> getKnowledgeBaseSources(String query) {
         try {
-            return knowledgeBaseService.searchKnowledgeBase(query, 5);
+            return knowledgeBaseService.searchKnowledgeBase(query, knowledgeBaseSourcesLimit);
         } catch (Exception e) {
             logger.error("Error retrieving knowledge base sources", e);
             return new ArrayList<>();

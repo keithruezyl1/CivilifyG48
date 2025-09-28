@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import jakarta.annotation.PostConstruct;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -52,6 +54,15 @@ public class KnowledgeBaseService {
     @Value("${knowledge.base.retry.delay:1000}")
     private long knowledgeBaseRetryDelay;
     
+    @Value("${knowledge.base.timeout:30000}")
+    private int knowledgeBaseTimeout;
+    
+    @Value("${knowledge.base.cache.ttl.seconds:60}")
+    private int knowledgeBaseCacheTtlSeconds;
+    
+    @Value("${knowledge.base.query.min.length:3}")
+    private int knowledgeBaseMinQueryLength;
+    
     private final RestTemplate restTemplate;
     private volatile String cachedServiceToken;
     private volatile long cachedServiceTokenExpiryMs = 0L;
@@ -67,6 +78,18 @@ public class KnowledgeBaseService {
     
     public KnowledgeBaseService() {
         this.restTemplate = new RestTemplate();
+    }
+    
+    @PostConstruct
+    private void configureRestTemplateTimeouts() {
+        try {
+            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+            factory.setConnectTimeout(knowledgeBaseTimeout);
+            factory.setReadTimeout(knowledgeBaseTimeout);
+            this.restTemplate.setRequestFactory(factory);
+        } catch (Exception e) {
+            logger.warn("Failed to configure KB timeouts: {}", e.getMessage());
+        }
     }
     
     /**
@@ -121,7 +144,7 @@ public class KnowledgeBaseService {
             logger.debug("Knowledge base is disabled, returning empty results");
             return new ArrayList<>();
         }
-        if (query == null || query.trim().length() < 3) {
+        if (query == null || query.trim().length() < knowledgeBaseMinQueryLength) {
             return new ArrayList<>();
         }
         String normalizedQuery = sanitizeUserText(query).toLowerCase(Locale.ROOT).trim();
@@ -200,10 +223,14 @@ public class KnowledgeBaseService {
                             }
                         }
                         List<KnowledgeBaseEntry> entries = convertToKnowledgeBaseEntries(results);
-                        resultCache.put(cacheKey, new CacheEntry<>(entries, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(60)));
+                        resultCache.put(cacheKey, new CacheEntry<>(entries, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(knowledgeBaseCacheTtlSeconds)));
                         return entries;
                     }
                 }
+            } catch (HttpClientErrorException.TooManyRequests e429) {
+                // Do not try other variants on rate limit; bubble up so outer retry/backoff applies
+                logger.warn("KB rate limited on variant '{}': {}", variant, e429.getMessage());
+                throw e429;
             } catch (HttpClientErrorException.Forbidden e403) {
                 logger.warn("KB auth variant '{}' failed with 403: {}", variant, e403.getResponseBodyAsString());
                 // fallthrough to next variant
