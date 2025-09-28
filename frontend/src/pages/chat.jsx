@@ -2894,10 +2894,9 @@ const styles = {
     // left: "-16px",
   },
   aiMessage: {
-    borderRadius: "24px 24px 24px 0px",
+    borderRadius: "0px 24px 24px 24px",
     alignSelf: "flex-start",
-    backgroundColor: "#232f3a", // slightly darker for dark mode
-    borderBottomLeftRadius: "4px",
+    backgroundColor: "#232f3a", // slightly darker for dark modeS
     boxShadow: "0 4px 12px rgba(0,0,0,0.3)", // Enhanced shadow
     color: "#e0e0e0",
     marginLeft: "0",
@@ -3234,7 +3233,6 @@ const styles = {
     width: "32px",
   },
   messageWrapper: {
-    alignItems: "center",
     display: "flex",
     flexDirection: "row",
     gap: "16px", // Spread content to edges
@@ -3497,10 +3495,9 @@ const styles = {
     // right: "-16px",
   },
   userMessage: {
-    borderRadius: "24px 24px 0px 24px",
+    borderRadius: "24px 0px 24px 24px",
     alignSelf: "flex-start",
     backgroundColor: "#F34D01",
-    borderBottomRightRadius: "4px",
     boxShadow: "0 4px 12px rgba(243,77,1,0.2)", // Enhanced shadow
     color: "#ffffff",
     marginLeft: "auto",
