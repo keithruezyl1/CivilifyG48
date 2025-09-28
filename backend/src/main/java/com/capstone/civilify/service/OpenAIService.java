@@ -225,10 +225,15 @@ public class OpenAIService {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", model);  // Using the model selected based on mode
             requestBody.put("messages", messages);
-            requestBody.put("temperature", temperature);
-            requestBody.put("top_p", topP);
-            requestBody.put("frequency_penalty", frequencyPenalty);
-            requestBody.put("presence_penalty", presencePenalty);
+            // Some newer models (e.g., GPT-4o family, GPT-5) pin sampling to defaults.
+            // Avoid sending sampling params to prevent 400 "unsupported_value" errors.
+            boolean fixedSampling = isFixedSamplingModel(model);
+            if (!fixedSampling) {
+                requestBody.put("temperature", temperature);
+                requestBody.put("top_p", topP);
+                requestBody.put("frequency_penalty", frequencyPenalty);
+                requestBody.put("presence_penalty", presencePenalty);
+            }
             // Some org/project gateways for GPT-4o family require 'max_completion_tokens'
             requestBody.put("max_completion_tokens", maxTokens);
             requestBody.put("stream", stream);
@@ -367,6 +372,12 @@ public class OpenAIService {
 
     private String getCpaSystemPrompt() {
         return "You are Villy, assisting with case plausibility pre-assessment. Ask clarifying questions then produce a concise report.";
+    }
+
+    private boolean isFixedSamplingModel(String model) {
+        if (model == null) return false;
+        String m = model.toLowerCase();
+        return m.contains("gpt-4o") || m.contains("gpt-5");
     }
     
     /**
