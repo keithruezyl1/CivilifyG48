@@ -4,7 +4,6 @@ import com.capstone.civilify.model.ChatConversation;
 import com.capstone.civilify.model.ChatMessage;
 import com.capstone.civilify.service.ChatService;
 import com.capstone.civilify.service.OpenAIService;
-import com.capstone.civilify.service.KnowledgeBaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +26,6 @@ public class OpenAIController {
     
     @Autowired
     private ChatService chatService;
-    
-    @Autowired
-    private KnowledgeBaseService knowledgeBaseService;
     
     // Endpoint to delete all previous conversations for a user
     @PostMapping("/delete-previous-conversations")
@@ -243,87 +239,14 @@ public class OpenAIController {
                 })
                 .collect(Collectors.toList());
             
-            // 1) Query Knowledge Base FIRST to retrieve context and a primary KB answer
-            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbEntries = openAIService.getKnowledgeBaseSources(userMessage);
-            int kbCount = kbEntries != null ? kbEntries.size() : 0;
-            logger.info("Knowledge base lookup (pre-generation) complete. Entries found: {}", kbCount);
-            com.capstone.civilify.DTO.KnowledgeBaseChatResponse kbChat = knowledgeBaseService.chatWithKnowledgeBase(userMessage);
-            String kbPrimaryAnswer = (kbChat != null && !kbChat.hasError() && kbChat.getAnswer() != null && !kbChat.getAnswer().trim().isEmpty())
-                ? kbChat.getAnswer().trim() : null;
-
-            // Build sources array for response and a compact context block for the model
-            java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
-            String augmentedSystemPrompt = systemPrompt;
-            if (kbEntries != null && !kbEntries.isEmpty()) {
-                StringBuilder ctx = new StringBuilder();
-                ctx.append("\n\n### CONTEXT (Knowledge Base) ###\n");
-                int idx = 1;
-                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbEntries) {
-                    Map<String, Object> source = new HashMap<>();
-                    source.put("entryId", entry.getEntryId());
-                    source.put("title", entry.getTitle());
-                    source.put("type", entry.getType());
-                    source.put("canonicalCitation", entry.getCanonicalCitation());
-                    source.put("summary", entry.getSummary());
-                    sources.add(source);
-
-                    String title = entry.getTitle() != null ? entry.getTitle() : "(Untitled)";
-                    String cite = entry.getCanonicalCitation() != null ? entry.getCanonicalCitation() : "";
-                    String summary = entry.getSummary();
-                    if (summary != null && summary.length() > 400) summary = summary.substring(0, 400) + "...";
-                    ctx.append(idx++).append(". ").append(title);
-                    if (!cite.isEmpty()) ctx.append(" — ").append(cite);
-                    if (summary != null && !summary.isBlank()) ctx.append("\n   Summary: ").append(summary.trim());
-                    ctx.append("\n");
-                }
-                augmentedSystemPrompt = systemPrompt + ctx.toString();
-            }
-
-            // Merge KB chat sources (if any) and dedupe by entryId
-            if (kbChat != null && kbChat.getSources() != null) {
-                java.util.Set<String> added = new java.util.HashSet<>();
-                for (java.util.Map<String, Object> s : sources) {
-                    Object id = s.get("entryId");
-                    if (id instanceof String) added.add((String) id);
-                }
-                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbChat.getSources()) {
-                    String id = entry.getEntryId();
-                    if (id != null && added.contains(id)) continue;
-                    Map<String, Object> source = new HashMap<>();
-                    source.put("entryId", entry.getEntryId());
-                    source.put("title", entry.getTitle());
-                    source.put("type", entry.getType());
-                    source.put("canonicalCitation", entry.getCanonicalCitation());
-                    source.put("summary", entry.getSummary());
-                    sources.add(source);
-                    if (id != null) added.add(id);
-                }
-            }
-
-            // If we have a KB primary answer, inject it and clear integration rules to keep emphasis on KB
-            if (kbPrimaryAnswer != null) {
-                String snippet = kbPrimaryAnswer;
-                if (snippet.length() > 1200) snippet = snippet.substring(0, 1200) + "...";
-                StringBuilder rules = new StringBuilder();
-                rules.append("\n\n### PRIMARY ANSWER (Knowledge Base) ###\n");
-                rules.append(snippet).append("\n");
-                rules.append("\n### INTEGRATION RULES ###\n");
-                rules.append("- Treat the Knowledge Base primary answer as authoritative.\n");
-                rules.append("- Refine wording, structure, and clarity; do NOT contradict KB content.\n");
-                rules.append("- Only add concise clarifications that are consistent with KB.\n");
-                rules.append("- Cite KB sources first; external links are optional and must not conflict.\n");
-                augmentedSystemPrompt = augmentedSystemPrompt + rules.toString();
-            }
-            logger.info("Knowledge base sources prepared for prompt: {}", sources.size());
-
-            // 2) Generate the primary AI response using the augmented system prompt
+            // Generate the primary AI response FIRST using the system prompt for the selected mode
             String aiResponse = openAIService.generateResponse(
                 userMessage,
-                augmentedSystemPrompt,
+                systemPrompt,
                 conversationHistoryForAI,
                 mode
             );
-            logger.info("Primary AI response generated with mode {} using augmented system prompt.", mode);
+            logger.info("Primary AI response generated with mode {} using system prompt.", mode);
             
             // For development, you can use the mock response instead
             // String aiResponse = openAIService.generateMockResponse(userMessage);
@@ -332,6 +255,24 @@ public class OpenAIController {
             ChatMessage aiChatMessage = chatService.addMessage(
                 conversationId, null, "villy@civilify.com", aiResponse, false);
             logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
+            
+            // Query KB AFTER the AI answer to enrich with sources (answer proceeds even if none)
+            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbEntries = openAIService.getKnowledgeBaseSources(userMessage);
+            logger.info("Knowledge base lookup complete. Entries found: {}", kbEntries != null ? kbEntries.size() : 0);
+
+            java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
+            if (kbEntries != null) {
+                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbEntries) {
+                    Map<String, Object> source = new HashMap<>();
+                    source.put("entryId", entry.getEntryId());
+                    source.put("title", entry.getTitle());
+                    source.put("type", entry.getType());
+                    source.put("canonicalCitation", entry.getCanonicalCitation());
+                    source.put("summary", entry.getSummary());
+                    sources.add(source);
+                }
+            }
+            logger.info("Knowledge base sources included in response: {}", sources.size());
             
             // Prepare response
             Map<String, Object> responseBody = new HashMap<>();
