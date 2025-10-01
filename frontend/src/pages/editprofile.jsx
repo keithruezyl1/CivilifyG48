@@ -30,6 +30,9 @@ const EditProfile = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
+  const { mode: rawMode, ...profile } = location.state || {};
+  const mode = rawMode ? rawMode.toLowerCase() : "edit"; // Default to "edit"
+
   useEffect(() => {
     localStorage.setItem("darkMode", isDarkMode);
   }, [isDarkMode]);
@@ -66,8 +69,10 @@ const EditProfile = () => {
     };
 
     loadUserData();
-    document.title = "Civilify | Edit Profile";
-  }, [location.state]);
+    mode === "edit"
+      ? (document.title = "Civilify | Edit Profile")
+      : (document.title = "Civilify | Change Password");
+  }, [location.state, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -218,9 +223,9 @@ const EditProfile = () => {
         </div>
         <div>
           <img
-            src={logoIconOrange || "/placeholder.svg"}
+            src={logoIconOrange}
             alt="Civilify"
-            style={{ width: "45px", height: "auto", paddingRight: "1em" }}
+            style={{ height: "30px", marginRight: "12px", marginTop: "6px" }}
           />
         </div>
       </div>
@@ -228,100 +233,139 @@ const EditProfile = () => {
       <div className="content">
         <form onSubmit={handleSubmit}>
           <div className="avatar-section">
-            <div
-              className="avatar"
-              onClick={() => document.getElementById("avatar-upload").click()}
-            >
-              {avatarPreview ? (
-                <img
-                  src={avatarPreview || "/placeholder.svg"}
-                  alt="Avatar Preview"
-                  className="avatar-img"
-                />
-              ) : (
-                <div className="avatar-placeholder">
-                  {formData.username.substring(0, 2).toUpperCase() || "U"}
+            {mode === "edit" && (
+              <div
+                className="avatar"
+                onClick={() => document.getElementById("avatar-upload").click()}
+              >
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview || "/placeholder.svg"}
+                    alt="Avatar Preview"
+                    className="avatar-img"
+                  />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {formData.username.substring(0, 2).toUpperCase() || "U"}
+                  </div>
+                )}
+                <div className="avatar-overlay">
+                  {isLoading ? "Uploading..." : "Change Photo"}
                 </div>
-              )}
-              <div className="avatar-overlay">
-                {isLoading ? "Uploading..." : "Change Photo"}
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  style={{ display: "none" }}
+                  disabled={isLoading}
+                />
               </div>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                style={{ display: "none" }}
-                disabled={isLoading}
-              />
-            </div>
-            <h1>Edit Profile</h1>
-            <p>Update your profile information</p>
+            )}
+            <h1
+              {...(mode === "change-password" && {
+                style: { marginTop: "10vh" },
+              })}
+            >
+              {mode === "edit"
+                ? "Edit Profile"
+                : mode === "change-password"
+                ? "Change Password"
+                : "Invalid Mode"}
+            </h1>
+            <p>
+              {mode === "edit"
+                ? "Update your profile information"
+                : mode === "change-password"
+                ? "Update your password"
+                : "Please navigate from the profile page."}
+            </p>
           </div>
 
-          <div className="form-fields">
-            <div className="form-group">
-              <label>Username</label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleInputChange}
-                onBlur={handleInputBlur}
-                className="form-input"
-                placeholder="Enter your username"
-                disabled={isLoading}
-              />
-              {errors.username && <p className="error">{errors.username}</p>}
-            </div>
+          {mode === "edit" || mode === "change-password" ? (
+            <div className="form-fields">
+              {mode === "edit" && (
+                <>
+                  <div className="form-group">
+                    <label>Username</label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      onBlur={handleInputBlur}
+                      className="form-input"
+                      placeholder="Enter your username"
+                      disabled={isLoading}
+                    />
+                    {errors.username && (
+                      <p className="error">{errors.username}</p>
+                    )}
+                  </div>
 
-            <div className="form-group">
-              <label>Email Address</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                onBlur={handleInputBlur}
-                className="form-input"
-                placeholder="Enter your email address"
-                disabled={isLoading}
-              />
-              {errors.email && <p className="error">{errors.email}</p>}
-            </div>
+                  <div className="form-group">
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      onBlur={handleInputBlur}
+                      className="form-input"
+                      placeholder="Enter your email address"
+                      disabled={isLoading}
+                    />
+                    {errors.email && <p className="error">{errors.email}</p>}
+                  </div>
+                </>
+              )}
+              {mode === "change-password" && (
+                <>
+                  <div className="form-group">
+                    <label>
+                      {mode === "edit"
+                        ? "New Password (Optional)"
+                        : "New Password"}
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      onBlur={handleInputBlur}
+                      className="form-input"
+                      placeholder={
+                        mode === "edit"
+                          ? "Leave blank to keep current password"
+                          : "Enter your new password"
+                      }
+                      disabled={isLoading}
+                    />
+                    {errors.password && (
+                      <p className="error">{errors.password}</p>
+                    )}
+                  </div>
 
-            <div className="form-group">
-              <label>New Password (Optional)</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                onBlur={handleInputBlur}
-                className="form-input"
-                placeholder="Leave blank to keep current password"
-                disabled={isLoading}
-              />
-              {errors.password && <p className="error">{errors.password}</p>}
-            </div>
-
-            <div className="form-group">
-              <label>Confirm New Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                onBlur={handleInputBlur}
-                className="form-input"
-                placeholder="Confirm your new password"
-                disabled={isLoading}
-              />
-              {errors.confirmPassword && (
-                <p className="error">{errors.confirmPassword}</p>
+                  <div className="form-group">
+                    <label>Confirm New Password</label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      onBlur={handleInputBlur}
+                      className="form-input"
+                      placeholder="Confirm your new password"
+                      disabled={isLoading}
+                    />
+                    {errors.confirmPassword && (
+                      <p className="error">{errors.confirmPassword}</p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
-          </div>
+          ) : null}
 
           <div className="submit-button">
             <button
@@ -337,18 +381,14 @@ const EditProfile = () => {
       <style>{`
   .edit-profile-container {
     min-height: 100vh;
-    background-color: ${isDarkMode ? "#0a0a0a" : "#ffffff"};
-    background-image: radial-gradient(circle, ${
-      isDarkMode ? "rgba(255, 255, 255, 0.2) 1px" : "rgba(0, 0, 0, 0.1) 1px"
-    }, transparent 1px);
-    background-size: 20px 20px; /* Adjusts spacing of dots */
+    background-color: ${isDarkMode ? "#1c1c1c" : "#ffffff"};
     color: ${isDarkMode ? "#ffffff" : "#1a1a1a"};
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 
-  .header {
-    padding: 24px 24px 0 24px;
+ .header {
+    padding: 24px;
     margin: 0 auto;
     display: flex;
     flex-direction: row;
