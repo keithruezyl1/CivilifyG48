@@ -470,7 +470,7 @@ const SignUp = () => {
               <label htmlFor="terms" className="terms-text">
                 I agree to the{" "}
                 <Link
-                  to="/civilify-documents"
+                  // to="/civilify-documents"
                   className="terms-link"
                   onClick={() => {
                     window.localStorage.setItem(
@@ -478,13 +478,14 @@ const SignUp = () => {
                       "security"
                     );
                     window.localStorage.setItem("docFromSignup", "true");
+                    toast.info("Terms of Service coming soon");
                   }}
                 >
                   Terms of Service
                 </Link>{" "}
                 and{" "}
                 <Link
-                  to="/civilify-documents"
+                  // to="/civilify-documents"
                   className="terms-link"
                   onClick={() => {
                     window.localStorage.setItem(
@@ -492,6 +493,7 @@ const SignUp = () => {
                       "security"
                     );
                     window.localStorage.setItem("docFromSignup", "true");
+                    toast.info("Privacy Policy coming soon");
                   }}
                 >
                   Privacy Policy

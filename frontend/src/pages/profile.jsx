@@ -118,7 +118,7 @@ const Profile = () => {
           <img
             src={logoIconOrange}
             alt="Civilify"
-            style={{ width: "45px", height: "auto", paddingRight: "1em" }}
+            style={{ height: "30px", marginRight: "12px", marginTop: "6px" }}
           />
         </div>
       </div>
@@ -142,12 +142,23 @@ const Profile = () => {
           <p>{profile.email}</p>
           <div className="action-buttons">
             <button
-              onClick={() => navigate("/edit-profile", { state: profile })}
+              onClick={() =>
+                navigate("/edit-profile", {
+                  state: { ...profile, mode: "edit" },
+                })
+              }
               className="action-btn edit-btn"
             >
               Edit Profile
             </button>
-            <button className="action-btn change-password-btn">
+            <button
+              onClick={() =>
+                navigate("/edit-profile", {
+                  state: { ...profile, mode: "change-password" },
+                })
+              }
+              className="action-btn change-password-btn"
+            >
               Change Password
             </button>
           </div>
@@ -161,7 +172,12 @@ const Profile = () => {
                 <h3>Language</h3>
                 <p>English (US)</p>
               </div>
-              <button className="change-btn">Change</button>
+              <button
+                className="change-btn"
+                onClick={() => toast.info("Language settings coming soon")}
+              >
+                Change
+              </button>
             </div>
             <div className="setting">
               <div>
@@ -186,7 +202,10 @@ const Profile = () => {
                 </span>
               </div>
             </div>
-            <div className="delete-section">
+            <div
+              className="delete-section"
+              onClick={() => toast.info("Delete functionality coming soon")}
+            >
               <div>
                 <h3>Delete Account</h3>
                 <p>Permanently delete your account and all data.</p>
@@ -199,18 +218,14 @@ const Profile = () => {
       <style>{`
   .profile-container {
     min-height: 100vh;
-    background-color: ${isDarkMode ? "#0a0a0a" : "#ffffff"};
-    background-image: radial-gradient(circle, ${
-      isDarkMode ? "rgba(255, 255, 255, 0.2) 1px" : "rgba(0, 0, 0, 0.1) 1px"
-    }, transparent 1px);
-    background-size: 20px 20px; /* Adjusts spacing of dots */
+    background-color: ${isDarkMode ? "#1c1c1c" : "#ffffff"};
     color: ${isDarkMode ? "#ffffff" : "#1a1a1a"};
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 
   .header {
-    padding: 24px 24px 0 24px;
+    padding: 24px;
     margin: 0 auto;
     display: flex;
     flex-direction: row;
@@ -218,7 +233,7 @@ const Profile = () => {
   }
 
   .back-button, .logo { flex: 1; }
-  .logo { display: flex; justify-content: flex-end; }
+  .logo { display: flex; align-items: center; }
 
   .back-btn {
     display: flex;
@@ -368,6 +383,11 @@ const Profile = () => {
     border: 1px solid ${isDarkMode ? "#7f1d1d" : "#fecaca"};
     border-radius: 12px;
     padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 32px;
+    gap: 3vh;
   }
   .delete-btn {
     padding: 12px 20px;

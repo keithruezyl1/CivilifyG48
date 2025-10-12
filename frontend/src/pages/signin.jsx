@@ -854,6 +854,7 @@ const SignIn = () => {
         }
 
         .divider-text {
+          position: relative;
           padding: 0 16px;
           font-size: 14px;
           font-weight: 500;

@@ -581,7 +581,15 @@ const Chat = () => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [showReportThanksPopup, setShowReportThanksPopup] = useState(false); // controls the 'Villy is glad' popup
+  const [showDisclaimer, setShowDisclaimer] = useState(() => {
+    return sessionStorage.getItem("disclaimerDismissed") !== "true";
+  });
 
+  useEffect(() => {
+    sessionStorage.setItem("disclaimerDismissed", (!showDisclaimer).toString());
+  }, [showDisclaimer]);
+
+  // controls the disclaimer visibility
   // Undeclared variables for new conversation creation
   const conversationLocation = ""; // Placeholder, assuming it's not used or will be defined elsewhere
   const conversationCategory = ""; // Placeholder, assuming it's not used or will be defined elsewhere
@@ -1784,7 +1792,7 @@ const Chat = () => {
           <img
             src={logoIconOrange}
             alt="Civilify Logo"
-            style={{ ...styles.logo, height: "40px", marginRight: "12px" }}
+            style={{ ...styles.logo, height: "30px", marginRight: "12px" }}
           />
           <span
             style={{
@@ -2331,6 +2339,36 @@ const Chat = () => {
             style={{ ...styles.inputWrapper, marginBottom: "10px" }}
             ref={inputWrapperRef}
           >
+            {showDisclaimer && (
+              <div
+                style={{
+                  ...styles.disclaimer,
+                  background: isDarkMode
+                    ? "rgba(220, 38, 38, 0.50)"
+                    : "rgba(239, 68, 68, 0.50)",
+
+                  padding: "8px",
+                  margin: "12px 0",
+                  maxWidth: "900px",
+                  borderRadius: "20px",
+                  color: isDarkMode ? "#bbbbbb" : "#ffffff",
+                  cursor: "pointer",
+                  boxShadow: isDarkMode
+                    ? "0 2px 8px rgba(0,0,0,0.32)"
+                    : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                }}
+                onClick={() => setShowDisclaimer(false)} // Hide disclaimer on click
+              >
+                Villy offers AI-powered legal insights to help you explore your
+                situation. While it's here to assist, it's not a substitute for
+                professional legal advice.
+                <div
+                  style={{ marginTop: "3px", fontSize: "12px", opacity: 0.8 }}
+                >
+                  (Click to dismiss)
+                </div>
+              </div>
+            )}
             <div
               style={{
                 ...styles.inputSection,
@@ -2450,17 +2488,6 @@ const Chat = () => {
                   )}
                 </button>
               </form>
-              <div
-                style={{
-                  ...styles.disclaimer,
-                  background: "transparent",
-                  color: isDarkMode ? "#bbbbbb" : "#666666",
-                }}
-              >
-                Villy offers AI-powered legal insights to help you explore your
-                situation. While it's here to assist, it's not a substitute for
-                professional legal advice.
-              </div>
             </div>
           </div>
         )}
