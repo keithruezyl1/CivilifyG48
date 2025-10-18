@@ -10,6 +10,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,30 +37,23 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/signin")).permitAll()
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/google")).permitAll()
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/forgot-password")).permitAll()
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/test")).permitAll()
+                // Public endpoints
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/**")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/ai/**")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/knowledge-base/**")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/health")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/debug/**")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/register")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/login")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/email/**")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/*/profile-picture")).permitAll()
-                .requestMatchers(mvcMatcherBuilder.pattern("/health")).permitAll()
-                // Allow debug API endpoints
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/debug/**")).permitAll()
-                // Allow CORS preflight requests
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/**")).permitAll()
-                // Allow chat API endpoints
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/chat/**")).permitAll()
-                // Allow AI API endpoints
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/ai/**")).permitAll()
+                // Role-based protection
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/system/**")).hasRole("SYSTEM_ADMIN")
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/admin/**")).hasAnyRole("ADMIN", "SYSTEM_ADMIN")
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/users/**")).hasAnyRole("USER", "ADMIN", "SYSTEM_ADMIN")
                 // For H2 console access (for development only)
                 .requestMatchers(mvcMatcherBuilder.pattern("/h2-console/**")).permitAll()
-                // Explicitly allow profile endpoints (they will be authenticated by JWT filter)
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/users/profile")).permitAll()
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/users/upload-profile-picture")).permitAll()
                 // Admin-specific endpoints
-                .requestMatchers(mvcMatcherBuilder.pattern("/api/admin/**")).hasAuthority("ROLE_ADMIN")
                 // Secure all other endpoints
                 .anyRequest().authenticated()
             )
@@ -70,6 +65,13 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions().disable());
 
         return http.build();
+    }
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        RoleHierarchyImpl hierarchy = new RoleHierarchyImpl();
+        hierarchy.setHierarchy("ROLE_SYSTEM_ADMIN > ROLE_ADMIN \n ROLE_ADMIN > ROLE_USER");
+        return hierarchy;
     }
     
     @Bean

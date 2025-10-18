@@ -63,7 +63,15 @@ public class JwtUtil {
     }
 
     public String generateToken(String username) {
+        return generateToken(username, "ROLE_USER");
+    }
+
+    public String generateToken(String username, String role) {
         Map<String, Object> claims = new HashMap<>();
+        if (role == null || role.isBlank()) {
+            role = "ROLE_USER";
+        }
+        claims.put("role", role);
         return createToken(claims, username);
     }
     
@@ -85,6 +93,19 @@ public class JwtUtil {
                 // Use the non-deprecated signWith method that takes a Key instead of a String
                 .signWith(io.jsonwebtoken.security.Keys.hmacShaKeyFor(getEncodedSecret().getBytes()), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String extractRole(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            Object roleObj = claims.get("role");
+            if (roleObj instanceof String) {
+                return (String) roleObj;
+            }
+        } catch (Exception e) {
+            logger.debug("No role claim present or failed to extract role: {}", e.getMessage());
+        }
+        return null;
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {

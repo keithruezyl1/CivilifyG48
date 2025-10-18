@@ -50,17 +50,8 @@ target/
 *.war
 *.ear
 
-# Windsurf rules
-.windsurfrules
-.windsurfrules.*
-*.windsurfrules
-.windsurf/
-.windsurf/**
-
 frontend-reference
 
 law-entry-extension-reference
 
-.cursorrules
-.cursor
-
+.cursor/rules/

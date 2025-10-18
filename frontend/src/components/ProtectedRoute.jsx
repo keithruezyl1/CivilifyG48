@@ -1,14 +1,17 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { validateAuthToken, getAuthToken } from '../utils/auth';
 
-const ProtectedRoute = ({ children }) => {
+// requiredRole can be 'USER' | 'ADMIN' | 'SYSTEM_ADMIN'
+const ProtectedRoute = ({ children, requiredRole }) => {
   const location = useLocation();
   const token = getAuthToken();
   const authStatus = validateAuthToken();
   
   // Get user data to check role
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = user.role === 'ROLE_ADMIN';
+  const role = (user.role || '').toString();
+  const isAdmin = role === 'ROLE_ADMIN' || role === 'ADMIN';
+  const isSystemAdmin = role === 'ROLE_SYSTEM_ADMIN' || role === 'SYSTEM_ADMIN';
   const currentPath = location.pathname;
   
   console.log('ProtectedRoute check:', {
@@ -32,18 +35,18 @@ const ProtectedRoute = ({ children }) => {
   }
   
   // Role-based access control
-  if (isAdmin) {
-    // Admin users can only access admin and edit-profile pages
-    const allowedAdminPaths = ['/admin', '/edit-profile'];
-    if (!allowedAdminPaths.includes(currentPath)) {
-      console.log('Admin attempted to access unauthorized page:', currentPath);
-      return <Navigate to="/admin" replace />;
+  if (requiredRole) {
+    const hasRequired =
+      (requiredRole === 'USER' && (role === 'ROLE_USER' || isAdmin || isSystemAdmin)) ||
+      (requiredRole === 'ADMIN' && (isAdmin || isSystemAdmin)) ||
+      (requiredRole === 'SYSTEM_ADMIN' && isSystemAdmin);
+    if (!hasRequired) {
+      return <Navigate to="/unauthorized" replace />;
     }
   } else {
-    // Regular users cannot access admin page
-    if (currentPath === '/admin') {
-      console.log('Regular user attempted to access admin page');
-      return <Navigate to="/" replace />;
+    // Default restrictions for admin path
+    if (currentPath.startsWith('/admin') && !(isAdmin || isSystemAdmin)) {
+      return <Navigate to="/unauthorized" replace />;
     }
   }
 

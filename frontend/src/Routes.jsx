@@ -53,15 +53,16 @@ const AppRoutes = () => {
       />
       <Route path="/diagnostics" element={<DiagnosticsPage />} />
       <Route path="/admin" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiredRole="ADMIN">
           <Admin />
         </ProtectedRoute>
       } />
       <Route path="/admin/knowledge-base" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiredRole="ADMIN">
           <AdminKnowledgeBase />
         </ProtectedRoute>
       } />
+      <Route path="/unauthorized" element={<div style={{padding:20}}>Unauthorized</div>} />
     </Routes>
   );
 };
