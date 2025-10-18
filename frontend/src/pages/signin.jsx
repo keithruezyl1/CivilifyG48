@@ -231,7 +231,19 @@ const SignIn = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      navigate("/chat");
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const role = (u.role || '').toString();
+        if (role === 'ROLE_SYSTEM_ADMIN' || role === 'SYSTEM_ADMIN') {
+          navigate('/system');
+        } else if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/chat');
+        }
+      } catch {
+        navigate('/chat');
+      }
     }, 1000);
   };
 
@@ -300,7 +312,19 @@ const SignIn = () => {
   useEffect(() => {
     const authStatus = validateAuthToken();
     if (authStatus.valid) {
-      navigate("/chat");
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const role = (u.role || '').toString();
+        if (role === 'ROLE_SYSTEM_ADMIN' || role === 'SYSTEM_ADMIN') {
+          navigate('/system');
+        } else if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/chat');
+        }
+      } catch {
+        navigate('/chat');
+      }
     }
   }, [navigate]);
 
