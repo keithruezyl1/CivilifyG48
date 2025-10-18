@@ -1,3 +1,6 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { API_URL, getAuthToken, clearAuthData } from '../utils/auth';
 import { Box, Typography, Button, Card, CardContent, Grid, Alert, CircularProgress, Chip, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper } from '@mui/material';
 import { Refresh as RefreshIcon, AdminPanelSettings as AdminIcon, Delete as DeleteIcon, ArrowUpward as PromoteIcon, ArrowDownward as DemoteIcon, Settings as SettingsIcon, Logout as LogoutIcon } from '@mui/icons-material';
 
@@ -17,6 +20,11 @@ const SystemAdminPage = () => {
   const currentUser = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
   }, []);
+
+  const handleLogout = () => {
+    try { clearAuthData(); } catch {}
+    navigate('/signin');
+  };
 
   const roleChip = (role) => {
     const r = role || 'ROLE_USER';
@@ -97,13 +105,7 @@ const SystemAdminPage = () => {
         <Box display="flex" gap={1}>
           <Button onClick={fetchUsers} startIcon={<RefreshIcon />} variant="outlined">Refresh</Button>
           <Button onClick={() => navigate('/admin')} startIcon={<AdminIcon />} variant="outlined">Go to Admin</Button>
-          <Button onClick={() => { try { localStorage.setItem('redirectAfterLogin','/system'); } catch{}; window.scrollTo(0,0); }} variant="text" sx={{ display:'none' }}>noop</Button>
-          <Button onClick={() => { try { localStorage.removeItem('redirectAfterLogin'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop2</Button>
-          <Button onClick={() => { try { localStorage.removeItem('chatMessages'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop3</Button>
-          <Button onClick={() => { try { localStorage.removeItem('currentConversationId'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop4</Button>
-          <Button onClick={() => { try { localStorage.removeItem('profileData'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop5</Button>
-          <Button onClick={() => { try { localStorage.removeItem('selectedMode'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop6</Button>
-          <Button onClick={() => { try { localStorage.removeItem('user'); localStorage.removeItem('authToken'); localStorage.removeItem('tokenExpires'); } catch{}; window.location.href='/signin'; }} startIcon={<LogoutIcon />} color="error" variant="outlined">Logout</Button>
+          <Button onClick={handleLogout} startIcon={<LogoutIcon />} color="error" variant="outlined">Logout</Button>
         </Box>
       </Box>
 
