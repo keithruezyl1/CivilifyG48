@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { clearAuthData } from '../utils/auth';
 import { API_URL } from '../utils/auth';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { FaSearch, FaEdit, FaSignOutAlt, FaTrash, FaUser } from 'react-icons/fa';
+import { Box, Typography, Button, Card, CardContent, Grid, Alert, CircularProgress, Chip, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper, TextField, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Search as SearchIcon, Delete as DeleteIcon, Logout as LogoutIcon, ManageSearch as ManageSearchIcon, Edit as EditIcon } from '@mui/icons-material';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ const Admin = () => {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     
-    if (user.role !== 'ROLE_ADMIN') {
+    if (user.role !== 'ROLE_ADMIN' && user.role !== 'ROLE_SYSTEM_ADMIN') {
       navigate('/');
       return;
     }
@@ -56,7 +57,7 @@ const Admin = () => {
       setFilteredUsers(users);
     } else {
       const filtered = users.filter(user => 
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
+        (user.username || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
@@ -161,274 +162,100 @@ const Admin = () => {
     setShowLogoutConfirm(false);
   };
 
-  return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <div style={styles.userInfo}>
-          {userData.avatar}
-          <div style={styles.userDetails}>
-            <h2 style={styles.name}>{userData.name}</h2>
-            <p style={styles.email}>{userData.email}</p>
-          </div>
-        </div>
-        <div style={styles.headerButtons}>
-          <button
-            onClick={() => {
-              localStorage.setItem('forceLightMode', 'true');
-              navigate('/edit-profile');
-            }}
-            style={styles.editProfileButton}
-            className="primary-button-hover"
-          >
-            <FaUser style={{ marginRight: '8px' }} />
-            Edit Profile
-          </button>
-          <button
-            onClick={handleLogout}
-            style={styles.logoutButton}
-            className="primary-button-hover"
-          >
-            <FaSignOutAlt style={{ marginRight: '8px' }} />
-            Logout
-          </button>
-        </div>
-      </div>
-      <div style={styles.content}>
-        {/* Admin Navigation */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '24px',
-          padding: '16px',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '8px',
-          border: '1px solid #e0e0e0'
-        }}>
-          <button
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#ff7a59',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
-            onClick={() => navigate('/admin/knowledge-base')}
-          >
-            Knowledge Base
-          </button>
-          <button
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
-            onClick={() => window.open('/law-entry-extension', '_blank')}
-          >
-            Law Entry Extension
-          </button>
-        </div>
+  // Hide SYSTEM_ADMIN from list in UI
+  const displayedUsers = (filteredUsers || []).filter(u => (u.role || 'ROLE_USER') !== 'ROLE_SYSTEM_ADMIN');
 
-        <div style={styles.titleSection}>
-          <h1 style={styles.title}>User Management</h1>
-          <div style={styles.searchContainer}>
-            <FaSearch style={styles.searchIcon} />
-            <input
-              type="text"
+  return (
+    <Box p={3}>
+      <Box mb={4} display="flex" alignItems="center" justifyContent="space-between">
+        <Box display="flex" alignItems="center" gap={2}>
+          {userData.avatar}
+          <Box>
+            <Typography variant="h6">{userData.name}</Typography>
+            <Typography variant="body2" color="text.secondary">{userData.email}</Typography>
+          </Box>
+        </Box>
+        <Box display="flex" gap={1}>
+          <Button variant="outlined" startIcon={<EditIcon />} onClick={() => { localStorage.setItem('forceLightMode','true'); navigate('/edit-profile'); }}>Edit Profile</Button>
+          <Button variant="outlined" startIcon={<ManageSearchIcon />} onClick={() => navigate('/admin/knowledge-base')}>Knowledge Base</Button>
+          <Button variant="contained" color="error" startIcon={<LogoutIcon />} onClick={handleLogout}>Logout</Button>
+        </Box>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+      )}
+
+      <Card>
+        <CardContent>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+            <Typography variant="h6">User Management</Typography>
+            <TextField
+              size="small"
               placeholder="Search by username..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={styles.searchInput}
+              InputProps={{ startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              )}}
             />
-          </div>
-        </div>
-        
-        {error && (
-          <div style={styles.errorMessage}>
-            <span>Error: {error}</span>
-            <button 
-              onClick={() => {
-                setError(null);
-                fetchUsers();
-              }}
-              style={styles.retryButton}
-              className="primary-button-hover"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-        
-        {isLoading ? (
-          <div style={styles.loadingContainer}>
-            <div style={styles.loadingSpinner}></div>
-            <p style={styles.loadingText}>Loading users...</p>
-          </div>
-        ) : (
-          <div style={styles.userList}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.tableHeader}>Email</th>
-                  <th style={styles.tableHeader}>Username</th>
-                  <th style={styles.tableHeader}>Role</th>
-                  <th style={styles.tableHeader}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map(user => (
-                  <tr key={user.userId} style={styles.tableRow}>
-                    <td style={styles.tableCell}>{user.email}</td>
-                    <td style={styles.tableCell}>{user.username}</td>
-                    <td style={styles.tableCell}>
-                      <span style={{
-                        ...styles.roleBadge,
-                        backgroundColor: user.role === 'ROLE_ADMIN' ? '#F34D01' : '#4CAF50',
-                        color: '#fff',
-                      }}>
-                        {user.role === 'ROLE_ADMIN' ? 'Admin' : 'User'}
-                      </span>
-                    </td>
-                    <td style={styles.tableCell}>
-                      <button
-                        onClick={() => handleDeleteUser(user.userId)}
-                        style={styles.deleteButton}
-                        className="danger-button-hover"
-                      >
-                        <FaTrash style={{ marginRight: '6px' }} />
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      
-      {confirmDelete && (
-        <div style={styles.modal}>
-          <div style={styles.modalContent}>
-            <h2 style={styles.modalTitle}>
-              You are deleting {users.find(u => u.userId === selectedUser)?.username || 'this user'}
-            </h2>
-            <p style={styles.modalText}>
-              They will not be able to retrieve this account, including their previous session. Continue?
-            </p>
-            <div style={styles.modalButtons}>
-              <button 
-                onClick={confirmDeleteUser}
-                style={{
-                  ...styles.confirmButton,
-                  backgroundColor: '#fff',
-                  color: '#F34D01',
-                  border: '2px solid #F34D01',
-                  fontWeight: 600,
-                  transition: 'background 0.2s, color 0.2s, border 0.2s',
-                }}
-                className="primary-button-hover"
-              >
-                Confirm
-              </button>
-              <button 
-                onClick={cancelDelete}
-                style={{
-                  ...styles.cancelButton,
-                  backgroundColor: '#F34D01',
-                  color: '#fff',
-                  border: 'none',
-                  fontWeight: 600,
-                  transition: 'background 0.2s, color 0.2s, border 0.2s',
-                }}
-                className="primary-button-hover"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </Box>
 
-      {/* Logout Confirmation Popup */}
-      {showLogoutConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 2000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div style={{
-            background: '#fff',
-            color: '#1a1a1a',
-            borderRadius: '16px',
-            padding: '32px 32px 24px 32px',
-            maxWidth: 400,
-            width: '90vw',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-            textAlign: 'center',
-          }}>
-            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Logout</h2>
-            <div style={{ fontSize: 16, color: '#444', marginBottom: 24 }}>
-              Are you sure you want to logout?
-            </div>
-            <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-              <button
-                style={{
-                  background: logoutYesHovered ? '#e04000' : '#F34D01',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: 16,
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '12px 20px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s, transform 0.1s',
-                  transform: logoutYesHovered ? 'translateY(0px) scale(0.98)' : undefined,
-                }}
-                onClick={() => handleLogoutConfirm(true)}
-                onMouseEnter={() => setLogoutYesHovered(true)}
-                onMouseLeave={() => setLogoutYesHovered(false)}
-              >
-                Yes, Logout
-              </button>
-              <button
-                style={{
-                  background: logoutNoHovered ? '#f2f2f2' : '#fff',
-                  color: '#1a1a1a',
-                  fontWeight: 600,
-                  fontSize: 16,
-                  border: '1px solid #ccc',
-                  borderRadius: 8,
-                  padding: '12px 20px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s, border-color 0.2s, transform 0.1s',
-                  transform: logoutNoHovered ? 'translateY(0px) scale(0.98)' : undefined,
-                }}
-                onClick={() => handleLogoutConfirm(false)}
-                onMouseEnter={() => setLogoutNoHovered(true)}
-                onMouseLeave={() => setLogoutNoHovered(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+          {isLoading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}><CircularProgress /></Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Username</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {displayedUsers.map(user => (
+                    <TableRow key={user.userId}>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.username}</TableCell>
+                      <TableCell>
+                        <Chip size="small" label={(user.role || 'ROLE_USER').replace('ROLE_', '')} color={user.role === 'ROLE_ADMIN' ? 'primary' : 'default'} variant={user.role === 'ROLE_ADMIN' ? 'filled' : 'outlined'} />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button size="small" color="error" variant="contained" startIcon={<DeleteIcon />} onClick={() => handleDeleteUser(user.userId)}>Delete</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={confirmDelete} onClose={cancelDelete}>
+        <DialogTitle>Delete user</DialogTitle>
+        <DialogContent>
+          You are deleting {users.find(u => u.userId === selectedUser)?.username || 'this user'}. This action is irreversible.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelDelete}>Cancel</Button>
+          <Button onClick={confirmDeleteUser} color="error" variant="contained">Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={showLogoutConfirm} onClose={() => handleLogoutConfirm(false)}>
+        <DialogTitle>Logout</DialogTitle>
+        <DialogContent>Are you sure you want to logout?</DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleLogoutConfirm(false)}>Cancel</Button>
+          <Button onClick={() => handleLogoutConfirm(true)} color="error" variant="contained" startIcon={<LogoutIcon />}>Logout</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

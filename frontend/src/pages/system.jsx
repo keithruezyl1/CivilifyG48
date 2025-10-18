@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { API_URL, getAuthToken } from '../utils/auth';
-import { useNavigate } from 'react-router-dom';
+import { Box, Typography, Button, Card, CardContent, Grid, Alert, CircularProgress, Chip, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper } from '@mui/material';
+import { Refresh as RefreshIcon, AdminPanelSettings as AdminIcon, Delete as DeleteIcon, ArrowUpward as PromoteIcon, ArrowDownward as DemoteIcon, Settings as SettingsIcon, Logout as LogoutIcon } from '@mui/icons-material';
 
 const SystemAdminPage = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [actionBusy, setActionBusy] = useState(null);
   const token = useMemo(() => getAuthToken(), []);
 
@@ -14,16 +14,32 @@ const SystemAdminPage = () => {
     'Content-Type': 'application/json'
   }), [token]);
 
+  const currentUser = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+  }, []);
+
+  const roleChip = (role) => {
+    const r = role || 'ROLE_USER';
+    const color = r === 'ROLE_SYSTEM_ADMIN' ? 'secondary' : (r === 'ROLE_ADMIN' ? 'primary' : 'default');
+    const label = r.replace('ROLE_', '');
+    return <Chip size="small" color={color} variant={color === 'default' ? 'outlined' : 'filled'} label={label} />;
+  };
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch(`${API_URL}/admin/users`, { headers });
       if (!res.ok) throw new Error('Failed to load users');
       const body = await res.json();
-      const list = body?.data || [];
-      setUsers(Array.isArray(list) ? list : []);
+      const list = Array.isArray(body?.data) ? body.data : [];
+      // Hide all SYSTEM_ADMINs and optionally hide self
+      const filtered = list.filter(u => (u.role || 'ROLE_USER') !== 'ROLE_SYSTEM_ADMIN');
+      setUsers(filtered);
     } catch (e) {
       console.error(e);
+      setError(e.message || 'Failed to load users');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -43,6 +59,7 @@ const SystemAdminPage = () => {
       await fetchUsers();
     } catch (e) {
       console.error(e);
+      setError(e.message || 'Failed to update role');
     } finally {
       setActionBusy(null);
     }
@@ -60,101 +77,115 @@ const SystemAdminPage = () => {
       await fetchUsers();
     } catch (e) {
       console.error(e);
+      setError(e.message || 'Failed to delete user');
     } finally {
       setActionBusy(null);
     }
   };
 
-  const renderActions = (u) => {
-    const isBusyPromote = actionBusy === (u.userId + ':ROLE_ADMIN');
-    const isBusyDemote = actionBusy === (u.userId + ':ROLE_USER');
-    const isBusyDelete = actionBusy === (u.userId + ':DELETE');
-    const role = u.role || 'ROLE_USER';
-    return (
-      <div style={{ display: 'flex', gap: 8 }}>
-        {role !== 'ROLE_ADMIN' && (
-          <button disabled={isBusyPromote} onClick={() => updateRole(u.userId, 'ROLE_ADMIN')} style={styles.btnPrimary}>
-            {isBusyPromote ? 'Promoting…' : 'Promote to Admin'}
-          </button>
-        )}
-        {role !== 'ROLE_USER' && (
-          <button disabled={isBusyDemote} onClick={() => updateRole(u.userId, 'ROLE_USER')} style={styles.btnSecondary}>
-            {isBusyDemote ? 'Demoting…' : 'Demote to User'}
-          </button>
-        )}
-        <button disabled={isBusyDelete} onClick={() => deleteUser(u.userId)} style={styles.btnDanger}>
-          {isBusyDelete ? 'Deleting…' : 'Delete'}
-        </button>
-      </div>
-    );
-  };
-
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>System Admin</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={fetchUsers} style={styles.btnGhost}>Refresh</button>
-          <button onClick={() => navigate('/admin')} style={styles.btnGhost}>Go to Admin</button>
-        </div>
-      </div>
+    <Box p={3}>
+      <Box mb={4} display="flex" alignItems="center" justifyContent="space-between">
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            System Administration
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Manage platform roles and users.
+          </Typography>
+        </Box>
+        <Box display="flex" gap={1}>
+          <Button onClick={fetchUsers} startIcon={<RefreshIcon />} variant="outlined">Refresh</Button>
+          <Button onClick={() => navigate('/admin')} startIcon={<AdminIcon />} variant="outlined">Go to Admin</Button>
+          <Button onClick={() => { try { localStorage.setItem('redirectAfterLogin','/system'); } catch{}; window.scrollTo(0,0); }} variant="text" sx={{ display:'none' }}>noop</Button>
+          <Button onClick={() => { try { localStorage.removeItem('redirectAfterLogin'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop2</Button>
+          <Button onClick={() => { try { localStorage.removeItem('chatMessages'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop3</Button>
+          <Button onClick={() => { try { localStorage.removeItem('currentConversationId'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop4</Button>
+          <Button onClick={() => { try { localStorage.removeItem('profileData'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop5</Button>
+          <Button onClick={() => { try { localStorage.removeItem('selectedMode'); } catch{}; }} variant="text" sx={{ display:'none' }}>noop6</Button>
+          <Button onClick={() => { try { localStorage.removeItem('user'); localStorage.removeItem('authToken'); localStorage.removeItem('tokenExpires'); } catch{}; window.location.href='/signin'; }} startIcon={<LogoutIcon />} color="error" variant="outlined">Logout</Button>
+        </Box>
+      </Box>
 
-      <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>Users</h2>
-        {loading ? (
-          <div style={{ padding: 16 }}>Loading users…</div>
-        ) : users.length === 0 ? (
-          <div style={{ padding: 16 }}>No users found.</div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>User ID</th>
-                  <th style={styles.th}>Email</th>
-                  <th style={styles.th}>Username</th>
-                  <th style={styles.th}>Role</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.userId || u.email}>
-                    <td style={styles.td}>{u.userId || '-'}</td>
-                    <td style={styles.td}>{u.email}</td>
-                    <td style={styles.td}>{u.username || '-'}</td>
-                    <td style={styles.td}><span style={styles.roleBadge}>{u.role || 'ROLE_USER'}</span></td>
-                    <td style={styles.td}>{renderActions(u)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                <Typography variant="h6">Users</Typography>
+                <Chip label="SYSTEM_ADMIN hidden from list" size="small" color="info" variant="outlined" />
+              </Box>
 
-      <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>System Settings</h2>
-        <p style={{ color: '#6b7280', margin: 0 }}>RBAC is active. Hierarchy: SYSTEM_ADMIN &gt; ADMIN &gt; USER.</p>
-      </section>
-    </div>
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+              )}
+
+              {loading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}><CircularProgress /></Box>
+              ) : users.length === 0 ? (
+                <Box p={2} color="text.secondary">No users found.</Box>
+              ) : (
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>User ID</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Username</TableCell>
+                        <TableCell>Role</TableCell>
+                        <TableCell align="right">Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {users.map((u) => {
+                        const role = u.role || 'ROLE_USER';
+                        const isBusyPromote = actionBusy === (u.userId + ':ROLE_ADMIN');
+                        const isBusyDemote = actionBusy === (u.userId + ':ROLE_USER');
+                        const isBusyDelete = actionBusy === (u.userId + ':DELETE');
+                        return (
+                          <TableRow key={u.userId || u.email}>
+                            <TableCell>{u.userId || '-'}</TableCell>
+                            <TableCell>{u.email}</TableCell>
+                            <TableCell>{u.username || '-'}</TableCell>
+                            <TableCell>{roleChip(role)}</TableCell>
+                            <TableCell align="right">
+                              <Box display="flex" gap={1} justifyContent="flex-end">
+                                {role !== 'ROLE_ADMIN' && (
+                                  <Button size="small" variant="contained" startIcon={<PromoteIcon />} disabled={isBusyPromote} onClick={() => updateRole(u.userId, 'ROLE_ADMIN')}>Promote</Button>
+                                )}
+                                {role !== 'ROLE_USER' && (
+                                  <Button size="small" color="warning" variant="contained" startIcon={<DemoteIcon />} disabled={isBusyDemote} onClick={() => updateRole(u.userId, 'ROLE_USER')}>Demote</Button>
+                                )}
+                                <Button size="small" color="error" variant="contained" startIcon={<DeleteIcon />} disabled={isBusyDelete} onClick={() => deleteUser(u.userId)}>Delete</Button>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Typography variant="h6">System Settings</Typography>
+                <SettingsIcon color="action" />
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                RBAC is active. Hierarchy: SYSTEM_ADMIN &gt; ADMIN &gt; USER.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
   );
-};
-
-const styles = {
-  container: { maxWidth: 1100, margin: '24px auto', padding: '0 16px' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { margin: 0, fontSize: 24 },
-  section: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: 600, padding: '12px 16px', borderBottom: '1px solid #e5e7eb', margin: 0 },
-  table: { width: '100%', borderCollapse: 'separate', borderSpacing: 0 },
-  th: { textAlign: 'left', fontSize: 13, color: '#6b7280', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' },
-  td: { fontSize: 14, padding: '12px 16px', borderBottom: '1px solid #f3f4f6' },
-  roleBadge: { background: '#f3f4f6', color: '#111827', fontSize: 12, padding: '4px 8px', borderRadius: 999, display: 'inline-block' },
-  btnPrimary: { background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' },
-  btnSecondary: { background: '#6b7280', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' },
-  btnDanger: { background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' },
-  btnGhost: { background: '#fff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }
 };
 
 export default SystemAdminPage;
