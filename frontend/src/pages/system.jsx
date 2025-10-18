@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_URL, getAuthToken, clearAuthData } from '../utils/auth';
-import { Box, Typography, Button, Card, CardContent, Grid, Alert, CircularProgress, Chip, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper } from '@mui/material';
-import { Refresh as RefreshIcon, AdminPanelSettings as AdminIcon, Delete as DeleteIcon, ArrowUpward as PromoteIcon, ArrowDownward as DemoteIcon, Settings as SettingsIcon, Logout as LogoutIcon } from '@mui/icons-material';
+import { Box, Typography, Button, Card, CardContent, Grid, Alert, CircularProgress, Chip, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper, TextField, InputAdornment } from '@mui/material';
+import { Refresh as RefreshIcon, Delete as DeleteIcon, ArrowUpward as PromoteIcon, ArrowDownward as DemoteIcon, Logout as LogoutIcon, Search as SearchIcon } from '@mui/icons-material';
 
 const SystemAdminPage = () => {
   const navigate = useNavigate();
@@ -10,6 +10,7 @@ const SystemAdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionBusy, setActionBusy] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const token = useMemo(() => getAuthToken(), []);
 
   const headers = useMemo(() => ({
@@ -103,8 +104,18 @@ const SystemAdminPage = () => {
           </Typography>
         </Box>
         <Box display="flex" gap={1}>
+          <TextField
+            size="small"
+            placeholder="Search by email or username..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{ startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            )}}
+          />
           <Button onClick={fetchUsers} startIcon={<RefreshIcon />} variant="outlined">Refresh</Button>
-          <Button onClick={() => navigate('/admin')} startIcon={<AdminIcon />} variant="outlined">Go to Admin</Button>
           <Button onClick={handleLogout} startIcon={<LogoutIcon />} color="error" variant="outlined">Logout</Button>
         </Box>
       </Box>
@@ -115,7 +126,6 @@ const SystemAdminPage = () => {
             <CardContent>
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                 <Typography variant="h6">Users</Typography>
-                <Chip label="SYSTEM_ADMIN hidden from list" size="small" color="info" variant="outlined" />
               </Box>
 
               {error && (
@@ -139,7 +149,16 @@ const SystemAdminPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {users.map((u) => {
+                      {users
+                        .filter((u) => {
+                          const q = searchQuery.toLowerCase();
+                          if (!q) return true;
+                          return (
+                            (u.email || '').toLowerCase().includes(q) ||
+                            (u.username || '').toLowerCase().includes(q)
+                          );
+                        })
+                        .map((u) => {
                         const role = u.role || 'ROLE_USER';
                         const isBusyPromote = actionBusy === (u.userId + ':ROLE_ADMIN');
                         const isBusyDemote = actionBusy === (u.userId + ':ROLE_USER');
@@ -172,19 +191,7 @@ const SystemAdminPage = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                <Typography variant="h6">System Settings</Typography>
-                <SettingsIcon color="action" />
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                RBAC is active. Hierarchy: SYSTEM_ADMIN &gt; ADMIN &gt; USER.
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+        {/* System settings card removed by request */}
       </Grid>
     </Box>
   );

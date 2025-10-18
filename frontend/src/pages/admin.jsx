@@ -177,7 +177,7 @@ const Admin = () => {
         </Box>
         <Box display="flex" gap={1}>
           <Button variant="outlined" startIcon={<EditIcon />} onClick={() => { localStorage.setItem('forceLightMode','true'); navigate('/edit-profile'); }}>Edit Profile</Button>
-          <Button variant="outlined" startIcon={<ManageSearchIcon />} onClick={() => navigate('/admin/knowledge-base')}>Knowledge Base</Button>
+          {/* Knowledge Base button removed by request */}
           <Button variant="contained" color="error" startIcon={<LogoutIcon />} onClick={handleLogout}>Logout</Button>
         </Box>
       </Box>
