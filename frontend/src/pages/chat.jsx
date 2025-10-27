@@ -33,8 +33,20 @@ const CPA_SYSTEM_PROMPT =
 
 // Function to format AI response text
 const formatAIResponse = (text) => {
+  if (!text) return "";
+  
+  // Clean up metadata tags and unnecessary formatting
+  let cleanedText = text
+    // Remove metadata tags like {sourcesUsed: [...]}
+    .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
+    // Remove any remaining metadata patterns
+    .replace(/\{[^}]*\}/g, "")
+    // Clean up extra whitespace
+    .replace(/\s+/g, " ")
+    .trim();
+  
   // Replace Markdown-like symbols with HTML tags
-  const formattedText = text
+  const formattedText = cleanedText
     // Replace ***text*** with <strong><em>text</em></strong>
     .replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>")
     // Replace **text** with <strong>text</strong>
@@ -406,13 +418,24 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
   // Helper to style report text for dark mode
   function formatReportText(text, isDarkMode) {
     if (!text) return "";
-    // Remove emojis from the text
-    text = text.replace(
-      /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
-      ""
-    );
+    
+    // Clean up metadata tags and unnecessary formatting
+    let cleanedText = text
+      // Remove metadata tags like {sourcesUsed: [...]}
+      .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
+      // Remove any remaining metadata patterns
+      .replace(/\{[^}]*\}/g, "")
+      // Remove emojis from the text
+      .replace(
+        /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
+        ""
+      )
+      // Clean up extra whitespace
+      .replace(/\s+/g, " ")
+      .trim();
+    
     // Split into lines
-    const lines = text.split("\n");
+    const lines = cleanedText.split("\n");
     let html = "";
     lines.forEach((line) => {
       let styledLine = line;

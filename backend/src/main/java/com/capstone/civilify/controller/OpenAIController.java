@@ -169,9 +169,11 @@ public class OpenAIController {
                     "- If the user explicitly asks for jurisdiction other than the Philippines, switch references and sources accordingly and state the jurisdiction at the top of the reply.\n" +
                     "- If the user insists on direct legal representation or asks to prepare court filings, refuse and recommend they consult a licensed attorney.\n\n" +
 
-                    "### DEBUG / METADATA (FOR INTERNAL USE) ###\n" +
-                    "- When possible, include at least one short metadata tag in the reply (hidden or visible as appropriate) indicating whether the answer used: \"InternalKB\", \"OfficialGov\", \"SecondarySource\".\n" +
-                    "- Example (visible to developer or logging only): {sourcesUsed: [\"InternalKB\",\"psa.gov.ph\"]}\n\n" +
+                    "### SOURCE ACCURACY REQUIREMENTS ###\n" +
+                    "- ONLY cite sources that are explicitly provided in the knowledge base context or are well-known official Philippine legal sources.\n" +
+                    "- NEVER invent or hallucinate sources that are not provided in the context.\n" +
+                    "- If no reliable sources are available, explicitly state: \"No specific legal sources found for this query.\"\n" +
+                    "- DO NOT include any metadata tags like {sourcesUsed: [...]} in the user-facing response.\n\n" +
 
                     "### FINAL NOTE ###\n" +
                     "You are a separate digital entity operating under Civilify. You are Villy, a bot created by Civilify to answer general legal questions clearly, calmly, and accurately using Philippine law as the default reference.\n";
@@ -361,8 +363,11 @@ public class OpenAIController {
                                            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources, String mode) {
         StringBuilder enhancedPrompt = new StringBuilder(baseSystemPrompt);
         
-        // Add KB context if available
-        if (primaryKbAnswer != null && !primaryKbAnswer.trim().isEmpty()) {
+        // Add KB context if available and meaningful
+        if (primaryKbAnswer != null && !primaryKbAnswer.trim().isEmpty() && 
+            !primaryKbAnswer.trim().equalsIgnoreCase("I don't know") && 
+            !primaryKbAnswer.trim().equalsIgnoreCase("No relevant information found")) {
+            
             enhancedPrompt.append("\n\nKNOWLEDGE BASE CONTEXT:\n");
             enhancedPrompt.append("The following information was retrieved from the legal knowledge base:\n\n");
             enhancedPrompt.append(primaryKbAnswer);
@@ -380,10 +385,12 @@ public class OpenAIController {
             
             enhancedPrompt.append("\nIMPORTANT: Base your response primarily on the knowledge base context provided above. ");
             enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
-            enhancedPrompt.append("If the knowledge base context is relevant to the user's question, prioritize that information in your response.");
+            enhancedPrompt.append("Only cite sources that are explicitly mentioned in the knowledge base context above.");
         } else {
             enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
-            enhancedPrompt.append("Provide general guidance while acknowledging this limitation and recommending consultation with a legal professional.");
+            enhancedPrompt.append("Provide general guidance while acknowledging this limitation. ");
+            enhancedPrompt.append("Do not invent or hallucinate sources. If you cannot provide accurate information, ");
+            enhancedPrompt.append("recommend consultation with a legal professional.");
         }
         
         return enhancedPrompt.toString();
