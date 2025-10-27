@@ -239,30 +239,54 @@ public class OpenAIController {
                 })
                 .collect(Collectors.toList());
             
-            // Generate the primary AI response FIRST using the system prompt for the selected mode
+            // VILLY RAG ENHANCED FLOW: KB-First Approach
+            // Step 1: Get primary KB response using enhanced chat
+            com.capstone.civilify.DTO.KnowledgeBaseChatResponse kbResponse = 
+                openAIService.getKnowledgeBaseService().chatWithKnowledgeBaseEnhanced(userMessage, mode);
+            
+            String primaryKbAnswer = null;
+            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources = new java.util.ArrayList<>();
+            
+            if (kbResponse != null && !kbResponse.hasError()) {
+                primaryKbAnswer = kbResponse.getAnswer();
+                if (kbResponse.getSources() != null) {
+                    kbSources.addAll(kbResponse.getSources());
+                }
+                logger.info("Primary KB response obtained: answer length={}, sources count={}", 
+                    primaryKbAnswer != null ? primaryKbAnswer.length() : 0, kbSources.size());
+            } else {
+                logger.warn("KB response failed or empty: {}", kbResponse != null ? kbResponse.getError() : "null response");
+            }
+            
+            // Step 2: Generate enhanced AI response with KB context
+            String enhancedSystemPrompt = buildEnhancedSystemPrompt(systemPrompt, primaryKbAnswer, kbSources, mode);
+            
             String aiResponse = openAIService.generateResponse(
                 userMessage,
-                systemPrompt,
+                enhancedSystemPrompt,
                 conversationHistoryForAI,
                 mode
             );
-            logger.info("Primary AI response generated with mode {} using system prompt.", mode);
-            
-            // For development, you can use the mock response instead
-            // String aiResponse = openAIService.generateMockResponse(userMessage);
+            logger.info("Enhanced AI response generated with mode {} using KB context.", mode);
             
             // Add AI response to the conversation
             ChatMessage aiChatMessage = chatService.addMessage(
                 conversationId, null, "villy@civilify.com", aiResponse, false);
             logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
             
-            // Query KB AFTER the AI answer to enrich with sources (answer proceeds even if none)
-            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbEntries = openAIService.getKnowledgeBaseSources(userMessage);
-            logger.info("Knowledge base lookup complete. Entries found: {}", kbEntries != null ? kbEntries.size() : 0);
+            // Step 3: Get additional KB sources for context enrichment (if not already obtained)
+            if (kbSources.isEmpty()) {
+                java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> additionalKbEntries = 
+                    openAIService.getKnowledgeBaseSources(userMessage);
+                if (additionalKbEntries != null) {
+                    kbSources.addAll(additionalKbEntries);
+                }
+                logger.info("Additional KB sources obtained: {}", kbSources.size());
+            }
 
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
-            if (kbEntries != null) {
-                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbEntries) {
+            if (kbSources != null) {
+                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbSources) {
                     Map<String, Object> source = new HashMap<>();
                     source.put("entryId", entry.getEntryId());
                     source.put("title", entry.getTitle());
@@ -328,5 +352,40 @@ public class OpenAIController {
         response.put("success", false);
         response.put("error", message);
         return response;
+    }
+    
+    /**
+     * Build enhanced system prompt with KB context for Villy RAG
+     */
+    private String buildEnhancedSystemPrompt(String baseSystemPrompt, String primaryKbAnswer, 
+                                           java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources, String mode) {
+        StringBuilder enhancedPrompt = new StringBuilder(baseSystemPrompt);
+        
+        // Add KB context if available
+        if (primaryKbAnswer != null && !primaryKbAnswer.trim().isEmpty()) {
+            enhancedPrompt.append("\n\nKNOWLEDGE BASE CONTEXT:\n");
+            enhancedPrompt.append("The following information was retrieved from the legal knowledge base:\n\n");
+            enhancedPrompt.append(primaryKbAnswer);
+            
+            if (kbSources != null && !kbSources.isEmpty()) {
+                enhancedPrompt.append("\n\nSUPPORTING LEGAL SOURCES:\n");
+                for (com.capstone.civilify.DTO.KnowledgeBaseEntry source : kbSources) {
+                    enhancedPrompt.append("- ").append(source.getTitle());
+                    if (source.getCanonicalCitation() != null && !source.getCanonicalCitation().isEmpty()) {
+                        enhancedPrompt.append(" (").append(source.getCanonicalCitation()).append(")");
+                    }
+                    enhancedPrompt.append("\n");
+                }
+            }
+            
+            enhancedPrompt.append("\nIMPORTANT: Base your response primarily on the knowledge base context provided above. ");
+            enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
+            enhancedPrompt.append("If the knowledge base context is relevant to the user's question, prioritize that information in your response.");
+        } else {
+            enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
+            enhancedPrompt.append("Provide general guidance while acknowledging this limitation and recommending consultation with a legal professional.");
+        }
+        
+        return enhancedPrompt.toString();
     }
 }

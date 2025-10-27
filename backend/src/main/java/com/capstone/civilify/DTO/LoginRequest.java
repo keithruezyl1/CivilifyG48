@@ -1,4 +1,4 @@
-package com.capstone.civilify.dto;
+package com.capstone.civilify.DTO;
 
 public class LoginRequest {
     private String email;

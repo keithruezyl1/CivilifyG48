@@ -18,10 +18,11 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 import java.util.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.stream.Collectors;
 
 /**
  * Service for interacting with the knowledge base system.
@@ -62,6 +63,12 @@ public class KnowledgeBaseService {
     
     @Value("${knowledge.base.query.min.length:3}")
     private int knowledgeBaseMinQueryLength;
+    
+    @Value("${knowledge.base.sqg.enabled:true}")
+    private boolean sqgEnabled;
+    
+    @Value("${knowledge.base.metadata.filtering.enabled:true}")
+    private boolean metadataFilteringEnabled;
     
     private final RestTemplate restTemplate;
     private volatile String cachedServiceToken;
@@ -561,5 +568,168 @@ public class KnowledgeBaseService {
             logger.error("Knowledge base health check failed", e);
             return false;
         }
+    }
+    
+    /**
+     * Enhanced chat with knowledge base using KB-first approach
+     * This method implements the Villy RAG pattern: KB-first, then AI enhancement
+     */
+    public KnowledgeBaseChatResponse chatWithKnowledgeBaseEnhanced(String question, String mode) {
+        if (!knowledgeBaseEnabled) {
+            logger.warn("Knowledge base is disabled");
+            return new KnowledgeBaseChatResponse(null, null, "Knowledge base is currently disabled");
+        }
+        
+        if (question == null || question.trim().length() < knowledgeBaseMinQueryLength) {
+            logger.warn("Query too short: {}", question);
+            return new KnowledgeBaseChatResponse(null, null, "Query too short for meaningful search");
+        }
+        
+        try {
+            logger.info("Enhanced KB chat request for mode: {}, question: {}", mode, question);
+            
+            // Step 1: Get primary KB response using chat endpoint
+            KnowledgeBaseChatResponse kbResponse = chatWithKnowledgeBase(question);
+            
+            if (kbResponse.hasError()) {
+                logger.warn("KB chat failed: {}", kbResponse.getError());
+                return kbResponse;
+            }
+            
+            // Step 2: Get additional sources for context enrichment
+            List<KnowledgeBaseEntry> additionalSources = searchKnowledgeBase(question, maxResults);
+            
+            // Step 3: Combine primary answer with additional sources
+            List<KnowledgeBaseEntry> allSources = new ArrayList<>();
+            if (kbResponse.getSources() != null) {
+                allSources.addAll(kbResponse.getSources());
+            }
+            if (additionalSources != null) {
+                allSources.addAll(additionalSources);
+            }
+            
+            // Remove duplicates based on entryId
+            Map<String, KnowledgeBaseEntry> uniqueSources = new LinkedHashMap<>();
+            for (KnowledgeBaseEntry entry : allSources) {
+                if (entry.getEntryId() != null) {
+                    uniqueSources.put(entry.getEntryId(), entry);
+                }
+            }
+            
+            List<KnowledgeBaseEntry> finalSources = new ArrayList<>(uniqueSources.values());
+            
+            logger.info("Enhanced KB response: answer length={}, sources count={}", 
+                kbResponse.getAnswer() != null ? kbResponse.getAnswer().length() : 0, 
+                finalSources.size());
+            
+            return new KnowledgeBaseChatResponse(kbResponse.getAnswer(), finalSources);
+            
+        } catch (Exception e) {
+            logger.error("Enhanced KB chat failed", e);
+            return new KnowledgeBaseChatResponse(null, null, "Enhanced knowledge base chat failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Generate structured query for better legal search
+     * This implements the SQG (Structured Query Generation) pattern from Villy RAG
+     */
+    public Map<String, Object> generateStructuredQuery(String userQuery) {
+        if (!sqgEnabled) {
+            return Map.of("normalized_question", userQuery, "keywords", List.of(userQuery.split("\\s+")));
+        }
+        
+        try {
+            logger.info("Generating structured query for: {}", userQuery);
+            
+            // Call Villy's SQG endpoint if available
+            String sqgUrl = knowledgeBaseApiUrl + "/api/sqg";
+            Map<String, Object> requestBody = Map.of("question", userQuery);
+            
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                sqgUrl, requestEntity, Map.class);
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> sqgResult = (Map<String, Object>) response.getBody();
+                logger.info("SQG generated successfully: {}", sqgResult.keySet());
+                return sqgResult;
+            }
+            
+        } catch (Exception e) {
+            logger.warn("SQG failed, using fallback: {}", e.getMessage());
+        }
+        
+        // Fallback: Simple keyword extraction
+        return Map.of(
+            "normalized_question", userQuery,
+            "keywords", extractKeywords(userQuery),
+            "legal_topics", extractLegalTopics(userQuery),
+            "statutes_referenced", extractStatuteReferences(userQuery)
+        );
+    }
+    
+    /**
+     * Extract keywords from user query (fallback for SQG)
+     */
+    private List<String> extractKeywords(String query) {
+        // Simple keyword extraction - remove common words and legal connectors
+        String[] stopWords = {"the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by", "what", "how", "when", "where", "why"};
+        return Arrays.stream(query.toLowerCase().split("\\s+"))
+            .filter(word -> word.length() > 2 && !Arrays.asList(stopWords).contains(word))
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Extract legal topics from user query (fallback for SQG)
+     */
+    private List<String> extractLegalTopics(String query) {
+        List<String> topics = new ArrayList<>();
+        String lowerQuery = query.toLowerCase();
+        
+        // Common Philippine legal topics
+        if (lowerQuery.contains("criminal") || lowerQuery.contains("crime")) topics.add("criminal law");
+        if (lowerQuery.contains("civil") || lowerQuery.contains("contract")) topics.add("civil law");
+        if (lowerQuery.contains("family") || lowerQuery.contains("marriage")) topics.add("family law");
+        if (lowerQuery.contains("labor") || lowerQuery.contains("employment")) topics.add("labor law");
+        if (lowerQuery.contains("property") || lowerQuery.contains("real estate")) topics.add("property law");
+        if (lowerQuery.contains("procedure") || lowerQuery.contains("court")) topics.add("procedural law");
+        if (lowerQuery.contains("constitutional") || lowerQuery.contains("constitution")) topics.add("constitutional law");
+        if (lowerQuery.contains("administrative")) topics.add("administrative law");
+        
+        return topics;
+    }
+    
+    /**
+     * Extract statute references from user query (fallback for SQG)
+     */
+    private List<String> extractStatuteReferences(String query) {
+        List<String> statutes = new ArrayList<>();
+        
+        // Pattern for Rules of Court (Rule X Sec. Y)
+        java.util.regex.Pattern rulePattern = java.util.regex.Pattern.compile("(?i)rule\\s+(\\d+)\\s*sec(?:tion)?\\s*(\\d+)");
+        java.util.regex.Matcher ruleMatcher = rulePattern.matcher(query);
+        while (ruleMatcher.find()) {
+            statutes.add("Rule " + ruleMatcher.group(1) + " Sec. " + ruleMatcher.group(2));
+        }
+        
+        // Pattern for RPC Articles (Art. X)
+        java.util.regex.Pattern artPattern = java.util.regex.Pattern.compile("(?i)(?:art(?:icle)?|rpc)\\s*(\\d+)");
+        java.util.regex.Matcher artMatcher = artPattern.matcher(query);
+        while (artMatcher.find()) {
+            statutes.add("RPC Art. " + artMatcher.group(1));
+        }
+        
+        // Pattern for Republic Acts (RA X)
+        java.util.regex.Pattern raPattern = java.util.regex.Pattern.compile("(?i)ra\\s+(\\d+)");
+        java.util.regex.Matcher raMatcher = raPattern.matcher(query);
+        while (raMatcher.find()) {
+            statutes.add("RA " + raMatcher.group(1));
+        }
+        
+        return statutes;
     }
 }

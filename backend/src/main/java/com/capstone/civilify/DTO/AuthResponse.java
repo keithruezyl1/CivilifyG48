@@ -1,4 +1,4 @@
-package com.capstone.civilify.dto;
+package com.capstone.civilify.DTO;
 
 import java.util.Date;
 
