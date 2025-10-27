@@ -1,4 +1,4 @@
-package com.capstone.civilify.DTO;
+package com.capstone.civilify.dto;
 
 import java.util.List;
 

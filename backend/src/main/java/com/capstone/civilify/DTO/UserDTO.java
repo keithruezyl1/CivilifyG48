@@ -1,4 +1,4 @@
-package com.capstone.civilify.DTO;
+package com.capstone.civilify.dto;
 
 /**
  * Data Transfer Object for User information.
