@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/auth/**")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/ai/**")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/knowledge-base/**")).permitAll()
+                .requestMatchers(mvcMatcherBuilder.pattern("/api/chat/**")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/health")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/debug/**")).permitAll()
                 .requestMatchers(mvcMatcherBuilder.pattern("/api/users/register")).permitAll()
