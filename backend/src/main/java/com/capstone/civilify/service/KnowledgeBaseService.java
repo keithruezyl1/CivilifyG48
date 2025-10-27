@@ -70,6 +70,63 @@ public class KnowledgeBaseService {
     @Value("${knowledge.base.metadata.filtering.enabled:true}")
     private boolean metadataFilteringEnabled;
     
+    @Value("${knowledge.base.confidence.threshold:0.15}")
+    private double confidenceThreshold;
+    
+    @Value("${knowledge.base.simple.query.skip.sqg:true}")
+    private boolean simpleQuerySkipSqg;
+    
+    @Value("${knowledge.base.metadata.min.topics:2}")
+    private int metadataMinTopics;
+    
+    @Value("${knowledge.base.cross.encoder.blend:0.8}")
+    private double crossEncoderBlend;
+    
+    @Value("${knowledge.base.cross.encoder.cache.max:2000}")
+    private int crossEncoderCacheMax;
+    
+    @Value("${knowledge.base.cross.encoder.ttl.ms:1800000}")
+    private long crossEncoderTtlMs;
+    
+    @Value("${knowledge.base.early.termination.threshold:0.80}")
+    private double earlyTerminationThreshold;
+    
+    @Value("${knowledge.base.embed.cache.max:5000}")
+    private int embedCacheMax;
+    
+    @Value("${knowledge.base.embed.ttl.ms:7200000}")
+    private long embedTtlMs;
+    
+    @Value("${knowledge.base.response.cache.max:1000}")
+    private int responseCacheMax;
+    
+    @Value("${knowledge.base.response.ttl.ms:1800000}")
+    private long responseTtlMs;
+    
+    @Value("${knowledge.base.sqg.model:gpt-4o-mini}")
+    private String sqgModel;
+    
+    @Value("${knowledge.base.sqg.cache.max:2000}")
+    private int sqgCacheMax;
+    
+    @Value("${knowledge.base.sqg.ttl.ms:3600000}")
+    private long sqgTtlMs;
+    
+    @Value("${knowledge.base.rerank.mode:cross-encoder}")
+    private String rerankMode;
+    
+    @Value("${knowledge.base.rerank.model:gpt-4o-mini}")
+    private String rerankModel;
+    
+    @Value("${knowledge.base.use.reranker:false}")
+    private boolean useReranker;
+    
+    @Value("${knowledge.base.use.streaming:true}")
+    private boolean useStreaming;
+    
+    @Value("${knowledge.base.performance.logging:true}")
+    private boolean performanceLogging;
+    
     private final RestTemplate restTemplate;
     private volatile String cachedServiceToken;
     private volatile long cachedServiceTokenExpiryMs = 0L;
@@ -575,6 +632,8 @@ public class KnowledgeBaseService {
      * This method implements the Villy RAG pattern: KB-first, then AI enhancement
      */
     public KnowledgeBaseChatResponse chatWithKnowledgeBaseEnhanced(String question, String mode) {
+        long startTime = System.currentTimeMillis();
+        
         if (!knowledgeBaseEnabled) {
             logger.warn("Knowledge base is disabled");
             return new KnowledgeBaseChatResponse(null, null, "Knowledge base is currently disabled");
@@ -586,10 +645,18 @@ public class KnowledgeBaseService {
         }
         
         try {
-            logger.info("Enhanced KB chat request for mode: {}, question: {}", mode, question);
+            if (performanceLogging) {
+                logger.info("Enhanced KB chat request for mode: {}, question: {}", mode, question);
+            }
             
             // Step 1: Get primary KB response using chat endpoint
+            long chatStartTime = System.currentTimeMillis();
             KnowledgeBaseChatResponse kbResponse = chatWithKnowledgeBase(question);
+            long chatDuration = System.currentTimeMillis() - chatStartTime;
+            
+            if (performanceLogging) {
+                logger.info("KB chat completed in {}ms", chatDuration);
+            }
             
             if (kbResponse.hasError()) {
                 logger.warn("KB chat failed: {}", kbResponse.getError());
@@ -597,7 +664,13 @@ public class KnowledgeBaseService {
             }
             
             // Step 2: Get additional sources for context enrichment
+            long searchStartTime = System.currentTimeMillis();
             List<KnowledgeBaseEntry> additionalSources = searchKnowledgeBase(question, maxResults);
+            long searchDuration = System.currentTimeMillis() - searchStartTime;
+            
+            if (performanceLogging) {
+                logger.info("KB search completed in {}ms, found {} sources", searchDuration, additionalSources.size());
+            }
             
             // Step 3: Combine primary answer with additional sources
             List<KnowledgeBaseEntry> allSources = new ArrayList<>();
@@ -618,14 +691,20 @@ public class KnowledgeBaseService {
             
             List<KnowledgeBaseEntry> finalSources = new ArrayList<>(uniqueSources.values());
             
-            logger.info("Enhanced KB response: answer length={}, sources count={}", 
-                kbResponse.getAnswer() != null ? kbResponse.getAnswer().length() : 0, 
-                finalSources.size());
+            long totalDuration = System.currentTimeMillis() - startTime;
+            
+            if (performanceLogging) {
+                logger.info("Enhanced KB response completed in {}ms: answer length={}, sources count={}", 
+                    totalDuration,
+                    kbResponse.getAnswer() != null ? kbResponse.getAnswer().length() : 0, 
+                    finalSources.size());
+            }
             
             return new KnowledgeBaseChatResponse(kbResponse.getAnswer(), finalSources);
             
         } catch (Exception e) {
-            logger.error("Enhanced KB chat failed", e);
+            long totalDuration = System.currentTimeMillis() - startTime;
+            logger.error("Enhanced KB chat failed after {}ms", totalDuration, e);
             return new KnowledgeBaseChatResponse(null, null, "Enhanced knowledge base chat failed: " + e.getMessage());
         }
     }
@@ -639,6 +718,17 @@ public class KnowledgeBaseService {
             return Map.of("normalized_question", userQuery, "keywords", List.of(userQuery.split("\\s+")));
         }
         
+        // Skip SQG for simple queries if enabled
+        if (simpleQuerySkipSqg && isSimpleQuery(userQuery)) {
+            logger.debug("Skipping SQG for simple query: {}", userQuery);
+            return Map.of(
+                "normalized_question", userQuery,
+                "keywords", extractKeywords(userQuery),
+                "legal_topics", extractLegalTopics(userQuery),
+                "statutes_referenced", extractStatuteReferences(userQuery)
+            );
+        }
+        
         try {
             logger.info("Generating structured query for: {}", userQuery);
             
@@ -649,8 +739,8 @@ public class KnowledgeBaseService {
             HttpHeaders headers = buildAuthHeaders();
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
             
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                sqgUrl, requestEntity, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(
+                sqgUrl, HttpMethod.POST, requestEntity, new ParameterizedTypeReference<Map>() {});
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 @SuppressWarnings("unchecked")
@@ -670,6 +760,23 @@ public class KnowledgeBaseService {
             "legal_topics", extractLegalTopics(userQuery),
             "statutes_referenced", extractStatuteReferences(userQuery)
         );
+    }
+    
+    /**
+     * Check if a query is simple enough to skip SQG processing
+     */
+    private boolean isSimpleQuery(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return true;
+        }
+        
+        String trimmed = query.trim().toLowerCase();
+        
+        // Simple queries: short length, basic question words, or direct statute references
+        return trimmed.length() <= 20 || 
+               trimmed.matches("^(what|how|when|where|why|who)\\s+.*") ||
+               trimmed.matches(".*(rule|art|section|article)\\s+\\d+.*") ||
+               trimmed.split("\\s+").length <= 5;
     }
     
     /**
