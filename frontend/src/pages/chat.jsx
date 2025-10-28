@@ -8,6 +8,7 @@ import {
   FaQuestionCircle,
   FaSignOutAlt,
   FaClipboardList,
+  FaCheckCircle,
 } from "react-icons/fa";
 import villyAvatar from "../assets/images/villypfporange.jpg";
 import LoadingScreen from "./LoadingScreen";
