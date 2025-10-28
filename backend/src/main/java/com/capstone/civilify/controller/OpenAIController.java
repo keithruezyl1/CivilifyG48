@@ -175,7 +175,9 @@ public class OpenAIController {
                     "- If the knowledge base provides source URLs, use ONLY those URLs.\n" +
                     "- If no sources are provided by the knowledge base, explicitly state: \"No specific legal sources found for this query.\"\n" +
                     "- DO NOT include any metadata tags like {sourcesUsed: [...]} in the user-facing response.\n" +
-                    "- DO NOT create or suggest external links unless they are explicitly provided in the knowledge base context.\n\n" +
+                    "- DO NOT create or suggest external links unless they are explicitly provided in the knowledge base context.\n" +
+                    "- DO NOT include any \"Sources:\" section in your response - sources will be handled separately by the system.\n" +
+                    "- Focus on providing accurate legal information without mentioning sources in the main response text.\n\n" +
 
                     "### FINAL NOTE ###\n" +
                     "You are a separate digital entity operating under Civilify. You are Villy, a bot created by Civilify to answer general legal questions clearly, calmly, and accurately using Philippine law as the default reference.\n";
@@ -195,7 +197,7 @@ public class OpenAIController {
                     "Legal Issues or Concerns:\n- Bullet points of relevant legal issues.\n\n" +
                     "Plausibility Score: [number]% - [label]\n" +
                     "Suggested Next Steps:\n- Bullet points of practical next steps.\n\n" +
-                    "Sources:\n- As much as possible, provide at least one online link to a working, reputable reference (such as a law, government website, or legal guide) that supports your assessment.\n- If you did not use any sources, suggest reputable online sources the user can consult for more information.\n\n" +
+                    "Sources:\n- DO NOT include any \"Sources:\" section in your response - sources will be handled separately by the system.\n- DO NOT invent or hallucinate sources that are not provided in the knowledge base context.\n- Focus on providing accurate legal assessment without mentioning sources in the main response text.\n\n" +
                     "At the end, add this disclaimer: This is a legal pre-assessment only. If your situation is serious or urgent, please consult a licensed lawyer.\n\n" +
                     "Formatting:\n- Use plain text, line breaks, and dashes for bullets.\n- Do NOT use markdown, HTML, or tables.\n- Use clear section headers as shown above.\n\n" +
                     "Tone:\n- Be warm, respectful, and helpful.\n- Avoid repeating 'under Philippine law' unless contextually needed.\n- Do not start any section with a comma or incomplete sentence.\n\n" +
@@ -297,9 +299,15 @@ public class OpenAIController {
                     source.put("type", entry.getType());
                     source.put("canonicalCitation", entry.getCanonicalCitation());
                     source.put("summary", entry.getSummary());
-                    // Only include source URLs if they exist
+                    // Only include source URLs if they exist and are valid
                     if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
-                        source.put("sourceUrls", entry.getSourceUrls());
+                        // Filter out any invalid or empty URLs
+                        List<String> validUrls = entry.getSourceUrls().stream()
+                            .filter(url -> url != null && !url.trim().isEmpty() && url.startsWith("http"))
+                            .collect(Collectors.toList());
+                        if (!validUrls.isEmpty()) {
+                            source.put("sourceUrls", validUrls);
+                        }
                     }
                     sources.add(source);
                 }
@@ -385,9 +393,9 @@ public class OpenAIController {
                     if (source.getCanonicalCitation() != null && !source.getCanonicalCitation().isEmpty()) {
                         enhancedPrompt.append(" (").append(source.getCanonicalCitation()).append(")");
                     }
-                    // Include source URLs if available
+                    // Include source URLs if available and valid
                     if (source.getSourceUrls() != null && !source.getSourceUrls().isEmpty()) {
-                        enhancedPrompt.append(" - Sources: ");
+                        enhancedPrompt.append(" - Available Sources: ");
                         for (int i = 0; i < source.getSourceUrls().size(); i++) {
                             if (i > 0) enhancedPrompt.append(", ");
                             enhancedPrompt.append(source.getSourceUrls().get(i));

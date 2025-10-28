@@ -44,6 +44,12 @@ const formatAIResponse = (text) => {
     // Remove standalone "Sources:" sections that are just text (not structured)
     .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+\n?/gi, "")
     .replace(/\n\s*Sources?:\s*$/gi, "")
+    // Remove bulleted source lists
+    .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+(\n\s*[-•]\s*[^\n]+)*/gi, "")
+    // Remove numbered source lists
+    .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
+    // Remove any remaining source references
+    .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
     // Clean up extra whitespace
     .replace(/\s+/g, " ")
     .trim();
@@ -431,6 +437,12 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
       // Remove standalone "Sources:" sections that are just text (not structured)
       .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+\n?/gi, "")
       .replace(/\n\s*Sources?:\s*$/gi, "")
+      // Remove bulleted source lists
+      .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+(\n\s*[-•]\s*[^\n]+)*/gi, "")
+      // Remove numbered source lists
+      .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
+      // Remove any remaining source references
+      .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
       // Remove emojis from the text
       .replace(
         /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
