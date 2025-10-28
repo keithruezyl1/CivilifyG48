@@ -330,9 +330,13 @@ public class OpenAIController {
             }
 
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
-            if (kbSources != null) {
-                // Limit to maximum 5 sources to keep it simple
-                int maxSources = Math.min(kbSources.size(), 5);
+            
+            // Only provide sources for law-related queries
+            boolean shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
+            
+            if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
+                // Limit to maximum 3 sources for relevance
+                int maxSources = Math.min(kbSources.size(), 3);
                 for (int i = 0; i < maxSources; i++) {
                     com.capstone.civilify.DTO.KnowledgeBaseEntry entry = kbSources.get(i);
                     Map<String, Object> source = new HashMap<>();
@@ -353,6 +357,9 @@ public class OpenAIController {
                     }
                     sources.add(source);
                 }
+                logger.info("Providing {} sources for law-related query", sources.size());
+            } else {
+                logger.info("Not providing sources - query not law-related or no KB sources available");
             }
             logger.info("Knowledge base sources included in response: {}", sources.size());
             
@@ -434,7 +441,70 @@ public class OpenAIController {
     /**
      * Build enhanced system prompt with KB context for Villy RAG
      */
-    private String buildEnhancedSystemPrompt(String baseSystemPrompt, String primaryKbAnswer, 
+    /**
+     * Determines if a query is law-related based on user message and AI response
+     */
+    private boolean isLawRelatedQuery(String userMessage, String aiResponse) {
+        if (userMessage == null || aiResponse == null) {
+            return false;
+        }
+        
+        String lowerUserMessage = userMessage.toLowerCase();
+        String lowerAiResponse = aiResponse.toLowerCase();
+        
+        // Non-law-related queries that should not have sources
+        String[] nonLegalPatterns = {
+            "who are you", "what are you", "what is your", "what can you do", 
+            "what are your capabilities", "introduce yourself", "tell me about yourself",
+            "hello", "hi", "good morning", "good afternoon", "good evening",
+            "how are you", "thank you", "thanks", "bye", "goodbye"
+        };
+        
+        // Check if user message matches non-legal patterns
+        for (String pattern : nonLegalPatterns) {
+            if (lowerUserMessage.contains(pattern)) {
+                return false;
+            }
+        }
+        
+        // Check if AI response indicates it's not providing legal information
+        String[] nonLegalResponsePatterns = {
+            "i am villy", "i am designed to assist", "my capabilities", 
+            "i can help", "i'm here to help", "what would you like to ask",
+            "general legal information", "case plausibility assessment"
+        };
+        
+        for (String pattern : nonLegalResponsePatterns) {
+            if (lowerAiResponse.contains(pattern) && lowerAiResponse.length() < 200) {
+                return false;
+            }
+        }
+        
+        // Check if AI response contains legal terms (indicating it's law-related)
+        String[] legalTerms = {
+            "law", "legal", "statute", "act", "code", "article", "section", 
+            "court", "judge", "lawyer", "attorney", "rights", "duties", 
+            "penalty", "punishment", "crime", "criminal", "civil", "contract",
+            "property", "family", "marriage", "divorce", "inheritance", "tax",
+            "constitution", "bill", "amendment", "regulation", "ordinance"
+        };
+        
+        for (String term : legalTerms) {
+            if (lowerUserMessage.contains(term) || lowerAiResponse.contains(term)) {
+                return true;
+            }
+        }
+        
+        // If AI response is very short and doesn't contain legal terms, likely not law-related
+        if (lowerAiResponse.length() < 150 && !lowerAiResponse.contains("law")) {
+            return false;
+        }
+        
+        // Default to true for longer responses that might be law-related
+        return lowerAiResponse.length() > 200;
+    }
+
+    private String buildEnhancedSystemPrompt(String baseSystemPrompt, String primaryKbAnswer,
                                            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources, String mode) {
         StringBuilder enhancedPrompt = new StringBuilder(baseSystemPrompt);
         

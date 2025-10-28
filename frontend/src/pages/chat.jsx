@@ -2298,7 +2298,7 @@ const Chat = () => {
                               Sources:
                             </div>
                             <div style={{ lineHeight: '1.6' }}>
-                              {message.sources.slice(0, 5).map((source, idx) => (
+                              {message.sources.slice(0, 3).map((source, idx) => (
                                 <div key={idx} style={{ marginBottom: '4px' }}>
                                   {source.sourceUrls && source.sourceUrls.length > 0 ? (
                                     <a
@@ -2331,14 +2331,14 @@ const Chat = () => {
                                   )}
                                 </div>
                               ))}
-                              {message.sources.length > 5 && (
+                              {message.sources.length > 3 && (
                                 <div style={{
                                   color: isDarkMode ? '#888' : '#666',
                                   fontSize: '11px',
                                   fontStyle: 'italic',
                                   marginTop: '4px'
                                 }}>
-                                  +{message.sources.length - 5} more sources available
+                                  +{message.sources.length - 3} more sources available
                                 </div>
                               )}
                             </div>
