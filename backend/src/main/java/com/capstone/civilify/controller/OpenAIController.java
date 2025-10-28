@@ -130,25 +130,25 @@ public class OpenAIController {
             } else {
                 // Case Plausibility Assessment Mode
                 systemPrompt = "You are Villy, Civilify's AI-powered legal assistant.\n\n" +
-                    "You are a separate digital entity operating under Civilify.\n" +
-                    "You are not Civilify itself — you are Villy, a bot created by Civilify to help users determine whether their legal concerns have plausible standing under Philippine law.\n\n" +
-                    "Your task is to:\n" +
-                    "- Understand the user's personal legal situation.\n" +
-                    "- Ask one meaningful follow-up question at a time to clarify the facts.\n" +
-                    "- If a user asks about any of the following topics, do NOT answer the question directly. Instead, light-heartedly redirect the user and inform them that you only answer law-related questions.\n" +
-                    "  Topics to redirect include: technology & programming, medical/health/psychology, finance/business/investments, personal advice/life coaching, academic/educational help, philosophy/religion/ethics, creative/entertainment, and general chat or casual conversation.\n" +
-                    "- If the user's question might have a legal angle, politely ask if they mean it in a law-related sense before proceeding.\n" +
-                    "- After you have gathered enough information to make a reasonable assessment, generate a structured case assessment report that includes:\n\n" +
-                    "Case Summary:\nA concise summary of the user's situation.\n\n" +
-                    "Legal Issues or Concerns:\n- Bullet points of relevant legal issues.\n\n" +
-                    "Plausibility Score: [number]% - [label]\n" +
-                    "Suggested Next Steps:\n- Bullet points of practical next steps.\n\n" +
-                    "Sources:\n- DO NOT include any \"Sources:\" section in your response - sources will be handled separately by the system.\n- DO NOT invent or hallucinate sources that are not provided in the knowledge base context.\n- DO NOT mention sources, citations, or references anywhere in your response text.\n- Focus on providing accurate legal assessment without mentioning sources in the main response text.\n- End your response with a period after the main content - do not add source information.\n\n" +
-                    "At the end, add this disclaimer: This is a legal pre-assessment only. If your situation is serious or urgent, please consult a licensed lawyer.\n\n" +
-                    "Formatting:\n- Use plain text, line breaks, and dashes for bullets.\n- Do NOT use markdown, HTML, or tables.\n- Use clear section headers as shown above.\n\n" +
-                    "Tone:\n- Be warm, respectful, and helpful.\n- Avoid repeating 'under Philippine law' unless contextually needed.\n- Do not start any section with a comma or incomplete sentence.\n\n" +
-                    "If a user continues the conversation after a report has already been generated, ask more clarifying questions to gather additional facts or updates. After gathering enough new information, generate a new, updated report.\n\n" +
-                    "Do NOT include an 'Explanation' section. Only include the sections listed above.";
+                    "ROLE: Help users assess the plausibility of their legal cases under Philippine law.\n\n" +
+                    "CONVERSATION FLOW:\n" +
+                    "- Always respond with helpful, relevant questions or information\n" +
+                    "- Ask one meaningful follow-up question at a time to clarify facts\n" +
+                    "- Be empathetic and supportive, especially for serious legal matters\n" +
+                    "- NEVER leave responses blank or empty\n" +
+                    "- If uncertain, ask clarifying questions rather than staying silent\n\n" +
+                    "ASSESSMENT PROCESS:\n" +
+                    "- Gather key facts: what happened, where, when, who was involved\n" +
+                    "- Understand the user's goal: file a case, defend against charges, etc.\n" +
+                    "- Ask about legal documents: subpoenas, complaints, police reports\n" +
+                    "- When you have enough information, provide a structured assessment\n\n" +
+                    "ASSESSMENT FORMAT:\n" +
+                    "Case Summary:\n[Brief summary of the situation]\n\n" +
+                    "Legal Issues:\n- [Key legal issues identified]\n\n" +
+                    "Plausibility Score: [X]% - [Label]\n\n" +
+                    "Suggested Next Steps:\n- [Practical recommendations]\n\n" +
+                    "DISCLAIMER: This is a legal pre-assessment only. If your situation is serious or urgent, please consult a licensed lawyer.\n\n" +
+                    "IMPORTANT: Always provide a response. Never leave the user without guidance or next steps.";
             }
             
             // Get or create conversation
@@ -191,6 +191,18 @@ public class OpenAIController {
                 })
                 .collect(Collectors.toList());
             
+            // Limit conversation history for CPA mode to prevent context confusion
+            if ("B".equals(mode) && conversationHistoryForAI.size() > 10) {
+                logger.info("CPA: Limiting conversation history from {} to 10 messages", conversationHistoryForAI.size());
+                conversationHistoryForAI = conversationHistoryForAI.subList(
+                    Math.max(0, conversationHistoryForAI.size() - 10), 
+                    conversationHistoryForAI.size()
+                );
+            }
+            
+            logger.info("Conversation history prepared: {} messages for conversation {}", 
+                conversationHistoryForAI.size(), conversationId);
+            
             // Mode-aware KB usage
             String primaryKbAnswer = null;
             java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources = new java.util.ArrayList<>();
@@ -218,17 +230,34 @@ public class OpenAIController {
             // Step 2: Generate enhanced AI response with KB context (GLI may include KB context; CPA will pass nulls here)
             String enhancedSystemPrompt = buildEnhancedSystemPrompt(systemPrompt, primaryKbAnswer, kbSources, mode);
             
-            String aiResponse = openAIService.generateResponse(
-                userMessage,
-                enhancedSystemPrompt,
-                conversationHistoryForAI,
-                mode
-            );
-            logger.info("Enhanced AI response generated with mode {} using KB context.", mode);
+            String aiResponse;
+            try {
+                aiResponse = openAIService.generateResponse(
+                    userMessage,
+                    enhancedSystemPrompt,
+                    conversationHistoryForAI,
+                    mode
+                );
+                logger.info("Enhanced AI response generated with mode {} using KB context. Response length: {}", 
+                    mode, aiResponse != null ? aiResponse.length() : 0);
+            } catch (Exception e) {
+                logger.error("Error generating AI response: {}", e.getMessage(), e);
+                aiResponse = "I apologize, but I'm experiencing technical difficulties. Please try again or consult with a licensed attorney for urgent matters.";
+            }
+            
+            // Handle blank responses - provide fallback
+            if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                logger.warn("AI generated blank response, providing fallback");
+                if ("B".equals(mode)) {
+                    aiResponse = "I understand you're going through a difficult situation. Could you please provide more details about your case so I can better assist you? For urgent legal matters, I recommend consulting with a licensed attorney immediately.";
+                } else {
+                    aiResponse = "I apologize, but I'm having trouble processing your request right now. Please try rephrasing your question or ask about Philippine legal matters.";
+                }
+            }
 
             // GLI: Allow AI to include sources as instructed in system prompt
             
-            // Add AI response to the conversation
+            // Add AI response to the conversation BEFORE report processing
             ChatMessage aiChatMessage = chatService.addMessage(
                 conversationId, null, "villy@civilify.com", aiResponse, false);
             logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
@@ -338,8 +367,21 @@ public class OpenAIController {
                     responseBody.put("isReport", true);
                     // CPA: Only now fetch KB sources to support the report
                     try {
+                        // Build full conversation context for KB search
+                        StringBuilder fullContext = new StringBuilder();
+                        fullContext.append("User's current message: ").append(userMessage).append("\n\n");
+                        fullContext.append("Conversation history:\n");
+                        
+                        for (Map<String, String> msg : conversationHistoryForAI) {
+                            String role = msg.get("isUserMessage").equals("true") ? "User" : "Assistant";
+                            fullContext.append(role).append(": ").append(msg.get("content")).append("\n");
+                        }
+                        
+                        String fullContextString = fullContext.toString();
+                        logger.info("CPA: Using full conversation context for KB search (length: {})", fullContextString.length());
+                        
                         java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
-                            openAIService.getKnowledgeBaseSources(userMessage);
+                            openAIService.getKnowledgeBaseSources(fullContextString);
                         if (reportSources != null) {
                             // Merge into kbSources without duplicates by entryId
                             java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
