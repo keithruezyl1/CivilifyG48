@@ -176,13 +176,14 @@ public class OpenAIController {
                     "- If no sources are provided by the knowledge base, explicitly state: \"No specific legal sources found for this query.\"\n" +
                     "- DO NOT include any metadata tags like {sourcesUsed: [...]} in the user-facing response.\n" +
                     "- DO NOT create or suggest external links unless they are explicitly provided in the knowledge base context.\n" +
-                    "- DO NOT include any \"Sources:\" section in your response - sources will be handled separately by the system.\n" +
-                    "- DO NOT mention sources, citations, or references anywhere in your response text.\n" +
-                    "- DO NOT include phrases like \"For more detailed information, refer to...\" or \"Sources:\" in your response.\n" +
-                    "- DO NOT mention specific laws, acts, or regulations by name unless they are part of the main answer content.\n" +
-                    "- Focus on providing accurate legal information without mentioning sources in the main response text.\n" +
-                    "- End your response with a period after the main content - do not add source information.\n" +
-                    "- Your response should be complete and self-contained without any source references.\n\n" +
+                    "- YOU MAY include a \"Sources:\" section at the end of your response ONLY if relevant sources are available from the knowledge base.\n" +
+                    "- When including sources, format them as a clean bulleted list under \"Sources:\" at the end of your response.\n" +
+                    "- DO NOT mention sources, citations, or references anywhere else in your response text.\n" +
+                    "- DO NOT include phrases like \"For more detailed information, refer to...\" in the main content.\n" +
+                    "- You may mention specific laws, acts, or regulations by name if they are essential to the main answer content.\n" +
+                    "- Focus on providing accurate legal information with sources only when they add value.\n" +
+                    "- If you include sources, end your main content with a period, then add a line break before \"Sources:\".\n" +
+                    "- Your response should be complete and well-structured with sources only when appropriate.\n\n" +
 
                     "### FINAL NOTE ###\n" +
                     "You are a separate digital entity operating under Civilify. You are Villy, a bot created by Civilify to answer general legal questions clearly, calmly, and accurately using Philippine law as the default reference.\n";
@@ -413,10 +414,10 @@ public class OpenAIController {
             enhancedPrompt.append("\nIMPORTANT: Base your response primarily on the knowledge base context provided above. ");
             enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
             enhancedPrompt.append("Only cite sources that are explicitly mentioned in the knowledge base context above.");
-            enhancedPrompt.append("\n\nCRITICAL: Do NOT include any source references, citations, or 'Sources:' sections in your response. ");
-            enhancedPrompt.append("Do NOT mention specific laws, acts, or regulations by name unless they are essential to the main answer. ");
-            enhancedPrompt.append("Do NOT include phrases like 'For more detailed information, refer to...' or 'Legal Reference:'. ");
-            enhancedPrompt.append("Your response should be complete and self-contained without any source mentions.");
+            enhancedPrompt.append("\n\nSOURCE GUIDANCE: You may include a 'Sources:' section at the end of your response if relevant sources are available from the knowledge base. ");
+            enhancedPrompt.append("Format sources as a clean bulleted list under 'Sources:' at the end. ");
+            enhancedPrompt.append("Do NOT mention sources anywhere else in your response. ");
+            enhancedPrompt.append("You may mention specific laws, acts, or regulations by name if they are essential to the main answer content.");
         } else {
             enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
             enhancedPrompt.append("Provide general guidance while acknowledging this limitation. ");

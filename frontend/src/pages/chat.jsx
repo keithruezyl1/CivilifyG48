@@ -41,24 +41,11 @@ const formatAIResponse = (text) => {
     .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
     // Remove any remaining metadata patterns
     .replace(/\{[^}]*\}/g, "")
-    // Remove standalone "Sources:" sections that are just text (not structured)
-    .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+\n?/gi, "")
-    .replace(/\n\s*Sources?:\s*$/gi, "")
-    // Remove bulleted source lists
-    .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+(\n\s*[-•]\s*[^\n]+)*/gi, "")
-    // Remove numbered source lists
-    .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
-    // Remove any remaining source references
-    .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
-    // Remove inline source references at the end of text (like "Sources: • Rape Laws...")
-    .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
-    // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
-    .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
     // Remove "For more detailed information, refer to..." patterns
     .replace(/\s*For\s+more\s+detailed\s+information,?\s+refer\s+to[^.]*\.?\s*$/gi, "")
     // Remove "Legal Reference:" sections that contain source information
     .replace(/\n\s*\d+\.\s*Legal\s+Reference:?\s*[^.]*\.?\s*$/gi, "")
-    // Remove specific law mentions that are clearly source references
+    // Remove specific law mentions that are clearly source references (but preserve them in Sources section)
     .replace(/\s*Republic\s+Act\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
     .replace(/\s*RA\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
     // Clean up extra whitespace
@@ -445,24 +432,11 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
       .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
       // Remove any remaining metadata patterns
       .replace(/\{[^}]*\}/g, "")
-      // Remove standalone "Sources:" sections that are just text (not structured)
-      .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+\n?/gi, "")
-      .replace(/\n\s*Sources?:\s*$/gi, "")
-      // Remove bulleted source lists
-      .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+(\n\s*[-•]\s*[^\n]+)*/gi, "")
-      // Remove numbered source lists
-      .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
-      // Remove any remaining source references
-      .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
-      // Remove inline source references at the end of text (like "Sources: • Rape Laws...")
-      .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
-      // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
-      .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
       // Remove "For more detailed information, refer to..." patterns
       .replace(/\s*For\s+more\s+detailed\s+information,?\s+refer\s+to[^.]*\.?\s*$/gi, "")
       // Remove "Legal Reference:" sections that contain source information
       .replace(/\n\s*\d+\.\s*Legal\s+Reference:?\s*[^.]*\.?\s*$/gi, "")
-      // Remove specific law mentions that are clearly source references
+      // Remove specific law mentions that are clearly source references (but preserve them in Sources section)
       .replace(/\s*Republic\s+Act\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
       .replace(/\s*RA\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
       // Remove emojis from the text
