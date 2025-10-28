@@ -366,7 +366,7 @@ public class OpenAIController {
             // GLI: Append sources as clickable links directly to the response
             if ("A".equals(mode) && aiResponse != null && shouldProvideSources && !sources.isEmpty()) {
                 StringBuilder sourcesText = new StringBuilder();
-                sourcesText.append("\n\n");
+                sourcesText.append("<br><br><strong>Sources:</strong><br>");
                 
                 for (int i = 0; i < sources.size(); i++) {
                     Map<String, Object> source = sources.get(i);
@@ -382,18 +382,18 @@ public class OpenAIController {
                         }
                         
                         if (urls != null && !urls.isEmpty()) {
-                            // Create clickable link
+                            // Create simple clickable link
                             sourcesText.append("<a href=\"").append(urls.get(0))
-                                      .append("\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #1976d2; text-decoration: none;\" onmouseover=\"this.style.textDecoration='underline'\" onmouseout=\"this.style.textDecoration='none'\">")
+                                      .append("\" target=\"_blank\" style=\"color: #1976d2; text-decoration: underline;\">")
                                       .append(displayText)
                                       .append("</a>");
                         } else {
                             // Plain text if no URL
-                            sourcesText.append(displayText);
+                            sourcesText.append("<span style=\"color: #666;\">").append(displayText).append("</span>");
                         }
                         
                         if (i < sources.size() - 1) {
-                            sourcesText.append(", ");
+                            sourcesText.append("<br>");
                         }
                     }
                 }
