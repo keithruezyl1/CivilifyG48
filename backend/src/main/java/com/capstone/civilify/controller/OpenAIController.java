@@ -170,10 +170,12 @@ public class OpenAIController {
                     "- If the user insists on direct legal representation or asks to prepare court filings, refuse and recommend they consult a licensed attorney.\n\n" +
 
                     "### SOURCE ACCURACY REQUIREMENTS ###\n" +
-                    "- ONLY cite sources that are explicitly provided in the knowledge base context or are well-known official Philippine legal sources.\n" +
-                    "- NEVER invent or hallucinate sources that are not provided in the context.\n" +
-                    "- If no reliable sources are available, explicitly state: \"No specific legal sources found for this query.\"\n" +
-                    "- DO NOT include any metadata tags like {sourcesUsed: [...]} in the user-facing response.\n\n" +
+                    "- ONLY cite sources that are explicitly provided in the knowledge base context.\n" +
+                    "- NEVER invent, hallucinate, or generate sources that are not provided in the context.\n" +
+                    "- If the knowledge base provides source URLs, use ONLY those URLs.\n" +
+                    "- If no sources are provided by the knowledge base, explicitly state: \"No specific legal sources found for this query.\"\n" +
+                    "- DO NOT include any metadata tags like {sourcesUsed: [...]} in the user-facing response.\n" +
+                    "- DO NOT create or suggest external links unless they are explicitly provided in the knowledge base context.\n\n" +
 
                     "### FINAL NOTE ###\n" +
                     "You are a separate digital entity operating under Civilify. You are Villy, a bot created by Civilify to answer general legal questions clearly, calmly, and accurately using Philippine law as the default reference.\n";
@@ -295,6 +297,10 @@ public class OpenAIController {
                     source.put("type", entry.getType());
                     source.put("canonicalCitation", entry.getCanonicalCitation());
                     source.put("summary", entry.getSummary());
+                    // Only include source URLs if they exist
+                    if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                        source.put("sourceUrls", entry.getSourceUrls());
+                    }
                     sources.add(source);
                 }
             }
@@ -378,6 +384,14 @@ public class OpenAIController {
                     enhancedPrompt.append("- ").append(source.getTitle());
                     if (source.getCanonicalCitation() != null && !source.getCanonicalCitation().isEmpty()) {
                         enhancedPrompt.append(" (").append(source.getCanonicalCitation()).append(")");
+                    }
+                    // Include source URLs if available
+                    if (source.getSourceUrls() != null && !source.getSourceUrls().isEmpty()) {
+                        enhancedPrompt.append(" - Sources: ");
+                        for (int i = 0; i < source.getSourceUrls().size(); i++) {
+                            if (i > 0) enhancedPrompt.append(", ");
+                            enhancedPrompt.append(source.getSourceUrls().get(i));
+                        }
                     }
                     enhancedPrompt.append("\n");
                 }

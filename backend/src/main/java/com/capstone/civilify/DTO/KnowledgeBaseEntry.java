@@ -19,6 +19,7 @@ public class KnowledgeBaseEntry {
     private String ruleNo;
     private String sectionNo;
     private String rightsScope;
+    private List<String> sourceUrls;
     
     // Constructors
     public KnowledgeBaseEntry() {}
@@ -116,6 +117,14 @@ public class KnowledgeBaseEntry {
     
     public void setRightsScope(String rightsScope) {
         this.rightsScope = rightsScope;
+    }
+    
+    public List<String> getSourceUrls() {
+        return sourceUrls;
+    }
+    
+    public void setSourceUrls(List<String> sourceUrls) {
+        this.sourceUrls = sourceUrls;
     }
     
     @Override

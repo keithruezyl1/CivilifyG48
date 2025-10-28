@@ -513,6 +513,18 @@ public class KnowledgeBaseService {
                 entry.setSectionNo((String) result.get("section_no"));
                 entry.setRightsScope((String) result.get("rights_scope"));
                 
+                // Handle source URLs array
+                Object sourceUrlsObj = result.get("source_urls");
+                if (sourceUrlsObj instanceof List<?>) {
+                    List<String> sourceUrls = new ArrayList<>();
+                    for (Object url : (List<?>) sourceUrlsObj) {
+                        if (url instanceof String) {
+                            sourceUrls.add((String) url);
+                        }
+                    }
+                    entry.setSourceUrls(sourceUrls);
+                }
+                
                 entries.add(entry);
                 
             } catch (Exception e) {
@@ -591,6 +603,18 @@ public class KnowledgeBaseService {
             entry.setRuleNo((String) result.get("rule_no"));
             entry.setSectionNo((String) result.get("section_no"));
             entry.setRightsScope((String) result.get("rights_scope"));
+            
+            // Handle source URLs array
+            Object sourceUrlsObj = result.get("source_urls");
+            if (sourceUrlsObj instanceof List<?>) {
+                List<String> sourceUrls = new ArrayList<>();
+                for (Object url : (List<?>) sourceUrlsObj) {
+                    if (url instanceof String) {
+                        sourceUrls.add((String) url);
+                    }
+                }
+                entry.setSourceUrls(sourceUrls);
+            }
             
             return entry;
             
@@ -739,12 +763,11 @@ public class KnowledgeBaseService {
             HttpHeaders headers = buildAuthHeaders();
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
             
-            ResponseEntity<Map> response = restTemplate.exchange(
-                sqgUrl, HttpMethod.POST, requestEntity, new ParameterizedTypeReference<Map>() {});
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                sqgUrl, HttpMethod.POST, requestEntity, new ParameterizedTypeReference<Map<String, Object>>() {});
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> sqgResult = (Map<String, Object>) response.getBody();
+                Map<String, Object> sqgResult = response.getBody();
                 logger.info("SQG generated successfully: {}", sqgResult.keySet());
                 return sqgResult;
             }
