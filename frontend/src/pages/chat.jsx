@@ -1112,6 +1112,8 @@ const Chat = () => {
             minute: "2-digit",
           }),
           isReport: result.isReport || false,
+          sources: result.sources || [],
+          hasKnowledgeBaseContext: result.hasKnowledgeBaseContext || false,
           plausibilityLabel: result.plausibilityLabel,
           plausibilitySummary: result.plausibilitySummary,
         };
