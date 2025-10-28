@@ -331,7 +331,10 @@ public class OpenAIController {
 
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
             if (kbSources != null) {
-                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbSources) {
+                // Limit to maximum 5 sources to keep it simple
+                int maxSources = Math.min(kbSources.size(), 5);
+                for (int i = 0; i < maxSources; i++) {
+                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = kbSources.get(i);
                     Map<String, Object> source = new HashMap<>();
                     source.put("entryId", entry.getEntryId());
                     source.put("title", entry.getTitle());

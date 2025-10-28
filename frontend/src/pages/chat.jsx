@@ -8,7 +8,6 @@ import {
   FaQuestionCircle,
   FaSignOutAlt,
   FaClipboardList,
-  FaCheckCircle,
 } from "react-icons/fa";
 import villyAvatar from "../assets/images/villypfporange.jpg";
 import LoadingScreen from "./LoadingScreen";
@@ -2283,134 +2282,66 @@ const Chat = () => {
                         </ReactMarkdown>
                         {!message.isUser && message.sources && message.sources.length > 0 && (
                           <div style={{
-                            marginTop: '16px',
-                            padding: '16px',
+                            marginTop: '12px',
+                            padding: '12px',
                             backgroundColor: isDarkMode ? '#2a2a2a' : '#f8f9fa',
-                            borderRadius: '12px',
+                            borderRadius: '8px',
                             border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`,
-                            fontSize: '12px',
-                            boxShadow: isDarkMode ? '0 4px 8px rgba(0,0,0,0.2)' : '0 2px 6px rgba(0,0,0,0.1)'
+                            fontSize: '13px'
                           }}>
                             <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              marginBottom: '12px',
+                              marginBottom: '8px',
                               color: isDarkMode ? '#888' : '#666',
-                              fontSize: '13px',
+                              fontSize: '12px',
                               fontWeight: '600'
                             }}>
-                              <FaCheckCircle style={{ marginRight: '8px', color: '#10b981', fontSize: '14px' }} />
-                              <span>Knowledge Base Sources ({message.sources.length})</span>
+                              Sources:
                             </div>
-                            {message.sources.slice(0, 3).map((source, idx) => (
-                              <div key={idx} style={{
-                                marginBottom: '8px',
-                                padding: '12px',
-                                backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-                                borderRadius: '8px',
-                                border: `1px solid ${isDarkMode ? '#333' : '#e0e0e0'}`,
-                                boxShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
-                              }}>
-                                <div style={{ 
-                                  fontWeight: 'bold', 
-                                  color: isDarkMode ? '#fff' : '#333',
-                                  fontSize: '13px',
-                                  marginBottom: '6px',
-                                  lineHeight: '1.4'
-                                }}>
-                                  {source.title}
+                            <div style={{ lineHeight: '1.6' }}>
+                              {message.sources.slice(0, 5).map((source, idx) => (
+                                <div key={idx} style={{ marginBottom: '4px' }}>
+                                  {source.sourceUrls && source.sourceUrls.length > 0 ? (
+                                    <a
+                                      href={source.sourceUrls[0]}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: isDarkMode ? '#64b5f6' : '#1976d2',
+                                        textDecoration: 'none',
+                                        fontSize: '12px'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.target.style.textDecoration = 'underline';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.target.style.textDecoration = 'none';
+                                      }}
+                                    >
+                                      {source.title}
+                                      {source.canonicalCitation && ` (${source.canonicalCitation})`}
+                                    </a>
+                                  ) : (
+                                    <span style={{ 
+                                      color: isDarkMode ? '#aaa' : '#666',
+                                      fontSize: '12px'
+                                    }}>
+                                      {source.title}
+                                      {source.canonicalCitation && ` (${source.canonicalCitation})`}
+                                    </span>
+                                  )}
                                 </div>
-                                
-                                {source.canonicalCitation && (
-                                  <div style={{ 
-                                    color: isDarkMode ? '#888' : '#666', 
-                                    fontSize: '11px',
-                                    marginBottom: '6px',
-                                    fontStyle: 'italic'
-                                  }}>
-                                    {source.canonicalCitation}
-                                  </div>
-                                )}
-                                
-                                {source.summary && (
-                                  <div style={{
-                                    color: isDarkMode ? '#ccc' : '#555',
-                                    fontSize: '11px',
-                                    marginBottom: '8px',
-                                    lineHeight: '1.3'
-                                  }}>
-                                    {source.summary.length > 120 
-                                      ? `${source.summary.substring(0, 120)}...` 
-                                      : source.summary}
-                                  </div>
-                                )}
-                                
-                                {source.sourceUrls && source.sourceUrls.length > 0 && (
-                                  <div style={{ marginBottom: '6px' }}>
-                                    {source.sourceUrls.map((url, urlIdx) => (
-                                      <a
-                                        key={urlIdx}
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{
-                                          display: 'inline-block',
-                                          padding: '4px 8px',
-                                          backgroundColor: isDarkMode ? '#2d5a87' : '#e3f2fd',
-                                          color: isDarkMode ? '#64b5f6' : '#1976d2',
-                                          textDecoration: 'none',
-                                          borderRadius: '4px',
-                                          fontSize: '10px',
-                                          marginRight: '4px',
-                                          marginBottom: '2px',
-                                          border: `1px solid ${isDarkMode ? '#4a90e2' : '#bbdefb'}`,
-                                          transition: 'all 0.2s ease'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                          e.target.style.backgroundColor = isDarkMode ? '#1e3a5f' : '#bbdefb';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                          e.target.style.backgroundColor = isDarkMode ? '#2d5a87' : '#e3f2fd';
-                                        }}
-                                      >
-                                        🔗 Source {urlIdx + 1}
-                                      </a>
-                                    ))}
-                                  </div>
-                                )}
-                                
-                                {source.type && (
-                                  <div style={{ 
-                                    display: 'inline-block',
-                                    padding: '3px 8px',
-                                    backgroundColor: isDarkMode ? '#ff7a59' : '#ff5722',
-                                    color: 'white',
-                                    borderRadius: '12px',
-                                    fontSize: '10px',
-                                    fontWeight: '500',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
-                                  }}>
-                                    {source.type.replace('_', ' ')}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                            {message.sources.length > 3 && (
-                              <div style={{
-                                color: isDarkMode ? '#888' : '#666',
-                                fontSize: '11px',
-                                fontStyle: 'italic',
-                                textAlign: 'center',
-                                padding: '8px',
-                                backgroundColor: isDarkMode ? '#1a1a1a' : '#ffffff',
-                                borderRadius: '6px',
-                                border: `1px dashed ${isDarkMode ? '#444' : '#ccc'}`,
-                                marginTop: '8px'
-                              }}>
-                                +{message.sources.length - 3} more sources available
-                              </div>
-                            )}
+                              ))}
+                              {message.sources.length > 5 && (
+                                <div style={{
+                                  color: isDarkMode ? '#888' : '#666',
+                                  fontSize: '11px',
+                                  fontStyle: 'italic',
+                                  marginTop: '4px'
+                                }}>
+                                  +{message.sources.length - 5} more sources available
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
