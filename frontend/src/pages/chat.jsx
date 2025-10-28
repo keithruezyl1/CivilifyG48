@@ -2277,9 +2277,9 @@ const Chat = () => {
                       />
                     ) : (
                       <div>
-                        <div dangerouslySetInnerHTML={{
-                          __html: message.isUser ? message.text : message.text
-                        }} />
+                        <ReactMarkdown components={markdownComponents}>
+                          {message.isUser ? message.text : message.text}
+                        </ReactMarkdown>
                       </div>
                     )}
                   </div>
