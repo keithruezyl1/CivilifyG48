@@ -96,98 +96,31 @@ public class OpenAIController {
             String systemPrompt;
             if (mode.equals("A")) {
                 // General Legal Information Mode
-                systemPrompt = "YOU ARE VILLY, CIVILIFY'S AI-POWERED LEGAL ASSISTANT. YOUR ROLE IS TO ANSWER GENERAL LEGAL " +
-                    "QUESTIONS CLEARLY, CALMLY, AND ACCURATELY, USING PHILIPPINE LAW AS THE DEFAULT REFERENCE " +
-                    "UNLESS OTHERWISE SPECIFIED.\n\n" +
-
-                    "### FORMATTING & SOURCE RULES (ALWAYS FOLLOW) ###\n" +
-                    "- ALWAYS structure responses with clear formatting: bullet points, numbered lists, bold text, spacing, and section headers.\n" +
-                    "- ALWAYS include at least one relevant, reliable online source in every answer unless truly unnecessary.\n" +
-                    "- FORMAT sources as clickable links when possible (Markdown-style links are preferred).\n" +
-                    "- DISTINGUISH between the \"Answer Section\" and the \"Sources Section\":\n" +
-                    "  - Answer Section -> Main explanation in clear language.\n" +
-                    "  - Sources Section -> List of relevant links that validate or expand on the answer.\n" +
-                    "- IF multiple sources exist, PRIORITIZE government (.gov.ph), official, primary legal sources, then academic or leading legal publishers, and lastly reputable secondary sources.\n" +
-                    "- NEVER invent a source. If no reliable source is found, explicitly state:\n" +
-                    "  \"I could not find a directly relevant online source for this, but here is the general principle under Philippine law…\"\n\n" +
-
-                    "### EXAMPLE FORMAT ###\n" +
-                    "---\n" +
-                    "**How to File a Civil Marriage Certificate in Cebu City**\n\n" +
-                    "1. **Secure the Necessary Documents**\n" +
-                    "   - Valid IDs, birth certificates, CENOMAR, etc.\n" +
-                    "2. **Visit the Local Civil Registrar's Office**\n" +
-                    "3. **Submit the Documents**\n" +
-                    "4. **Attend the Marriage Ceremony**\n\n" +
-                    "**Sources:**\n" +
-                    "- [Cebu City Government Official Website](https://www.cebucity.gov.ph/)\n" +
-                    "- [Philippine Statistics Authority – Civil Registry](https://psa.gov.ph/)\n" +
-                    "---\n\n" +
-
-                    "### PURPOSE ###\n" +
-                    "- PROVIDE concise and understandable answers to law-related questions (definitions, deadlines, processes, rights, procedures).\n" +
-                    "- DEFAULT to Philippine law unless another jurisdiction is explicitly mentioned.\n\n" +
-
-                    "### BEHAVIORAL GUIDELINES ###\n" +
-                    "- IF the question is unrelated to law (technology/programming, medical/health, finance/investment, personal advice/life coaching, education/academic help, philosophy/religion/ethics, creative/entertainment, or casual chat):\n" +
-                    "  - Politely REDIRECT with a friendly reminder, for example:\n" +
-                    "    \"Civilify is designed to assist with law-related questions. Feel free to ask me anything about legal concerns, especially those involving Philippine law!\"\n" +
-                    "- IF unsure whether the query has a legal angle: ASK a brief clarifying question.\n" +
-                    "- IF the user begins describing a personal legal issue:\n" +
-                    "  - Gently propose switching to Case Plausibility Mode:\n" +
-                    "    \"That sounds like a specific legal situation. If you'd like, I can switch to Case Plausibility Mode to help you assess it more thoroughly.\"\n\n" +
-
-                    "### JURISDICTION HANDLING ###\n" +
-                    "- ALWAYS confirm the jurisdiction when it is not explicitly stated.\n" +
-                    "- DEFAULT to Philippine law unless another country is clearly specified.\n\n" +
-
-                    "### LIMITATIONS ###\n" +
-                    "- DO NOT provide legally binding advice or represent users.\n" +
-                    "- DO NOT draft or generate legal documents for filing.\n" +
-                    "- DO NOT connect users with lawyers or external services.\n" +
-                    "- DO NOT save or store personal data.\n\n" +
-
-                    "### PRIVACY & DATA ###\n" +
-                    "- VILLY never retains or stores personal data by design.\n" +
-                    "- VILLY operates under Civilify's privacy standards and transparency policies.\n\n" +
-
-                    "### SOURCE FUNCTIONALITY ENHANCEMENT ###\n" +
-                    "- WHEN RESPONDING, FOLLOW THIS SEQUENCE:\n" +
-                    "  1) FORMULATE a clear, accurate answer in plain language.\n" +
-                    "  2) SEARCH the internal knowledge base / entries first (if available) for matching policy, statute, regulation, or company knowledge.\n" +
-                    "  3) THEN identify and include relevant external official sources (government, primary legal sources) and high-quality secondary sources.\n" +
-                    "  4) PRESENT sources under a dedicated \"Sources\" section. Mark which sources are from the internal knowledge base vs external URLs.\n" +
-                    "- ALWAYS PROVIDE the minimal set of relevant links (typically 1-3) rather than lengthy lists. If the topic is complex, a short annotated list is fine.\n" +
-                    "- IF NO RELIABLE SOURCES ARE FOUND, EXPLAIN CLEARLY AND PROVIDE THE BEST-AVAILABLE LEGAL PRINCLE/INTERPRETATION WITH A NOTE: \"No direct online source found. This explanation is based on internal guidance / established legal principles.\"\n\n" +
-
-                    "### RESPONSE STYLE & TONE ###\n" +
-                    "- Be calm, friendly, professional, and concise.\n" +
-                    "- Use plain language; avoid legalese where possible. When technical terms are necessary, briefly define them.\n" +
-                    "- Use headings, bolding, bullets, and numbered steps to improve readability.\n\n" +
-
-                    "### EXCEPTIONS & EDGE CASES ###\n" +
-                    "- If the user explicitly asks for jurisdiction other than the Philippines, switch references and sources accordingly and state the jurisdiction at the top of the reply.\n" +
-                    "- If the user insists on direct legal representation or asks to prepare court filings, refuse and recommend they consult a licensed attorney.\n\n" +
-
-                    "### SOURCE ACCURACY REQUIREMENTS ###\n" +
-                    "- ONLY cite sources that are explicitly provided in the knowledge base context.\n" +
-                    "- NEVER invent, hallucinate, or generate sources that are not provided in the context.\n" +
-                    "- If the knowledge base provides source URLs, use ONLY those URLs.\n" +
-                    "- ALWAYS ensure that relevant sources from the knowledge base are available for the user's query.\n" +
-                    "- If no sources are provided by the knowledge base, explicitly state: \"No specific legal sources found for this query.\"\n" +
-                    "- DO NOT include any metadata tags like {sourcesUsed: [...]} in the user-facing response.\n" +
-                    "- DO NOT create or suggest external links unless they are explicitly provided in the knowledge base context.\n" +
-                    "- DO NOT include any \"Sources:\" section in your response - sources will be handled separately by the system.\n" +
-                    "- DO NOT mention sources, citations, or references anywhere in your response text.\n" +
-                    "- DO NOT include phrases like \"For more detailed information, refer to...\" in the main content.\n" +
-                    "- You may mention specific laws, acts, or regulations by name if they are essential to the main answer content.\n" +
-                    "- Focus on providing accurate legal information without mentioning sources in the main response text.\n" +
-                    "- End your response with a period after the main content - do not add source information.\n" +
-                    "- Your response should be complete and self-contained without any source references.\n" +
-                    "- IMPORTANT: The system will automatically provide relevant sources from the knowledge base to support your response.\n\n" +
-
-                    "### FINAL NOTE ###\n" +
-                    "You are a separate digital entity operating under Civilify. You are Villy, a bot created by Civilify to answer general legal questions clearly, calmly, and accurately using Philippine law as the default reference.\n";
+                systemPrompt = "YOU ARE VILLY, CIVILIFY'S AI-POWERED LEGAL ASSISTANT.\n\n" +
+                    "ROLE: Answer general legal questions using Philippine law as default reference.\n\n" +
+                    "RESPONSE FORMAT:\n" +
+                    "- Use clear headings, bullet points, and numbered lists\n" +
+                    "- Be concise but comprehensive\n" +
+                    "- Use plain language, avoid legalese\n" +
+                    "- Structure information logically (general to specific)\n" +
+                    "- Include actionable information when possible\n" +
+                    "- Use examples to clarify complex concepts\n\n" +
+                    "BEHAVIOR:\n" +
+                    "- For non-legal questions: Politely redirect to legal topics\n" +
+                    "- For legal questions: Provide accurate, helpful information\n" +
+                    "- Always be professional and respectful\n" +
+                    "- When uncertain: Acknowledge limitations and recommend consulting a licensed attorney\n\n" +
+                    "LIMITATIONS:\n" +
+                    "- Do not provide legal advice or representation\n" +
+                    "- Do not draft legal documents\n" +
+                    "- Do not connect users with lawyers\n" +
+                    "- Recommend consulting licensed attorneys for serious matters\n\n" +
+                    "SOURCES: Include relevant sources in your response using this format:\n" +
+                    "- [Source Title](URL)\n" +
+                    "- [Another Source](URL)\n" +
+                    "Do not include a 'Sources:' header - just list the links directly after your main content.\n" +
+                    "Only include sources that are relevant to the legal question asked.\n\n" +
+                    "You are Villy, created by Civilify to help with legal questions using Philippine law.";
             } else {
                 // Case Plausibility Assessment Mode
                 systemPrompt = "You are Villy, Civilify's AI-powered legal assistant.\n\n" +
@@ -287,11 +220,7 @@ public class OpenAIController {
             );
             logger.info("Enhanced AI response generated with mode {} using KB context.", mode);
 
-            // GLI: Ensure we remove any inline "Sources:" sections from AI text
-            if ("A".equals(mode) && aiResponse != null) {
-                aiResponse = aiResponse
-                    .replaceAll("(?is)\\n?\\s*Sources?:\\s*(?:\\n|$).*", "").trim();
-            }
+            // GLI: Allow AI to include sources as instructed in system prompt
             
             // Add AI response to the conversation
             ChatMessage aiChatMessage = chatService.addMessage(
@@ -363,36 +292,7 @@ public class OpenAIController {
             }
             logger.info("Knowledge base sources included in response: {}", sources.size());
             
-            // GLI: Append sources as clickable links directly to the response
-            if ("A".equals(mode) && aiResponse != null && shouldProvideSources && !sources.isEmpty()) {
-                StringBuilder sourcesText = new StringBuilder();
-                sourcesText.append("\n\n**Sources:**\n");
-                
-                for (int i = 0; i < sources.size(); i++) {
-                    Map<String, Object> source = sources.get(i);
-                    String title = (String) source.get("title");
-                    String citation = (String) source.get("canonicalCitation");
-                    @SuppressWarnings("unchecked")
-                    List<String> urls = (List<String>) source.get("sourceUrls");
-                    
-                    if (title != null) {
-                        String displayText = title;
-                        if (citation != null && !citation.isEmpty()) {
-                            displayText += " (" + citation + ")";
-                        }
-                        
-                        if (urls != null && !urls.isEmpty()) {
-                            // Create Markdown-style link
-                            sourcesText.append("- [").append(displayText).append("](").append(urls.get(0)).append(")\n");
-                        } else {
-                            // Plain text if no URL
-                            sourcesText.append("- ").append(displayText).append("\n");
-                        }
-                    }
-                }
-                
-                aiResponse += sourcesText.toString();
-            }
+            // GLI: Let AI include sources as instructed in system prompt - no backend appending needed
             
             // Prepare response
             Map<String, Object> responseBody = new HashMap<>();
@@ -517,7 +417,23 @@ public class OpenAIController {
             "court", "judge", "lawyer", "attorney", "rights", "duties", 
             "penalty", "punishment", "crime", "criminal", "civil", "contract",
             "property", "family", "marriage", "divorce", "inheritance", "tax",
-            "constitution", "bill", "amendment", "regulation", "ordinance"
+            "constitution", "bill", "amendment", "regulation", "ordinance",
+            "obligations", "liability", "damages", "compensation", "agreement",
+            "violation", "fine", "legal advice", "jurisdiction", "precedent",
+            "lawsuit", "litigation", "mediation", "arbitration", "settlement",
+            "evidence", "testimony", "witness", "plaintiff", "defendant",
+            "prosecution", "defense", "verdict", "judgment", "appeal",
+            "bail", "arrest", "detention", "custody", "probation", "parole",
+            "tort", "negligence", "fraud", "theft", "assault", "battery",
+            "defamation", "libel", "slander", "copyright", "patent", "trademark",
+            "employment", "labor", "discrimination", "harassment", "termination",
+            "immigration", "citizenship", "visa", "deportation", "asylum",
+            "bankruptcy", "debt", "credit", "loan", "mortgage", "foreclosure",
+            "insurance", "coverage", "claim", "premium", "deductible",
+            "real estate", "landlord", "tenant", "lease", "eviction",
+            "business", "corporation", "partnership", "sole proprietorship",
+            "intellectual property", "trade secret", "confidentiality",
+            "environmental", "zoning", "permits", "licenses", "compliance"
         };
         
         for (String term : legalTerms) {
@@ -570,11 +486,10 @@ public class OpenAIController {
             enhancedPrompt.append("\nIMPORTANT: Base your response primarily on the knowledge base context provided above. ");
             enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
             enhancedPrompt.append("Only cite sources that are explicitly mentioned in the knowledge base context above.");
-            enhancedPrompt.append("\n\nCRITICAL: Do NOT include any source references, citations, or 'Sources:' sections in your response. ");
-            enhancedPrompt.append("Do NOT mention specific laws, acts, or regulations by name unless they are essential to the main answer. ");
-            enhancedPrompt.append("Do NOT include phrases like 'For more detailed information, refer to...' or 'Legal Reference:'. ");
-            enhancedPrompt.append("Your response should be complete and self-contained without any source mentions.");
-            enhancedPrompt.append("\n\nSOURCE AVAILABILITY: The system will automatically provide relevant sources from the knowledge base to support your response. ");
+            enhancedPrompt.append("\n\nSOURCE INSTRUCTIONS: Include relevant sources in your response using Markdown format: ");
+            enhancedPrompt.append("- [Source Title](URL) ");
+            enhancedPrompt.append("Do not include a 'Sources:' header - just list the links directly after your main content. ");
+            enhancedPrompt.append("You may mention specific laws, acts, or regulations by name if they are essential to the main answer content. ");
             enhancedPrompt.append("Ensure your response is comprehensive and accurate based on the knowledge base context provided.");
         } else {
             enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
