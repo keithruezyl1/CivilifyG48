@@ -251,26 +251,31 @@ public class OpenAIController {
                 })
                 .collect(Collectors.toList());
             
-            // VILLY RAG ENHANCED FLOW: KB-First Approach
-            // Step 1: Get primary KB response using enhanced chat
-            com.capstone.civilify.DTO.KnowledgeBaseChatResponse kbResponse = 
-                openAIService.getKnowledgeBaseService().chatWithKnowledgeBaseEnhanced(userMessage, mode);
-            
+            // Mode-aware KB usage
             String primaryKbAnswer = null;
             java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources = new java.util.ArrayList<>();
-            
-            if (kbResponse != null && !kbResponse.hasError()) {
-                primaryKbAnswer = kbResponse.getAnswer();
-                if (kbResponse.getSources() != null) {
-                    kbSources.addAll(kbResponse.getSources());
+
+            if ("A".equals(mode)) {
+                // GLI: KB-first to gather context and sources for UI, but do NOT print "Sources:" in the AI text
+                com.capstone.civilify.DTO.KnowledgeBaseChatResponse kbResponse =
+                    openAIService.getKnowledgeBaseService().chatWithKnowledgeBaseEnhanced(userMessage, mode);
+
+                if (kbResponse != null && !kbResponse.hasError()) {
+                    primaryKbAnswer = kbResponse.getAnswer();
+                    if (kbResponse.getSources() != null) {
+                        kbSources.addAll(kbResponse.getSources());
+                    }
+                    logger.info("GLI: KB response obtained: answer length={}, sources count={}",
+                        primaryKbAnswer != null ? primaryKbAnswer.length() : 0, kbSources.size());
+                } else {
+                    logger.warn("GLI: KB response failed or empty: {}", kbResponse != null ? kbResponse.getError() : "null response");
                 }
-                logger.info("Primary KB response obtained: answer length={}, sources count={}", 
-                    primaryKbAnswer != null ? primaryKbAnswer.length() : 0, kbSources.size());
             } else {
-                logger.warn("KB response failed or empty: {}", kbResponse != null ? kbResponse.getError() : "null response");
+                // CPA: Do not call KB during conversational probing phase (performance + avoid blank responses)
+                logger.info("CPA: Skipping KB calls during conversational phase.");
             }
-            
-            // Step 2: Generate enhanced AI response with KB context
+
+            // Step 2: Generate enhanced AI response with KB context (GLI may include KB context; CPA will pass nulls here)
             String enhancedSystemPrompt = buildEnhancedSystemPrompt(systemPrompt, primaryKbAnswer, kbSources, mode);
             
             String aiResponse = openAIService.generateResponse(
@@ -280,20 +285,29 @@ public class OpenAIController {
                 mode
             );
             logger.info("Enhanced AI response generated with mode {} using KB context.", mode);
+
+            // GLI: Ensure we remove any inline "Sources:" sections from AI text (UI renders sources separately)
+            if ("A".equals(mode) && aiResponse != null) {
+                aiResponse = aiResponse
+                    .replaceAll("(?is)\\n?\\s*Sources?:\\s*(?:\\n|$).*", "").trim();
+            }
             
             // Add AI response to the conversation
             ChatMessage aiChatMessage = chatService.addMessage(
                 conversationId, null, "villy@civilify.com", aiResponse, false);
             logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
             
-            // Step 3: Get additional KB sources for context enrichment (if not already obtained)
-            if (kbSources.isEmpty()) {
-                java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> additionalKbEntries = 
-                    openAIService.getKnowledgeBaseSources(userMessage);
-                if (additionalKbEntries != null) {
-                    kbSources.addAll(additionalKbEntries);
+            // Step 3: Source enrichment rules per mode
+            if ("A".equals(mode)) {
+                // GLI: If initial KB yielded no sources, try a lightweight follow-up fetch
+                if (kbSources.isEmpty()) {
+                    java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> additionalKbEntries =
+                        openAIService.getKnowledgeBaseSources(userMessage);
+                    if (additionalKbEntries != null) {
+                        kbSources.addAll(additionalKbEntries);
+                    }
+                    logger.info("GLI: Additional KB sources obtained: {}", kbSources.size());
                 }
-                logger.info("Additional KB sources obtained: {}", kbSources.size());
             }
 
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
@@ -356,6 +370,25 @@ public class OpenAIController {
                 String plausibilityPattern = "\\d{1,3}%\\s*(Possible|Likely|Unlikely|Highly Likely|Highly Unlikely)";
                 if (aiResponse != null && aiResponse.substring(0, Math.min(200, aiResponse.length())).matches("(?s).*" + plausibilityPattern + ".*")) {
                     responseBody.put("isReport", true);
+                    // CPA: Only now fetch KB sources to support the report
+                    try {
+                        java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
+                            openAIService.getKnowledgeBaseSources(userMessage);
+                        if (reportSources != null) {
+                            // Merge into kbSources without duplicates by entryId
+                            java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : kbSources) {
+                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
+                            }
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : reportSources) {
+                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
+                            }
+                            kbSources = new java.util.ArrayList<>(uniq.values());
+                        }
+                        logger.info("CPA: KB sources fetched for report: {}", kbSources.size());
+                    } catch (Exception ex) {
+                        logger.warn("CPA: Failed fetching KB sources for report: {}", ex.getMessage());
+                    }
                 } else {
                     responseBody.put("isReport", false);
                 }
