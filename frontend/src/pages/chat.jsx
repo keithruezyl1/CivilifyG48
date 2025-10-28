@@ -50,6 +50,10 @@ const formatAIResponse = (text) => {
     .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
     // Remove any remaining source references
     .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
+    // Remove inline source references at the end of text (like "Sources: • Rape Laws...")
+    .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
+    // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
+    .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
     // Clean up extra whitespace
     .replace(/\s+/g, " ")
     .trim();
@@ -443,6 +447,10 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
       .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
       // Remove any remaining source references
       .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
+      // Remove inline source references at the end of text (like "Sources: • Rape Laws...")
+      .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
+      // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
+      .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
       // Remove emojis from the text
       .replace(
         /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
