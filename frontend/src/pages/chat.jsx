@@ -54,6 +54,13 @@ const formatAIResponse = (text) => {
     .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
     // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
     .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
+    // Remove "For more detailed information, refer to..." patterns
+    .replace(/\s*For\s+more\s+detailed\s+information,?\s+refer\s+to[^.]*\.?\s*$/gi, "")
+    // Remove "Legal Reference:" sections that contain source information
+    .replace(/\n\s*\d+\.\s*Legal\s+Reference:?\s*[^.]*\.?\s*$/gi, "")
+    // Remove specific law mentions that are clearly source references
+    .replace(/\s*Republic\s+Act\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
+    .replace(/\s*RA\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
     // Clean up extra whitespace
     .replace(/\s+/g, " ")
     .trim();
@@ -451,6 +458,13 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
       .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
       // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
       .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
+      // Remove "For more detailed information, refer to..." patterns
+      .replace(/\s*For\s+more\s+detailed\s+information,?\s+refer\s+to[^.]*\.?\s*$/gi, "")
+      // Remove "Legal Reference:" sections that contain source information
+      .replace(/\n\s*\d+\.\s*Legal\s+Reference:?\s*[^.]*\.?\s*$/gi, "")
+      // Remove specific law mentions that are clearly source references
+      .replace(/\s*Republic\s+Act\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
+      .replace(/\s*RA\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
       // Remove emojis from the text
       .replace(
         /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
