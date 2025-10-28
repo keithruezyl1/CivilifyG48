@@ -287,7 +287,7 @@ public class OpenAIController {
             );
             logger.info("Enhanced AI response generated with mode {} using KB context.", mode);
 
-            // GLI: Ensure we remove any inline "Sources:" sections from AI text (UI renders sources separately)
+            // GLI: Ensure we remove any inline "Sources:" sections from AI text
             if ("A".equals(mode) && aiResponse != null) {
                 aiResponse = aiResponse
                     .replaceAll("(?is)\\n?\\s*Sources?:\\s*(?:\\n|$).*", "").trim();
@@ -363,13 +363,51 @@ public class OpenAIController {
             }
             logger.info("Knowledge base sources included in response: {}", sources.size());
             
+            // GLI: Append sources as clickable links directly to the response
+            if ("A".equals(mode) && aiResponse != null && shouldProvideSources && !sources.isEmpty()) {
+                StringBuilder sourcesText = new StringBuilder();
+                sourcesText.append("\n\n");
+                
+                for (int i = 0; i < sources.size(); i++) {
+                    Map<String, Object> source = sources.get(i);
+                    String title = (String) source.get("title");
+                    String citation = (String) source.get("canonicalCitation");
+                    @SuppressWarnings("unchecked")
+                    List<String> urls = (List<String>) source.get("sourceUrls");
+                    
+                    if (title != null) {
+                        String displayText = title;
+                        if (citation != null && !citation.isEmpty()) {
+                            displayText += " (" + citation + ")";
+                        }
+                        
+                        if (urls != null && !urls.isEmpty()) {
+                            // Create clickable link
+                            sourcesText.append("<a href=\"").append(urls.get(0))
+                                      .append("\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #1976d2; text-decoration: none;\" onmouseover=\"this.style.textDecoration='underline'\" onmouseout=\"this.style.textDecoration='none'\">")
+                                      .append(displayText)
+                                      .append("</a>");
+                        } else {
+                            // Plain text if no URL
+                            sourcesText.append(displayText);
+                        }
+                        
+                        if (i < sources.size() - 1) {
+                            sourcesText.append(", ");
+                        }
+                    }
+                }
+                
+                aiResponse += sourcesText.toString();
+            }
+            
             // Prepare response
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("response", aiResponse);
             responseBody.put("conversationId", conversationId);
             responseBody.put("success", true);
-            responseBody.put("sources", sources);
-            responseBody.put("hasKnowledgeBaseContext", !sources.isEmpty());
+            responseBody.put("sources", new java.util.ArrayList<>()); // Empty sources array since we're integrating them into response
+            responseBody.put("hasKnowledgeBaseContext", shouldProvideSources && !sources.isEmpty());
 
             // Extract plausibility score label and summary from the AI response (for mode B)
             String plausibilityLabel = null;

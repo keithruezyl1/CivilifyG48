@@ -2277,73 +2277,9 @@ const Chat = () => {
                       />
                     ) : (
                       <div>
-                        <ReactMarkdown components={markdownComponents}>
-                          {message.isUser ? message.text : message.text}
-                        </ReactMarkdown>
-                        {!message.isUser && message.sources && message.sources.length > 0 && (
-                          <div style={{
-                            marginTop: '12px',
-                            padding: '12px',
-                            backgroundColor: isDarkMode ? '#2a2a2a' : '#f8f9fa',
-                            borderRadius: '8px',
-                            border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`,
-                            fontSize: '13px'
-                          }}>
-                            <div style={{
-                              marginBottom: '8px',
-                              color: isDarkMode ? '#888' : '#666',
-                              fontSize: '12px',
-                              fontWeight: '600'
-                            }}>
-                              Sources:
-                            </div>
-                            <div style={{ lineHeight: '1.6' }}>
-                              {message.sources.slice(0, 3).map((source, idx) => (
-                                <div key={idx} style={{ marginBottom: '4px' }}>
-                                  {source.sourceUrls && source.sourceUrls.length > 0 ? (
-                                    <a
-                                      href={source.sourceUrls[0]}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{
-                                        color: isDarkMode ? '#64b5f6' : '#1976d2',
-                                        textDecoration: 'none',
-                                        fontSize: '12px'
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        e.target.style.textDecoration = 'underline';
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        e.target.style.textDecoration = 'none';
-                                      }}
-                                    >
-                                      {source.title}
-                                      {source.canonicalCitation && ` (${source.canonicalCitation})`}
-                                    </a>
-                                  ) : (
-                                    <span style={{ 
-                                      color: isDarkMode ? '#aaa' : '#666',
-                                      fontSize: '12px'
-                                    }}>
-                                      {source.title}
-                                      {source.canonicalCitation && ` (${source.canonicalCitation})`}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                              {message.sources.length > 3 && (
-                                <div style={{
-                                  color: isDarkMode ? '#888' : '#666',
-                                  fontSize: '11px',
-                                  fontStyle: 'italic',
-                                  marginTop: '4px'
-                                }}>
-                                  +{message.sources.length - 3} more sources available
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                        <div dangerouslySetInnerHTML={{
+                          __html: message.isUser ? message.text : message.text
+                        }} />
                       </div>
                     )}
                   </div>
