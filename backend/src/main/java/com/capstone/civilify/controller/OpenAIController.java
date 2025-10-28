@@ -176,7 +176,7 @@ public class OpenAIController {
                     "- If no sources are provided by the knowledge base, explicitly state: \"No specific legal sources found for this query.\"\n" +
                     "- DO NOT include any metadata tags like {sourcesUsed: [...]} in the user-facing response.\n" +
                     "- DO NOT create or suggest external links unless they are explicitly provided in the knowledge base context.\n" +
-                    "- DO NOT include any \"Sources:\" section in your response text - sources will be handled separately by the system.\n" +
+                    "- DO NOT include any \"Sources:\" section in your response - sources will be handled separately by the system.\n" +
                     "- DO NOT mention sources, citations, or references anywhere in your response text.\n" +
                     "- DO NOT include phrases like \"For more detailed information, refer to...\" in the main content.\n" +
                     "- You may mention specific laws, acts, or regulations by name if they are essential to the main answer content.\n" +
@@ -447,8 +447,8 @@ public class OpenAIController {
             enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
             enhancedPrompt.append("Only cite sources that are explicitly mentioned in the knowledge base context above.");
             enhancedPrompt.append("\n\nCRITICAL: Do NOT include any source references, citations, or 'Sources:' sections in your response. ");
-            enhancedPrompt.append("Do NOT mention sources anywhere in your response text. ");
-            enhancedPrompt.append("You may mention specific laws, acts, or regulations by name if they are essential to the main answer content. ");
+            enhancedPrompt.append("Do NOT mention specific laws, acts, or regulations by name unless they are essential to the main answer. ");
+            enhancedPrompt.append("Do NOT include phrases like 'For more detailed information, refer to...' or 'Legal Reference:'. ");
             enhancedPrompt.append("Your response should be complete and self-contained without any source mentions.");
         } else {
             enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");

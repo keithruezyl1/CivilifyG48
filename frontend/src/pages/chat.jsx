@@ -41,18 +41,18 @@ const formatAIResponse = (text) => {
     .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
     // Remove any remaining metadata patterns
     .replace(/\{[^}]*\}/g, "")
-    // Remove ALL "Sources:" sections and their content
-    .replace(/\n\s*Sources?:\s*.*$/gim, "")
-    .replace(/\n\s*Sources?:\s*\n.*$/gims, "")
+    // Remove standalone "Sources:" sections that are just text (not structured)
+    .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+\n?/gi, "")
+    .replace(/\n\s*Sources?:\s*$/gi, "")
     // Remove bulleted source lists
     .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+(\n\s*[-•]\s*[^\n]+)*/gi, "")
     // Remove numbered source lists
     .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
     // Remove any remaining source references
     .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
-    // Remove inline source references at the end of text
+    // Remove inline source references at the end of text (like "Sources: • Rape Laws...")
     .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
-    // Remove source references that appear inline
+    // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
     .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
     // Remove "For more detailed information, refer to..." patterns
     .replace(/\s*For\s+more\s+detailed\s+information,?\s+refer\s+to[^.]*\.?\s*$/gi, "")
@@ -61,8 +61,10 @@ const formatAIResponse = (text) => {
     // Remove specific law mentions that are clearly source references
     .replace(/\s*Republic\s+Act\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
     .replace(/\s*RA\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
+    // Remove any "Sources:" text followed by anything
+    .replace(/\n?\s*Sources?:\s*.*$/gim, "")
     // Remove any remaining source-related text patterns
-    .replace(/\n\s*Sources?:\s*.*?(?=\n\n|\n[A-Z]|$)/gims, "")
+    .replace(/\n?\s*Sources?:\s*.*?(?=\n\n|\n[A-Z]|$)/gim, "")
     // Clean up extra whitespace
     .replace(/\s+/g, " ")
     .trim();
@@ -447,18 +449,18 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
       .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
       // Remove any remaining metadata patterns
       .replace(/\{[^}]*\}/g, "")
-      // Remove ALL "Sources:" sections and their content
-      .replace(/\n\s*Sources?:\s*.*$/gim, "")
-      .replace(/\n\s*Sources?:\s*\n.*$/gims, "")
+      // Remove standalone "Sources:" sections that are just text (not structured)
+      .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+\n?/gi, "")
+      .replace(/\n\s*Sources?:\s*$/gi, "")
       // Remove bulleted source lists
       .replace(/\n\s*Sources?:\s*\n?\s*[-•]\s*[^\n]+(\n\s*[-•]\s*[^\n]+)*/gi, "")
       // Remove numbered source lists
       .replace(/\n\s*Sources?:\s*\n?\s*\d+\.\s*[^\n]+(\n\s*\d+\.\s*[^\n]+)*/gi, "")
       // Remove any remaining source references
       .replace(/\n\s*Sources?:\s*[^\n]+/gi, "")
-      // Remove inline source references at the end of text
+      // Remove inline source references at the end of text (like "Sources: • Rape Laws...")
       .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*$/gi, "")
-      // Remove source references that appear inline
+      // Remove source references that appear inline (like "Sources: • Rape Laws in the Philippines")
       .replace(/\s+Sources?:\s*[-•]\s*[^.]*\.?\s*(?=\s|$)/gi, "")
       // Remove "For more detailed information, refer to..." patterns
       .replace(/\s*For\s+more\s+detailed\s+information,?\s+refer\s+to[^.]*\.?\s*$/gi, "")
@@ -467,8 +469,10 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
       // Remove specific law mentions that are clearly source references
       .replace(/\s*Republic\s+Act\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
       .replace(/\s*RA\s+No\.\s+\d+[^.]*\.?\s*$/gi, "")
+      // Remove any "Sources:" text followed by anything
+      .replace(/\n?\s*Sources?:\s*.*$/gim, "")
       // Remove any remaining source-related text patterns
-      .replace(/\n\s*Sources?:\s*.*?(?=\n\n|\n[A-Z]|$)/gims, "")
+      .replace(/\n?\s*Sources?:\s*.*?(?=\n\n|\n[A-Z]|$)/gim, "")
       // Remove emojis from the text
       .replace(
         /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
