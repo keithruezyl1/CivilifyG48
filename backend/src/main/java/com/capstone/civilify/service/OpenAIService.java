@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
@@ -98,9 +99,26 @@ public class OpenAIService {
     // How many KB sources to request (clamped by KnowledgeBaseService.maxResults)
     @Value("${knowledge.base.sources.limit:${knowledge.base.max.results:5}}")
     private int knowledgeBaseSourcesLimit;
+    @Value("${knowledge.base.cache.ttl.seconds:300}")
+    private int kbCacheTtlSeconds;
+
+    private static class KbCacheEntry {
+        List<KnowledgeBaseEntry> data;
+        long expiresAtMs;
+        KbCacheEntry(List<KnowledgeBaseEntry> data, long ttlMs) {
+            this.data = data;
+            this.expiresAtMs = System.currentTimeMillis() + ttlMs;
+        }
+        boolean isExpired() { return System.currentTimeMillis() > expiresAtMs; }
+    }
+    private final Map<String, KbCacheEntry> kbCache = new java.util.concurrent.ConcurrentHashMap<>();
     
     public OpenAIService() {
-        this.restTemplate = new RestTemplate();
+        // Configure timeouts (no extra dependency for pooling)
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(4000);
+        factory.setReadTimeout(8000);
+        this.restTemplate = new RestTemplate(factory);
     }
     
     public String generateResponse(String userMessage, String systemPrompt, List<Map<String, String>> conversationHistory) {
@@ -263,7 +281,7 @@ public class OpenAIService {
                 masked.set("Authorization", "Bearer ****");
             }
             logger.info("Request headers: {}", masked);
-            logger.info("Request body: {}", requestBody);
+            // Avoid logging full request body for performance
             
             try {
                 ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
@@ -447,9 +465,38 @@ public class OpenAIService {
      */
     public List<KnowledgeBaseEntry> getKnowledgeBaseSources(String query) {
         try {
-            return knowledgeBaseService.searchKnowledgeBase(query, knowledgeBaseSourcesLimit);
+            String key = (query == null ? "" : query.trim().toLowerCase()) + "|limit=" + knowledgeBaseSourcesLimit;
+            KbCacheEntry cached = kbCache.get(key);
+            if (cached != null && !cached.isExpired()) {
+                logger.info("KB cache hit for key='{}'", key);
+                return cached.data;
+            }
+            List<KnowledgeBaseEntry> result = knowledgeBaseService.searchKnowledgeBase(query, knowledgeBaseSourcesLimit);
+            kbCache.put(key, new KbCacheEntry(result, kbCacheTtlSeconds * 1000L));
+            return result;
         } catch (Exception e) {
             logger.error("Error retrieving knowledge base sources", e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Variant that allows a caller-provided limit. Falls back to configured limit when invalid.
+     */
+    public List<KnowledgeBaseEntry> getKnowledgeBaseSources(String query, int limitOverride) {
+        int effectiveLimit = (limitOverride > 0 && limitOverride <= 10) ? limitOverride : knowledgeBaseSourcesLimit;
+        try {
+            String key = (query == null ? "" : query.trim().toLowerCase()) + "|limit=" + effectiveLimit;
+            KbCacheEntry cached = kbCache.get(key);
+            if (cached != null && !cached.isExpired()) {
+                logger.info("KB cache hit for key='{}'", key);
+                return cached.data;
+            }
+            List<KnowledgeBaseEntry> result = knowledgeBaseService.searchKnowledgeBase(query, effectiveLimit);
+            kbCache.put(key, new KbCacheEntry(result, kbCacheTtlSeconds * 1000L));
+            return result;
+        } catch (Exception e) {
+            logger.error("Error retrieving knowledge base sources (limit override)", e);
             return new ArrayList<>();
         }
     }

@@ -58,6 +58,7 @@ const formatAIResponse = (text) => {
 };
 
 // Function to fetch response from GPT-3.5 Turbo API via backend
+let currentAbortController = null;
 const fetchGPTResponse = async (
   userMessage,
   mode = "A",
@@ -73,13 +74,21 @@ const fetchGPTResponse = async (
     const user = getUserData();
 
     // Call the backend API endpoint with conversation context
-    const response = await axios.post(`${API_URL}/ai/chat`, {
-      message: userMessage,
-      mode: mode,
-      conversationId: conversationId,
-      userId: userId || (user ? user.uid : null),
-      userEmail: userEmail || (user ? user.email : null),
-    });
+    if (currentAbortController) {
+      try { currentAbortController.abort(); } catch (e) {}
+    }
+    currentAbortController = new AbortController();
+    const response = await axios.post(
+      `${API_URL}/ai/chat`,
+      {
+        message: userMessage,
+        mode: mode,
+        conversationId: conversationId,
+        userId: userId || (user ? user.uid : null),
+        userEmail: userEmail || (user ? user.email : null),
+      },
+      { signal: currentAbortController.signal }
+    );
 
     console.log("AI response received:", response.data);
 

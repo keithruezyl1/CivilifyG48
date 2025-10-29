@@ -190,10 +190,10 @@ public class OpenAIController {
                 .collect(Collectors.toList());
             
             // Limit conversation history for CPA mode to prevent context confusion
-            if ("B".equals(mode) && conversationHistoryForAI.size() > 10) {
-                logger.info("CPA: Limiting conversation history from {} to 10 messages", conversationHistoryForAI.size());
+            if ("B".equals(mode) && conversationHistoryForAI.size() > 8) {
+                logger.info("CPA: Limiting conversation history from {} to 8 messages", conversationHistoryForAI.size());
                 conversationHistoryForAI = conversationHistoryForAI.subList(
-                    Math.max(0, conversationHistoryForAI.size() - 10), 
+                    Math.max(0, conversationHistoryForAI.size() - 8), 
                     conversationHistoryForAI.size()
                 );
             }
@@ -327,8 +327,9 @@ public class OpenAIController {
                 // GLI: Always ensure we have sources from KB - try multiple approaches if needed
                 if (kbSources.isEmpty()) {
                     logger.info("GLI: No sources from initial KB response, attempting additional search");
+                    int desiredLimit = computeDesiredSourceLimit(userMessage);
                     java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> additionalKbEntries =
-                        openAIService.getKnowledgeBaseSources(userMessage);
+                        openAIService.getKnowledgeBaseSources(userMessage, desiredLimit);
                     if (additionalKbEntries != null) {
                         kbSources.addAll(additionalKbEntries);
                     }
@@ -341,8 +342,9 @@ public class OpenAIController {
                     String[] keywords = userMessage.toLowerCase().split("\\s+");
                     for (String keyword : keywords) {
                         if (keyword.length() > 3) { // Only search meaningful keywords
+                            int desiredLimit = computeDesiredSourceLimit(userMessage);
                             java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> keywordResults =
-                                openAIService.getKnowledgeBaseSources(keyword);
+                                openAIService.getKnowledgeBaseSources(keyword, desiredLimit);
                             if (keywordResults != null && !keywordResults.isEmpty()) {
                                 kbSources.addAll(keywordResults);
                                 logger.info("GLI: Found sources for keyword '{}': {}", keyword, keywordResults.size());
@@ -446,8 +448,9 @@ public class OpenAIController {
                         String fullContextString = fullContext.toString();
                         logger.info("CPA: Using full conversation context for KB search (length: {})", fullContextString.length());
                         
+                        int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
                         java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
-                            openAIService.getKnowledgeBaseSources(fullContextString);
+                            openAIService.getKnowledgeBaseSources(fullContextString, desiredLimitForReport);
                         if (reportSources != null) {
                             // Merge into kbSources without duplicates by entryId
                             java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
@@ -563,6 +566,31 @@ public class OpenAIController {
         
         // Default to true for longer responses that might be law-related
         return lowerAiResponse.length() > 200;
+    }
+
+    /**
+     * Determine desired number of KB sources from the user's message.
+     * Defaults to 4. Allows 1..10. If user mentions a number before 'source(s)/citations/references', use it.
+     * If user asks for 'multiple/more sources' without a number, use 6.
+     */
+    private int computeDesiredSourceLimit(String userMessage) {
+        int defaultLimit = 4;
+        if (userMessage == null) return defaultLimit;
+        String lower = userMessage.toLowerCase();
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("(\\d{1,2})\\s*(source|sources|citation|citations|reference|references)");
+        java.util.regex.Matcher m = p.matcher(lower);
+        if (m.find()) {
+            try {
+                int n = Integer.parseInt(m.group(1));
+                if (n < 1) n = 1;
+                if (n > 10) n = 10;
+                return n;
+            } catch (NumberFormatException ignore) {}
+        }
+        if (lower.contains("multiple sources") || lower.contains("more sources") || lower.contains("several sources")) {
+            return 6;
+        }
+        return defaultLimit;
     }
 
     private String buildEnhancedSystemPrompt(String baseSystemPrompt, String primaryKbAnswer,
