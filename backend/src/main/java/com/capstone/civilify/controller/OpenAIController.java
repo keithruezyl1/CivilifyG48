@@ -176,10 +176,8 @@ public class OpenAIController {
                 conversationId = conversation.getId();
             }
             
-            // Add user message to the conversation
-            ChatMessage userChatMessage = chatService.addMessage(
-                conversationId, userId, userEmail, userMessage, true);
-            logger.info("Added user message to conversation: {}", userChatMessage.getId());
+            // Do NOT re-save the user message here to avoid duplicates; frontend already persists it
+            logger.info("Skipping backend user-message save to avoid duplicates (conversationId={})", conversationId);
             
             // Prepare conversation history for OpenAI
             List<Map<String, String>> conversationHistoryForAI = conversationMessages.stream()

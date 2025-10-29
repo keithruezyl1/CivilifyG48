@@ -857,7 +857,8 @@ const Chat = () => {
   // Function to save a message to the current conversation
   const saveMessageToConversation = async (content, isUserMessage) => {
     try {
-      if (!currentConversationId) {
+      let conversationIdToUse = currentConversationId;
+      if (!conversationIdToUse) {
         // Create a new conversation first if none exists
         const response = await axios.post(`${API_URL}/chat/conversations`, {
           userId: userData.uid || "unknown",
@@ -868,7 +869,8 @@ const Chat = () => {
 
         const newConversation = response.data;
         console.log("Created new conversation for message:", newConversation);
-        setCurrentConversationId(newConversation.id);
+        conversationIdToUse = newConversation.id;
+        setCurrentConversationId(conversationIdToUse);
 
         // We're not fetching conversations as per requirements
         // await fetchUserConversations();
@@ -876,7 +878,7 @@ const Chat = () => {
 
       // Now save the message
       await axios.post(
-        `${API_URL}/chat/conversations/${currentConversationId}/messages`,
+        `${API_URL}/chat/conversations/${conversationIdToUse}/messages`,
         {
           userId: userData.uid || "unknown",
           userEmail: userData.email,

@@ -216,11 +216,26 @@ public class OpenAIService {
                 logger.info("Added {} messages from conversation history", conversationHistory.size());
             }
             
-            // Add the current user message
-            Map<String, Object> userMessageMap = new HashMap<>();
-            userMessageMap.put("role", "user");
-            userMessageMap.put("content", userMessage);
-            messages.add(userMessageMap);
+            // Add the current user message only if it is not already the last history message
+            boolean lastIsSameUserMessage = false;
+            if (conversationHistory != null && !conversationHistory.isEmpty()) {
+                Map<String, String> last = conversationHistory.get(conversationHistory.size() - 1);
+                if (last != null && "true".equals(last.get("isUserMessage"))) {
+                    String lastContent = last.get("content");
+                    if (lastContent != null && lastContent.trim().equals(userMessage != null ? userMessage.trim() : null)) {
+                        lastIsSameUserMessage = true;
+                    }
+                }
+            }
+
+            if (!lastIsSameUserMessage) {
+                Map<String, Object> userMessageMap = new HashMap<>();
+                userMessageMap.put("role", "user");
+                userMessageMap.put("content", userMessage);
+                messages.add(userMessageMap);
+            } else {
+                logger.info("Skipping duplicate current user message in request payload");
+            }
             
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", model);  // Using the model selected based on mode
