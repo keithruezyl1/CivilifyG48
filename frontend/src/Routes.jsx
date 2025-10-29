@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+// import Landing from "./pages/landing copy";
 import Landing from "./pages/landing";
 import Chat from "./pages/chat";
 import SignIn from "./pages/signin";
@@ -12,6 +13,7 @@ import Profile from "./pages/profile";
 import DiagnosticsPage from "./pages/diagnostics";
 import Admin from "./pages/admin";
 import ProtectedRoute from "./components/ProtectedRoute";
+// import LoadingScreen from "./pages/LoadingScreen";
 import LoadingScreen from "./pages/LoadingScreen";
 
 const AppRoutes = () => {

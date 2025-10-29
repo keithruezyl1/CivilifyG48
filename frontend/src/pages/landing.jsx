@@ -1,39 +1,85 @@
+"use client";
+
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import logoIconOrange from "../assets/images/logoiconorange.png";
-import logoTextOrange from "../assets/images/logotextorange.png";
-import heroImage from "../assets/images/heropic.png";
-import villy3dIllustration from "../assets/images/villy_3dillustration.png";
-import villy3dIllustrationCropped from "../assets/images/villy_3dillustration_cropped.png";
-import featureIcon1 from "../assets/images/1.png";
-import featureIcon2 from "../assets/images/2.png";
-import featureIcon3 from "../assets/images/3.png";
+import villyBackground from "../assets/images/villy_3dbackground.png";
+import villyNaturalLanguage from "../assets/images/villy_naturallanguage.png";
+import villyLegalAnalysis from "../assets/images/villy_legalanalysis3.PNG";
+import villyAiAssistance from "../assets/images/villy_aiassistance2.PNG";
 import number1Icon from "../assets/images/1(1).png";
 import number2Icon from "../assets/images/2(1).png";
 import number3Icon from "../assets/images/3(1).png";
 import LoadingScreen from "./LoadingScreen";
+import SeasonalHoverCards from "../components/lightswind/seasonal-hover-cards";
+import "@quietui/quiet/components/text-mask/text-mask.js";
+import BeamGridBackground from "../components/lightswind/beam-grid-background";
+import {
+  GlowingCards,
+  GlowingCard,
+} from "@/components/lightswind/glowing-cards";
+import WaveTransition from "../components/lightswind/wave-transition";
+import ParticlesBackground from "../components/lightswind/particles-background";
 
 const Landing = () => {
   const navigate = useNavigate();
   const heroRef = useRef(null);
   const featuresRef = useRef(null);
   const howItWorksRef = useRef(null);
+  const patchNotesRef = useRef(null);
+  const ctaRef = useRef(null);
+  const footerRef = useRef(null);
   const [activeSection, setActiveSection] = useState("hero");
   const [loading, setLoading] = useState(false);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // Smooth scroll function
-  const smoothScroll = (element) => {
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
-  };
+    return false;
+  });
 
-  // Handle logo click
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleThemeChange = (e) => {
+      setIsDarkMode(e.matches);
+    };
+
+    mediaQuery.addEventListener("change", handleThemeChange);
+    return () => mediaQuery.removeEventListener("change", handleThemeChange);
+  }, []);
+
+  useEffect(() => {
+    document.title = "Civilify";
+  }, []);
+
+  useEffect(() => {
+    const sections = [
+      { id: "hero", ref: heroRef },
+      { id: "features", ref: featuresRef },
+      { id: "how-it-works", ref: howItWorksRef },
+      { id: "patch-notes", ref: patchNotesRef },
+      { id: "cta", ref: ctaRef },
+      { id: "footer", ref: footerRef },
+    ];
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) setActiveSection(e.target.id);
+        });
+      },
+      { rootMargin: "-50% 0px -50% 0px", threshold: 0 }
+    );
+
+    sections.forEach((s) => s.ref.current && observer.observe(s.ref.current));
+    return () =>
+      sections.forEach(
+        (s) => s.ref.current && observer.unobserve(s.ref.current)
+      );
+  }, []);
+
   const handleLogoClick = (e) => {
     e.preventDefault();
     window.scrollTo({
@@ -43,83 +89,20 @@ const Landing = () => {
     setIsMenuOpen(false);
   };
 
-  // Handle navigation link clicks
+  const smoothScroll = (element) => {
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
+
   const handleNavClick = (e, ref) => {
     e.preventDefault();
     smoothScroll(ref.current);
     setIsMenuOpen(false);
   };
-
-  useEffect(() => {
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: "0px",
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = "1";
-          entry.target.style.transform = "translateY(0)";
-        }
-      });
-    }, observerOptions);
-
-    if (heroRef.current) observer.observe(heroRef.current);
-    if (featuresRef.current) observer.observe(featuresRef.current);
-    if (howItWorksRef.current) observer.observe(howItWorksRef.current);
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      // Update active section based on scroll position
-      const heroPosition = heroRef.current?.getBoundingClientRect();
-      const featuresPosition = featuresRef.current?.getBoundingClientRect();
-      const howItWorksPosition = howItWorksRef.current?.getBoundingClientRect();
-
-      if (
-        heroPosition &&
-        heroPosition.top <= 100 &&
-        heroPosition.bottom >= 100
-      ) {
-        setActiveSection("hero");
-      } else if (
-        featuresPosition &&
-        featuresPosition.top <= 100 &&
-        featuresPosition.bottom >= 100
-      ) {
-        setActiveSection("features");
-      } else if (
-        howItWorksPosition &&
-        howItWorksPosition.top <= 100 &&
-        howItWorksPosition.bottom >= 100
-      ) {
-        setActiveSection("howItWorks");
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    // Scroll indicator fade logic
-    const handleScrollIndicator = () => {
-      if (window.scrollY > 40) {
-        setShowScrollIndicator(false);
-      } else {
-        setShowScrollIndicator(true);
-      }
-    };
-    window.addEventListener("scroll", handleScrollIndicator);
-    return () => window.removeEventListener("scroll", handleScrollIndicator);
-  }, []);
-
-  useEffect(() => {
-    document.title = "Civilify";
-  }, []);
 
   const handleSignIn = () => {
     setLoading(true);
@@ -148,64 +131,11 @@ const Landing = () => {
         setTimeout(() => {
           setIsMenuOpen(false);
           sidebar.classList.remove("closing");
-        }, 300); // Match animation duration
+        }, 300);
       }
     }
   };
 
-  // Handle wheel events for section locking
-  useEffect(() => {
-    const handleWheel = (e) => {
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-
-      // Define section positions
-      const heroTop = heroRef.current?.offsetTop || 0;
-      const featuresTop = featuresRef.current?.offsetTop || 0;
-      const howItWorksTop = howItWorksRef.current?.offsetTop || 0;
-      const footerTop = document.querySelector("footer")?.offsetTop || 0;
-
-      // Determine current section and scroll direction
-      let targetPosition;
-
-      if (e.deltaY > 0) {
-        // Scrolling down
-        if (scrollY < featuresTop - windowHeight / 2) {
-          targetPosition = featuresTop;
-        } else if (scrollY < howItWorksTop - windowHeight / 2) {
-          targetPosition = howItWorksTop;
-        } else if (scrollY < footerTop - windowHeight / 2) {
-          targetPosition = footerTop;
-        }
-      } else {
-        // Scrolling up
-        if (scrollY > howItWorksTop + windowHeight / 2) {
-          targetPosition = howItWorksTop;
-        } else if (scrollY > featuresTop + windowHeight / 2) {
-          targetPosition = featuresTop;
-        } else if (scrollY > heroTop + windowHeight / 2) {
-          targetPosition = heroTop;
-        }
-      }
-
-      // Scroll to target position if defined
-      if (targetPosition !== undefined) {
-        e.preventDefault();
-        window.scrollTo({
-          top: targetPosition,
-          behavior: "smooth",
-        });
-      }
-    };
-
-    window.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      window.removeEventListener("wheel", handleWheel);
-    };
-  }, []);
-
-  // Function to navigate to docs with a specific section
   const navigateToDocsSection = (sectionId) => {
     setLoading(true);
     setTimeout(() => {
@@ -215,369 +145,952 @@ const Landing = () => {
     }, 1500);
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading) return <LoadingScreen icon={logoIconOrange} />;
+
+  const seasonCards = [
+    {
+      title: "Natural Language Processing",
+      subtitle: "Ask in plain English",
+      description:
+        "Communicate with Villy in plain English, just like talking to a legal expert. Our AI understands context and legal terminology to provide clear, accurate guidance for your legal needs.",
+      imageSrc: villyNaturalLanguage,
+      imageAlt: "Natural language processing illustration",
+      isDarkMode: isDarkMode,
+    },
+    {
+      title: "Legal Analysis",
+      subtitle: "Instant case intelligence",
+      description:
+        "Get comprehensive analysis of your legal situation or detailed answers to your legal questions, with potential outcomes and recommended actions tailored to your needs.",
+      imageSrc: villyLegalAnalysis,
+      imageAlt: "Legal analysis illustration",
+      isDarkMode: isDarkMode,
+    },
+    {
+      title: "AI Assistance",
+      subtitle: "Smart next steps, instantly",
+      description:
+        "Receive intelligent suggested next steps and personalized guidance powered by advanced AI technology, whether you're asking general questions or analyzing a specific case.",
+      imageSrc: villyAiAssistance,
+      imageAlt: "AI assistance illustration",
+      isDarkMode: isDarkMode,
+    },
+  ];
 
   return (
-    <div style={styles.container}>
-      <nav style={styles.navbar}>
-        <div style={styles.logoContainer}>
-          <img
-            src={logoIconOrange}
-            alt="Civilify Logo"
-            style={styles.logo}
-            onClick={handleLogoClick}
-            className="logo-clickable"
-          />
-        </div>
-        <div style={styles.navContainer}>
-          <button
-            style={styles.hamburgerButton}
-            onClick={toggleMenu}
-            className="hamburger-button"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M3 6H21M3 12H21M3 18H21"
-                stroke="#F34D01"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-          {isMenuOpen && (
-            <div
-              style={styles.sidebarOverlay}
-              className="sidebar-overlay"
-              onClick={(e) => e.target === e.currentTarget && toggleMenu()}
-            >
-              <div
-                style={styles.sidebar}
-                className={`sidebar ${isMenuOpen ? "" : "closing"}`}
-              >
-                <div style={styles.sidebarLinks}>
-                  <a
-                    href="#features"
-                    style={{
-                      ...styles.navLink,
-                      color: activeSection === "features" ? "#F34D01" : "#333",
-                      fontWeight: activeSection === "features" ? "600" : "500",
-                    }}
-                    onClick={(e) => handleNavClick(e, featuresRef)}
-                  >
-                    Features
-                  </a>
-                  <a
-                    href="#how-it-works"
-                    style={{
-                      ...styles.navLink,
-                      color:
-                        activeSection === "howItWorks" ? "#F34D01" : "#333",
-                      fontWeight:
-                        activeSection === "howItWorks" ? "600" : "500",
-                    }}
-                    onClick={(e) => handleNavClick(e, howItWorksRef)}
-                  >
-                    How It Works
-                  </a>
-                  <button style={styles.navButton} onClick={handleSignIn}>
-                    Sign In
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div
-            style={styles.navLinks}
-            className={isMenuOpen ? "nav-links open" : "nav-links"}
-          >
-            <a
-              href="#features"
-              style={{
-                ...styles.navLink,
-                color: activeSection === "features" ? "#F34D01" : "#333",
-                fontWeight: activeSection === "features" ? "600" : "500",
-              }}
-              onClick={(e) => handleNavClick(e, featuresRef)}
-            >
-              Features
-            </a>
-            <a
-              href="#how-it-works"
-              style={{
-                ...styles.navLink,
-                color: activeSection === "howItWorks" ? "#F34D01" : "#333",
-                fontWeight: activeSection === "howItWorks" ? "600" : "500",
-              }}
-              onClick={(e) => handleNavClick(e, howItWorksRef)}
-            >
-              How It Works
-            </a>
-            <button style={styles.navButton} onClick={handleSignIn}>
-              Sign In
-            </button>
-          </div>
-        </div>
-      </nav>
+    <>
       <div
-        ref={heroRef}
-        style={{
-          ...styles.heroSection,
-          opacity: 0,
-          transform: "translateY(20px)",
-          transition: "all 0.6s ease-out",
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        <div style={styles.heroGrid} className="hero-grid">
-          {/* Left: Text */}
-          <div style={styles.heroLeft}>
-            <div style={styles.heroContent}>
-              <img
-                src={logoTextOrange}
-                alt="Civilify"
-                style={styles.heroLogo}
-                className="hero-logo"
-              />
-              <h2 style={styles.subheading} className="subheading-shine">
-                AI-Powered Legal Clarity
-              </h2>
-              <p style={styles.description}>
-                Ask a legal question, assess your legal case, get insights, and
-                know what to do next with{" "}
-                <span style={styles.highlight}>Villy</span>, your intelligent
-                legal companion.
-              </p>
-              <button
-                style={styles.primaryButton}
-                onClick={handleSignup}
-                className="get-started-button"
+        <nav style={styles.navbar}>
+          <div style={styles.logoContainer}>
+            <img
+              src={logoIconOrange || "/placeholder.svg"}
+              alt="Civilify Logo"
+              style={styles.logo}
+              onClick={handleLogoClick}
+              className="logo-clickable"
+            />
+          </div>
+          <div style={styles.navContainer}>
+            <button
+              style={styles.hamburgerButton}
+              onClick={toggleMenu}
+              className="hamburger-button"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                Get Started
+                <path
+                  d="M3 6H21M3 12H21M3 18H21"
+                  stroke="#F34D01"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            {isMenuOpen && (
+              <div
+                style={styles.sidebarOverlay}
+                className="sidebar-overlay"
+                onClick={(e) => e.target === e.currentTarget && toggleMenu()}
+              >
+                <div
+                  style={styles.sidebar}
+                  className={`sidebar ${isMenuOpen ? "" : "closing"}`}
+                >
+                  <div style={styles.sidebarLinks}>
+                    <a
+                      href="#features"
+                      style={{
+                        ...styles.navLink,
+                        color:
+                          activeSection === "features"
+                            ? "#F34D01"
+                            : isDarkMode
+                            ? "#e0e0e0"
+                            : "#333",
+                        fontWeight:
+                          activeSection === "features" ? "600" : "500",
+                      }}
+                      onClick={(e) => handleNavClick(e, featuresRef)}
+                    >
+                      Features
+                    </a>
+                    <a
+                      href="#how-it-works"
+                      style={{
+                        ...styles.navLink,
+                        color:
+                          activeSection === "how-it-works"
+                            ? "#F34D01"
+                            : isDarkMode
+                            ? "#e0e0e0"
+                            : "#333",
+                        fontWeight:
+                          activeSection === "how-it-works" ? "600" : "500",
+                      }}
+                      onClick={(e) => handleNavClick(e, howItWorksRef)}
+                    >
+                      How It Works
+                    </a>
+                    <a
+                      href="#patch-notes"
+                      style={{
+                        ...styles.navLink,
+                        color:
+                          activeSection === "patch-notes"
+                            ? "#F34D01"
+                            : isDarkMode
+                            ? "#e0e0e0"
+                            : "#333",
+                        fontWeight:
+                          activeSection === "patch-notes" ? "600" : "500",
+                      }}
+                      onClick={(e) => handleNavClick(e, patchNotesRef)}
+                    >
+                      What's New
+                    </a>
+                    <button style={styles.navButton} onClick={handleSignIn}>
+                      Sign In
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div
+              style={styles.navLinks}
+              className={isMenuOpen ? "nav-links open" : "nav-links"}
+            >
+              <a
+                href="#features"
+                style={{
+                  ...styles.navLink,
+                  color:
+                    activeSection === "features"
+                      ? "#F34D01"
+                      : isDarkMode
+                      ? "#e0e0e0"
+                      : "#333",
+                  fontWeight: activeSection === "features" ? "600" : "500",
+                }}
+                onClick={(e) => handleNavClick(e, featuresRef)}
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                style={{
+                  ...styles.navLink,
+                  color:
+                    activeSection === "how-it-works"
+                      ? "#F34D01"
+                      : isDarkMode
+                      ? "#e0e0e0"
+                      : "#333",
+                  fontWeight: activeSection === "how-it-works" ? "600" : "500",
+                }}
+                onClick={(e) => handleNavClick(e, howItWorksRef)}
+              >
+                How It Works
+              </a>
+              <a
+                href="#patch-notes"
+                style={{
+                  ...styles.navLink,
+                  color:
+                    activeSection === "patch-notes"
+                      ? "#F34D01"
+                      : isDarkMode
+                      ? "#e0e0e0"
+                      : "#333",
+                  fontWeight: activeSection === "patch-notes" ? "600" : "500",
+                }}
+                onClick={(e) => handleNavClick(e, patchNotesRef)}
+              >
+                What's New
+              </a>
+              <button style={styles.navButton} onClick={handleSignIn}>
+                Sign In
               </button>
             </div>
           </div>
+        </nav>
 
-          {/* Right: Villy bot */}
-          <div style={styles.heroRight}>
-            <img
-              src={villy3dIllustrationCropped}
-              alt="Villy AI Assistant"
-              style={styles.villyIllustration}
-              className="villy-illustration"
-            />
+        {/* Hero Section */}
+        <div
+          id="hero"
+          ref={heroRef}
+          style={{
+            backgroundColor: isDarkMode ? "#181818" : "#ffffff",
+            overflowX: "hidden",
+          }}
+        >
+          <BeamGridBackground />
+          <div
+            style={{
+              minHeight: "100vh",
+              display: "flex",
+              justifyContent: "center",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <quiet-text-mask
+              image={villyBackground}
+              fixed
+              style={{
+                fontFamily: "'Fira Sans', sans-serif",
+                fontSize: "10vw",
+                fontWeight: 900,
+                lineHeight: 1,
+                textAlign: "center",
+                "--brightness": "90%",
+                "--contrast": "90%",
+              }}
+            >
+              CIVILIFY
+            </quiet-text-mask>
+            <h2
+              style={{
+                ...styles.subheading,
+                zIndex: 1,
+              }}
+              className="subheading-shine"
+            >
+              AI-Powered Legal Clarity
+            </h2>
+            <p
+              style={{
+                ...styles.description,
+                color: isDarkMode ? "#d1d5db" : "#4b5563",
+                padding: "1em",
+                zIndex: 1,
+              }}
+              className={`text-gray-300 text-gray-700 p-4 sm:p-6 md:p-8 text-sm sm:text-base md:text-lg leading-relaxed z-10`}
+            >
+              Ask a legal question, assess your legal case, get insights, and
+              know what to do next with{" "}
+              <span style={styles.highlight}>Villy</span>, your intelligent
+              legal companion.
+            </p>
+            <button
+              style={{
+                ...styles.primaryButton,
+              }}
+              onClick={handleSignup}
+              className="get-started-button text-base leading-6 text-gray-600 text-center mb-8 sm:text-lg sm:leading-7 md:text-xl md:leading-8 md:mb-10"
+              variant="contained"
+            >
+              Chat Villy Now
+            </button>
+          </div>
+          <div
+            style={{
+              ...styles.scrollIndicator,
+              opacity: showScrollIndicator ? 1 : 0,
+              pointerEvents: "none",
+              transition: "opacity 0.5s",
+            }}
+          >
+            <div style={styles.scrollIndicatorBg}>
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ display: "block" }}
+              >
+                <path d="M12 16L6 10H18L12 16Z" fill="#fff" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div
+          id="features"
+          ref={featuresRef}
+          style={{
+            background: isDarkMode
+              ? "linear-gradient(to bottom, #0d0d0d, #181818)"
+              : "#ffffff",
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative", // Added position relative for absolute positioning of wave
+            overflow: "hidden", // Hide overflow to contain wave
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
+          >
+            <WaveTransition isDarkMode={isDarkMode} />
+          </div>
+
+          <h2
+            style={{
+              fontSize: "3em",
+              fontWeight: "700",
+              color: isDarkMode ? "#ffffff" : "#F34D01",
+              paddingTop: "1em",
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            Features
+          </h2>
+          <div
+            style={{
+              padding: "2em 2em 10em 2em ",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            <SeasonalHoverCards cards={seasonCards} />
           </div>
         </div>
 
         <div
+          id="how-it-works"
+          ref={howItWorksRef}
           style={{
-            ...styles.scrollIndicator,
-            opacity: showScrollIndicator ? 1 : 0,
-            pointerEvents: "none",
-            transition: "opacity 0.5s",
+            display: "flex",
+            flexDirection: "column",
+            minHeight: "100vh",
+            alignItems: "center",
+            backgroundColor: isDarkMode ? "#181818" : "#ffffff",
+            justifyContent: "center",
           }}
         >
-          <div style={styles.scrollIndicatorBg}>
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ display: "block" }}
-            >
-              <path d="M12 16L6 10H18L12 16Z" fill="#fff" />
-            </svg>
+          <h2
+            style={{
+              fontSize: "3em",
+              fontWeight: "700",
+              color: isDarkMode ? "#ffffff" : "#F34D01",
+              paddingTop: "1em",
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            How It Works
+          </h2>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: "20px",
+              alignContent: "center",
+            }}
+          >
+            <GlowingCards>
+              <GlowingCard
+                responsive={true}
+                glowColor="#10b981"
+                glowOpacity={1}
+                glowRadius={1.9}
+                backgroundColor={
+                  isDarkMode
+                    ? "rgba(24, 24, 24, 0.6)"
+                    : "rgba(255, 255, 255, 0.6)"
+                }
+                style={{
+                  padding: "2rem",
+                  border: "1px solid rgba(128, 128, 128, 0.2)",
+                }}
+              >
+                <img
+                  src={number1Icon || "/placeholder.svg"}
+                  style={{ width: "80%" }}
+                  alt="Number one icon"
+                ></img>
+                <h3
+                  style={{
+                    fontSize: "1.5rem",
+                    fontWeight: "600",
+                    color: isDarkMode ? "#ffffff" : "#1f2937",
+                    marginBottom: "1rem",
+                    marginTop: "1.5rem",
+                    lineHeight: "1.3",
+                    letterSpacing: "-0.025em",
+                  }}
+                >
+                  Choose Your Mode
+                </h3>
+                <p
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: "400",
+                    color: isDarkMode ? "#d1d5db" : "#4b5563",
+                    lineHeight: "1.6",
+                    marginBottom: "0.5rem",
+                    maxWidth: "90%",
+                  }}
+                >
+                  Select between General Legal Information for quick answers to
+                  legal questions, or Case Analysis for a detailed assessment of
+                  your specific legal situation. Pick the mode that fits your
+                  needs best.
+                </p>
+              </GlowingCard>
+              <GlowingCard
+                glowColor="#8b5cf6"
+                glowOpacity={1}
+                glowRadius={1.9}
+                backgroundColor={
+                  isDarkMode
+                    ? "rgba(24, 24, 24, 0.6)"
+                    : "rgba(255, 255, 255, 0.6)"
+                }
+                style={{
+                  padding: "2rem",
+                  border: "1px solid rgba(128, 128, 128, 0.2)",
+                }}
+              >
+                <img
+                  src={number2Icon || "/placeholder.svg"}
+                  style={{ width: "80%" }}
+                  alt="Number two icon"
+                ></img>
+                <h3
+                  style={{
+                    fontSize: "1.5rem",
+                    fontWeight: "600",
+                    color: isDarkMode ? "#ffffff" : "#1f2937",
+                    marginBottom: "1rem",
+                    marginTop: "1.5rem",
+                    lineHeight: "1.3",
+                    letterSpacing: "-0.025em",
+                  }}
+                >
+                  Get AI-Powered Answers
+                </h3>
+                <p
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: "400",
+                    color: isDarkMode ? "#d1d5db" : "#4b5563",
+                    lineHeight: "1.6",
+                    marginBottom: "0.5rem",
+                    maxWidth: "90%",
+                  }}
+                >
+                  Receive detailed insights and recommendations based on
+                  Philippine law and legal precedents, tailored to your chosen
+                  mode. Villy provides clear, actionable information every step
+                  of the way.
+                </p>
+              </GlowingCard>
+              <GlowingCard
+                glowColor="#60a5fa"
+                glowOpacity={1}
+                glowRadius={1.9}
+                backgroundColor={
+                  isDarkMode
+                    ? "rgba(24, 24, 24, 0.6)"
+                    : "rgba(255, 255, 255, 0.6)"
+                }
+                style={{
+                  padding: "2rem",
+                  border: "1px solid rgba(128, 128, 128, 0.2)",
+                }}
+              >
+                <img
+                  src={number3Icon || "/placeholder.svg"}
+                  style={{ width: "80%" }}
+                  alt="Number three icon"
+                ></img>
+                <h3
+                  style={{
+                    fontSize: "1.5rem",
+                    fontWeight: "600",
+                    color: isDarkMode ? "#ffffff" : "#1f2937",
+                    marginBottom: "1rem",
+                    marginTop: "1.5rem",
+                    lineHeight: "1.3",
+                    letterSpacing: "-0.025em",
+                  }}
+                >
+                  Take Action
+                </h3>
+                <p
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: "400",
+                    color: isDarkMode ? "#d1d5db" : "#4b5563",
+                    lineHeight: "1.6",
+                    marginBottom: "0.5rem",
+                    maxWidth: "90%",
+                  }}
+                >
+                  Follow the guided next steps, gain clear insights, and
+                  understand the best path forward for your situation—whether
+                  you need general information or specific case guidance, Villy
+                  is here to help.
+                </p>
+              </GlowingCard>
+            </GlowingCards>
           </div>
         </div>
-      </div>
 
-      <div
-        id="features"
-        ref={featuresRef}
-        style={{
-          ...styles.featuresSection,
-          opacity: 0,
-          transform: "translateY(20px)",
-          transition: "all 0.6s ease-out",
-        }}
-      >
-        <h2 style={styles.sectionHeading} className="section-heading">
-          Features
-        </h2>
-        <div style={styles.featuresGrid}>
-          <div style={styles.featureCard} className="feature-card ">
-            <img
-              src={featureIcon1}
-              alt="Natural Language Processing"
-              style={styles.featureImage}
-            />
-            <h3 style={{ ...styles.featureTitle, fontSize: "1.25rem" }}>
-              Natural Language Processing
-            </h3>
-            <p style={styles.featureDescription}>
-              <span>
-                Communicate with Villy in plain English, just like talking to a
-                legal expert. Our AI understands context and legal terminology
-                to provide clear, accurate guidance for your legal needs.
-              </span>
-            </p>
-          </div>
-          <div style={styles.featureCard} className="feature-card">
-            <img
-              src={featureIcon2}
-              alt="Legal Analysis"
-              style={styles.featureImage}
-            />
-            <h3 style={styles.featureTitle}>Legal Analysis</h3>
-            <p style={styles.featureDescription}>
-              <span>
-                Get comprehensive analysis of your legal situation or detailed
-                answers to your legal questions, with potential outcomes and
-                recommended actions tailored to your needs.
-              </span>
-            </p>
-          </div>
-          <div style={styles.featureCard} className="feature-card">
-            <img
-              src={featureIcon3}
-              alt="AI Assistance"
-              style={styles.featureImage}
-            />
-            <h3 style={styles.featureTitle}>AI Assistance</h3>
-            <p style={styles.featureDescription}>
-              <span>
-                Receive intelligent suggested next steps and personalized
-                guidance powered by advanced AI technology, whether you're
-                asking general questions or analyzing a specific case.
-              </span>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div
-        id="how-it-works"
-        ref={howItWorksRef}
-        style={{
-          ...styles.howItWorksSection,
-          opacity: 0,
-          transform: "translateY(20px)",
-          transition: "all 0.6s ease-out",
-        }}
-      >
-        <h2 style={styles.sectionHeading} className="section-heading">
-          How It Works
-        </h2>
-        <div style={styles.featuresGrid}>
-          <div style={styles.featureCard} className="feature-card">
-            <img src={number1Icon} alt="Step 1" style={styles.featureImage} />
-            <h3 style={styles.featureTitle}>Choose Your Mode</h3>
-            <p style={styles.featureDescription}>
-              <span>
-                Select between General Legal Information for quick answers to
-                legal questions, or Case Analysis for a detailed assessment of
-                your specific legal situation. Pick the mode that fits your
-                needs best.
-              </span>
-            </p>
-          </div>
-          <div style={styles.featureCard} className="feature-card">
-            <img src={number2Icon} alt="Step 2" style={styles.featureImage} />
-            <h3 style={styles.featureTitle}>Get AI-Powered Answers</h3>
-            <p style={styles.featureDescription}>
-              <span>
-                Receive detailed insights and recommendations based on
-                Philippine law and legal precedents, tailored to your chosen
-                mode. Villy provides clear, actionable information every step of
-                the way.
-              </span>
-            </p>
-          </div>
-          <div style={styles.featureCard} className="feature-card">
-            <img src={number3Icon} alt="Step 3" style={styles.featureImage} />
-            <h3 style={styles.featureTitle}>Take Action</h3>
-            <p style={styles.featureDescription}>
-              <span>
-                Follow the guided next steps, gain clear insights, and
-                understand the best path forward for your situation—whether you
-                need general information or specific case guidance, Villy is
-                here to help.
-              </span>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div style={styles.ctaSection}>
-        <h2 style={styles.ctaHeading} className="subheading-shine">
-          Ready to Get Started?
-        </h2>
-        <p style={styles.ctaDescription}>
-          Join thousands of users who trust Civilify for their legal needs.
-        </p>
-        <button
-          style={styles.primaryButton}
-          onClick={handleSignup}
-          className="get-started-button"
+        {/* Patch Notes Section */}
+        <div
+          id="patch-notes"
+          ref={patchNotesRef}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            minHeight: "100vh",
+            alignItems: "center",
+            backgroundColor: isDarkMode ? "#0d0d0d" : "#f8f9fa",
+            justifyContent: "center",
+            padding: "80px 5%",
+            scrollSnapAlign: "start",
+            position: "relative",
+            overflow: "hidden",
+          }}
         >
-          Get Started
-        </button>
-      </div>
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
+          >
+            <ParticlesBackground />
+          </div>
 
-      <footer style={styles.footer}>
-        <div style={styles.footerContent} className="footer-content">
-          <p style={styles.copyright}>© The Civilify Company, Cebu City 2025</p>
-          <div style={styles.footerLinks} className="footer-links">
-            <a
-              href="/civilify-documents"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateToDocsSection("what-is");
+          <h2
+            style={{
+              fontSize: "3em",
+              color: isDarkMode ? "#ffffff" : "#F34D01",
+              marginBottom: "1em",
+              position: "relative",
+              fontWeight: "700",
+              zIndex: 1,
+            }}
+          >
+            What's New
+          </h2>
+          <div
+            style={{
+              maxWidth: "900px",
+              width: "100%",
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            {/* Timeline line */}
+            <div
+              style={{
+                position: "absolute",
+                left: "20px",
+                top: "0",
+                bottom: "0",
+                width: "2px",
+                backgroundColor: isDarkMode ? "#333" : "#e0e0e0",
               }}
-              style={styles.footerLink}
-            >
-              What is Civilify
-            </a>
-            <a
-              href="/civilify-documents"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateToDocsSection("why-use");
+              className="timeline-line"
+            />
+
+            {/* Patch note items */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "40px",
               }}
-              style={styles.footerLink}
             >
-              Why use Civilify
-            </a>
-            <a
-              href="/civilify-documents"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateToDocsSection("getting-started");
-              }}
-              style={styles.footerLink}
-            >
-              FAQs
-            </a>
-            <a
-              href="/civilify-documents"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateToDocsSection("security");
-              }}
-              style={styles.footerLink}
-            >
-              Security and Privacy
-            </a>
+              {/* Update 1 */}
+              <div
+                style={{
+                  position: "relative",
+                  paddingLeft: "60px",
+                }}
+                className="patch-note-update"
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "12px",
+                    top: "8px",
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    backgroundColor: "#8b5cf6",
+                    border: `3px solid ${isDarkMode ? "#0d0d0d" : "#f8f9fa"}`,
+                    zIndex: 1,
+                  }}
+                  className="timeline-dot"
+                />
+                <div
+                  style={{
+                    backgroundColor: isDarkMode ? "#1a1a1a" : "#ffffff",
+                    padding: "24px",
+                    borderRadius: "12px",
+                    border: `1px solid ${isDarkMode ? "#333" : "#e0e0e0"}`,
+                    transition: "all 0.3s ease",
+                  }}
+                  className="patch-note-card"
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      marginBottom: "12px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 12px",
+                        backgroundColor: isDarkMode ? "#2d1f3d" : "#faf5ff",
+                        color: "#8b5cf6",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        border: `1px solid ${
+                          isDarkMode ? "#4a3366" : "#e9d5ff"
+                        }`,
+                      }}
+                    >
+                      IMPROVEMENT
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        color: isDarkMode ? "#888" : "#666",
+                      }}
+                    >
+                      October 2025
+                    </span>
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: "600",
+                      color: isDarkMode ? "#ffffff" : "#1f2937",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    Improved User Interface
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "1rem",
+                      color: isDarkMode ? "#b0b0b0" : "#4b5563",
+                      lineHeight: "1.6",
+                      margin: 0,
+                    }}
+                  >
+                    Redesigned interface with enhanced accessibility and
+                    smoother navigation. Dark mode support added for comfortable
+                    viewing in any lighting condition.
+                  </p>
+                </div>
+              </div>
+
+              {/* Update 2 */}
+              <div
+                style={{
+                  position: "relative",
+                  paddingLeft: "60px",
+                }}
+                className="patch-note-update"
+              >
+                {/* Timeline dot */}
+                <div
+                  style={{
+                    position: "absolute",
+                    left: "12px",
+                    top: "8px",
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    backgroundColor: "#F34D01",
+                    border: `3px solid ${isDarkMode ? "#0d0d0d" : "#f8f9fa"}`,
+                    zIndex: 1,
+                  }}
+                  className="timeline-dot"
+                />
+                <div
+                  style={{
+                    backgroundColor: isDarkMode ? "#1a1a1a" : "#ffffff",
+                    padding: "24px",
+                    borderRadius: "12px",
+                    border: `1px solid ${isDarkMode ? "#333" : "#e0e0e0"}`,
+                    transition: "all 0.3s ease",
+                  }}
+                  className="patch-note-card"
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      marginBottom: "12px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 12px",
+                        backgroundColor: isDarkMode ? "#2d1f1a" : "#fff5f0",
+                        color: "#F34D01",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        border: `1px solid ${
+                          isDarkMode ? "#4a2f24" : "#ffd4c0"
+                        }`,
+                      }}
+                    >
+                      IMPROVEMENT
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        color: isDarkMode ? "#888" : "#666",
+                      }}
+                    >
+                      August 2025
+                    </span>
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: "600",
+                      color: isDarkMode ? "#ffffff" : "#1f2937",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    Enhanced AI Analysis Engine
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "1rem",
+                      color: isDarkMode ? "#b0b0b0" : "#4b5563",
+                      lineHeight: "1.6",
+                      margin: 0,
+                    }}
+                  >
+                    Villy now provides even more accurate legal analysis with
+                    improved understanding of complex case scenarios and
+                    Philippine legal precedents. Response times have been
+                    optimized for faster insights.
+                  </p>
+                </div>
+              </div>
+
+              {/* Update 2 */}
+            </div>
           </div>
         </div>
-      </footer>
-    </div>
+
+        {/* CTA Section */}
+        <div
+          id="cta"
+          ref={ctaRef}
+          style={{
+            padding: "80px 5%",
+            textAlign: "center",
+            backgroundColor: isDarkMode ? "#181818" : "#ffffff",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "50vh",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "2.25rem",
+              fontWeight: "700",
+              marginBottom: "16px",
+              color: isDarkMode ? "#ffffff" : "#333",
+            }}
+            className="subheading-shine"
+          >
+            Ready to Get Started?
+          </h2>
+          <p
+            style={{
+              fontSize: "1.125rem",
+              lineHeight: "1.6",
+              color: isDarkMode ? "#d1d5db" : "#666",
+              marginBottom: "32px",
+              maxWidth: "600px",
+              margin: "0 auto 32px",
+            }}
+          >
+            Join thousands of users who trust Civilify for their legal needs.
+          </p>
+          <button
+            style={styles.primaryButton}
+            onClick={handleSignup}
+            className="get-started-button"
+          >
+            Get Started
+          </button>
+        </div>
+
+        {/* Footer */}
+        <footer
+          id="footer"
+          ref={footerRef}
+          style={{
+            backgroundColor: isDarkMode ? "#0d0d0d" : "#ffffff",
+            padding: "20px 5%",
+            borderTop: isDarkMode ? "1px solid #333" : "1px solid #eee",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "1200px",
+              margin: "0 auto",
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "24px",
+              flexWrap: "wrap",
+            }}
+            className="footer-content"
+          >
+            <p
+              style={{
+                fontSize: "0.875rem",
+                color: isDarkMode ? "#a0a0a0" : "#666",
+                margin: 0,
+              }}
+            >
+              © The Civilify Company, Cebu City 2025
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "24px",
+                flexWrap: "wrap",
+              }}
+              className="footer-links"
+            >
+              <a
+                href="/civilify-documents"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateToDocsSection("what-is");
+                }}
+                style={{
+                  color: isDarkMode ? "#a0a0a0" : "#666",
+                  textDecoration: "none",
+                  transition: "color 0.3s ease",
+                  fontSize: "0.875rem",
+                }}
+                className="footer-link"
+              >
+                What is Civilify
+              </a>
+              <a
+                href="/civilify-documents"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateToDocsSection("why-use");
+                }}
+                style={{
+                  color: isDarkMode ? "#a0a0a0" : "#666",
+                  textDecoration: "none",
+                  transition: "color 0.3s ease",
+                  fontSize: "0.875rem",
+                }}
+                className="footer-link"
+              >
+                Why use Civilify
+              </a>
+              <a
+                href="/civilify-documents"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateToDocsSection("getting-started");
+                }}
+                style={{
+                  color: isDarkMode ? "#a0a0a0" : "#666",
+                  textDecoration: "none",
+                  transition: "color 0.3s ease",
+                  fontSize: "0.875rem",
+                }}
+                className="footer-link"
+              >
+                FAQs
+              </a>
+              <a
+                href="/civilify-documents"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateToDocsSection("security");
+                }}
+                style={{
+                  color: isDarkMode ? "#a0a0a0" : "#666",
+                  textDecoration: "none",
+                  transition: "color 0.3s ease",
+                  fontSize: "0.875rem",
+                }}
+                className="footer-link"
+              >
+                Security and Privacy
+              </a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 };
 
@@ -619,13 +1132,11 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "1rem 5%",
-    backgroundColor: "#ffffff",
     position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 1000,
-    borderBottom: "1px solid #eee",
   },
   logoContainer: {
     display: "flex",
@@ -689,14 +1200,13 @@ const styles = {
         "0 2px 5px rgba(243, 77, 1, 0.2), 1px 1px 1px rgba(255, 255, 255, 0.3) inset",
     },
   },
-  heroSection: {
+  feature1section: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: "0 5%",
+    padding: "0 10%",
     minHeight: "100vh",
-    borderBottom: "1px solid #eee",
     position: "relative",
     overflow: "hidden",
     boxSizing: "border-box",
@@ -721,7 +1231,7 @@ const styles = {
     height: "4rem",
   },
 
-  heroGrid: {
+  feature1grid: {
     display: "grid",
     gridTemplateColumns: window.innerWidth <= 475 ? "1fr" : "1fr 1fr",
     // gap: "40px",
@@ -731,14 +1241,14 @@ const styles = {
     alignItems: "center",
   },
 
-  heroLeft: {
+  feature1left: {
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
     textAlign: "center",
   },
-  heroRight: {
+  feature1right: {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -767,8 +1277,6 @@ const styles = {
     textAlign: "center",
   },
   description: {
-    fontSize: "1rem",
-    lineHeight: "1.6",
     marginBottom: "32px",
     color: "#666",
     textAlign: "center",
@@ -784,9 +1292,9 @@ const styles = {
     textAlign: "center",
   },
   sectionHeading: {
-    fontSize: "2rem",
-    fontWeight: "700",
-    marginBottom: "1.5em",
+    fontSize: "4rem",
+    // fontWeight: "700",
+    // marginBottom: "0.8em",
     color: "#333",
     textAlign: "center",
   },
@@ -925,11 +1433,11 @@ const styles = {
     cursor: "pointer",
     transition: "all 0.3s ease",
     marginBottom: "0",
-    display: "inline-block",
     position: "relative",
     border: "none",
     boxShadow:
       "0 4px 10px rgba(243, 77, 1, 0.25), 1px 1px 2px rgba(255, 255, 255, 0.3) inset",
+    width: "200px",
   },
   footer: {
     backgroundColor: "#ffffff",
@@ -1010,10 +1518,9 @@ const styles = {
     marginBottom: "1rem",
   },
 };
-
-// Add CSS for logo hover effect
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
+
   .logo-clickable:hover {
     transform: scale(1.1);
   }
@@ -1023,6 +1530,16 @@ document.head.appendChild(styleSheet);
 // Add CSS for animations
 const animationStyleSheet = document.createElement("style");
 animationStyleSheet.textContent = `
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
   @keyframes shine {
     to {
       background-position: 200% center;
@@ -1075,7 +1592,7 @@ animationStyleSheet.textContent = `
     animation: buttonShine 1.5s linear infinite;
     box-shadow: 0 6px 15px rgba(243, 77, 1, 0.3), 1px 1px 2px rgba(255, 255, 255, 0.3) inset;
   }
-  
+
   .get-started-button:active {
     transform: translateY(0);
     box-shadow: 0 2px 5px rgba(243, 77, 1, 0.2), 1px 1px 1px rgba(255, 255, 255, 0.3) inset;
@@ -1139,12 +1656,184 @@ animationStyleSheet.textContent = `
     color: #F34D01;
   }
 
-  @media (max-width: 475px) {
-    .villy-illustration {
-      display: none !important;
+  /* === THIN SCROLLBAR FOR ENTIRE PAGE === */
+  /* WebKit (Chrome, Edge, Safari) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #888 transparent;
+  }
+
+  /* Optional: Dark mode scrollbar */
+  @media (prefers-color-scheme: dark) {
+    ::-webkit-scrollbar-thumb {
+      background: #666;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+    * {
+      scrollbar-color: #666 transparent;
     }
   }
-  
+
+  /* Dark mode styles */
+  @media (prefers-color-scheme: dark) {
+    /* Navbar */
+    .navbar {
+      background-color: #1a1a1a !important;
+      border-bottom: 1px solid #333 !important;
+    }
+    
+    .section-heading{color: #e0e0e0 !important;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background-color: #1a1a1a !important;
+      box-shadow: -4px 0 12px rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .sidebar-overlay {
+      background-color: rgba(0, 0, 0, 0.7) !important;
+    }
+
+    /* Nav links */
+    .nav-links a {
+      color: #e0e0e0 !important;
+    }
+
+    .nav-links a:hover {
+      color: #ff6b3d !important;
+    }
+
+    /* Nav button */
+    .nav-button {
+      background-color: #ff6b3d !important;
+      box-shadow: 0 4px 10px rgba(255, 107, 61, 0.3), 1px 1px 2px rgba(255, 255, 255, 0.2) inset !important;
+    }
+
+    .nav-button:hover {
+      background: linear-gradient(90deg, #ff6b3d, #F34D01, #ff6b3d) !important;
+      box-shadow: 0 6px 15px rgba(255, 107, 61, 0.4), 1px 1px 2px rgba(255, 255, 255, 0.2) inset !important;
+    }
+
+    /* Sections */
+    .hero-section,
+    .features-section,
+    .how-it-works-section {
+      background-color: #121212 !important;
+      color: #e0e0e0 !important;
+    }
+
+    /* Feature cards */
+    .feature-card {
+      background-color: #1e1e1e !important;
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .feature-card:hover {
+      box-shadow: 0 12px 32px rgba(255, 107, 61, 0.15) !important;
+    }
+
+    .feature-title {
+      color: #e0e0e0 !important;
+    }
+
+    .feature-description {
+      color: #a0a0a0 !important;
+    }
+
+    /* How it works steps */
+    .step {
+      background-color: #1e1e1e !important;
+    }
+
+    .step-title {
+      color: #e0e0e0 !important;
+    }
+
+    .step-description {
+      color: #a0a0a0 !important;
+    }
+
+    /* CTA section */
+    .cta-section {
+      background-color: #1a1a1a !important;
+    }
+
+    .cta-heading {
+      color: #e0e0e0 !important;
+    }
+
+    .cta-description {
+      color: #a0a0a0 !important;
+    }
+
+    .primary-button {
+      background-color: #ff6b3d !important;
+      box-shadow: 0 4px 10px rgba(255, 107, 61, 0.3), 1px 1px 2px rgba(255, 255, 255, 0.2) inset !important;
+    }
+
+    .primary-button:hover {
+      background: linear-gradient(90deg, #ff6b3d, #F34D01, #ff6b3d) !important;
+      box-shadow: 0 6px 15px rgba(255, 107, 61, 0.4), 1px 1px 2px rgba(255, 255, 255, 0.2) inset !important;
+    }
+
+    /* Footer */
+    .footer {
+      background-color: #121212 !important;
+      border-top: 1px solid #333 !important;
+    }
+
+    .footer-link,
+    .copyright {
+      color: #a0a0a0 !important;
+    }
+
+    .footer-link:hover {
+      color: #ff6b3d !important;
+    }
+
+  }
+
+  @media (max-width: 475px) {
+    .villy-illustration-right {
+      display: none !important;
+    }
+    .villy-illustration-mobile {
+      display: block !important;
+    }
+    .feature-card-container {
+      flex-direction: column !important;
+      align-items: center !important;
+    }
+    .timeline-dot{
+      display:none !important;
+    }
+    .patch-note-update {
+      padding-left: 0px !important;
+    }
+  }
+
   @media (max-width: 475px) {
     .hero-grid {
       grid-template-columns: 1fr !important;
@@ -1156,7 +1845,7 @@ animationStyleSheet.textContent = `
     .subheading-shine {
       font-size: 1.5rem !important;
       margin-top: 1rem !important;
-    } 
+    }
     .footer-content {
       flex-direction: column-reverse !important;
       align-items: center !important;
@@ -1168,14 +1857,17 @@ animationStyleSheet.textContent = `
       margin-top: 16px;
     }
   }
-  
+
   @media (min-width: 476px) {
     .hero-grid {
       grid-template-columns: 1fr 1fr !important;
     }
+    .villy-illustration-mobile {
+      display: none !important;
+    }
   }
 
-  @media (max-width: 330px) {
+  @media (max-width: 376px) {
     .hamburger-button {
       display: block !important;
       background: transparent !important;
@@ -1183,7 +1875,7 @@ animationStyleSheet.textContent = `
 
     .section-heading {
       font-size: 1.5rem !important;
-      margin: 0 0 0 
+      margin: 0 0 0;
     }
 
     .nav-links {
@@ -1215,7 +1907,25 @@ animationStyleSheet.textContent = `
       opacity: 1;
     }
   }
+
+  /* Added hover effect for patch note cards */
+  .patch-note-card:hover {
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .patch-note-card:hover {
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  /* Hide timeline line on mobile */
+  @media (max-width: 475px) {
+    .timeline-line {
+      display: none !important;
+    }
+  }
 `;
 document.head.appendChild(animationStyleSheet);
-
 export default Landing;
