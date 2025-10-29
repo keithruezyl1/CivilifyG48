@@ -26,7 +26,7 @@ public class OpenAIController {
     
     @Autowired
     private ChatService chatService;
-
+    
     // CPA structured facts feature removed
     
     // Endpoint to delete all previous conversations for a user
@@ -257,10 +257,7 @@ public class OpenAIController {
 
             // GLI: Allow AI to include sources as instructed in system prompt
             
-            // Add AI response to the conversation BEFORE report processing
-            ChatMessage aiChatMessage = chatService.addMessage(
-                conversationId, null, "villy@civilify.com", aiResponse, false);
-            logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
+            // Defer saving AI response until after CPA report enrichment (if any)
 
             // CPA: Extract and persist structured facts after each user turn to build memory
             // CPA structured facts/report generation removed
@@ -400,6 +397,19 @@ public class OpenAIController {
                             kbSources = new java.util.ArrayList<>(uniq.values());
                         }
                         logger.info("CPA: KB sources fetched for report: {}", kbSources.size());
+
+                        // Regenerate the report with KB context and strict source-citation instructions
+                        String reportPrompt = buildEnhancedSystemPrompt(systemPrompt, null, kbSources, mode);
+                        String regenerated = openAIService.generateResponse(
+                            userMessage,
+                            reportPrompt,
+                            conversationHistoryForAI,
+                            mode
+                        );
+                        if (regenerated != null && !regenerated.isBlank()) {
+                            aiResponse = regenerated;
+                            logger.info("CPA: Regenerated report with KB context and citations.");
+                        }
                     } catch (Exception ex) {
                         logger.warn("CPA: Failed fetching KB sources for report: {}", ex.getMessage());
                     }
@@ -407,6 +417,11 @@ public class OpenAIController {
                     responseBody.put("isReport", false);
                 }
             }
+
+            // Now persist the final AI response (original or regenerated)
+            ChatMessage aiChatMessage = chatService.addMessage(
+                conversationId, null, "villy@civilify.com", aiResponse, false);
+            logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
 
             return ResponseEntity.ok(responseBody);
         } catch (Exception e) {
