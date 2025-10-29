@@ -12,7 +12,6 @@ import {
   FaSun,
   FaUsers,
   FaUserShield,
-  FaCog,
   FaLaptop,
   FaBars,
   FaTimes,
@@ -435,17 +434,7 @@ const SystemAdminPage = () => {
               )}
             </button>
 
-            <button
-              onClick={() => {
-                localStorage.setItem("forceLightMode", "true");
-                navigate("/edit-profile");
-              }}
-              style={currentStyles.sidebarActionBtn}
-              className="sidebar-action-hover"
-              aria-label="Edit profile"
-            >
-              <FaCog size={16} />
-            </button>
+            {/* Settings button removed as requested */}
             <button
               onClick={handleLogout}
               style={currentStyles.sidebarActionBtn}
