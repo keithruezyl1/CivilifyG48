@@ -20,6 +20,7 @@ import {
 } from "@/components/lightswind/glowing-cards";
 import WaveTransition from "../components/lightswind/wave-transition";
 import ParticlesBackground from "../components/lightswind/particles-background";
+import PatchNotes from "../components/lightswind/patch-notes";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -177,6 +178,50 @@ const Landing = () => {
     },
   ];
 
+  // Inside your Landing component, before return()
+  const patchNotes = [
+    {
+      appVersion: "v2.4.1",
+      kbVersion: "v18",
+      date: "October 28, 2025",
+      tag: "IMPROVEMENT",
+      title: "Enhanced AI Context Engine",
+      changes: [
+        "Improved understanding of multi-party legal disputes",
+        "Added support for 12 new Philippine legal forms",
+        "Reduced response latency by 42% in Case Analysis mode",
+        "Enhanced citation accuracy for Supreme Court decisions",
+      ],
+      colorStart: "#8b5cf6",
+      colorEnd: "#6d28d9",
+      tagColor: "#8b5cf6",
+      tagBgLight: "#faf5ff",
+      tagBgDark: "#2d1f3d",
+      tagBorderLight: "#e9d5ff",
+      tagBorderDark: "#4a3366",
+    },
+    {
+      appVersion: "v2.3.0",
+      kbVersion: "v16",
+      date: "August 15, 2025",
+      tag: "FEATURE",
+      title: "Document Upload & Analysis",
+      changes: [
+        "Upload contracts, complaints, or court orders",
+        "AI extracts key clauses and risks instantly",
+        "Generate plain-language summaries",
+        "Export findings as PDF or share via link",
+      ],
+      colorStart: "#F34D01",
+      colorEnd: "#d94600",
+      tagColor: "#F34D01",
+      tagBgLight: "#fff5f0",
+      tagBgDark: "#2d1f1a",
+      tagBorderLight: "#ffd4c0",
+      tagBorderDark: "#4a2f24",
+    },
+    // Add more...
+  ];
   return (
     <>
       <div
@@ -397,7 +442,7 @@ const Landing = () => {
                 padding: "1em",
                 zIndex: 1,
               }}
-              className={`text-gray-300 text-gray-700 p-4 sm:p-6 md:p-8 text-sm sm:text-base md:text-lg leading-relaxed z-10`}
+              className={`text-gray-300 p-4 sm:p-6 md:p-8 text-sm sm:text-base md:text-lg leading-relaxed z-10`}
             >
               Ask a legal question, assess your legal case, get insights, and
               know what to do next with{" "}
@@ -437,6 +482,7 @@ const Landing = () => {
             </div>
           </div>
         </div>
+        {/* Features Section */}
         <div
           id="features"
           ref={featuresRef}
@@ -491,7 +537,7 @@ const Landing = () => {
             <SeasonalHoverCards cards={seasonCards} />
           </div>
         </div>
-
+        {/* How It Works Section */}
         <div
           id="how-it-works"
           ref={howItWorksRef}
@@ -685,7 +731,7 @@ const Landing = () => {
             alignItems: "center",
             backgroundColor: isDarkMode ? "#0d0d0d" : "#f8f9fa",
             justifyContent: "center",
-            padding: "80px 5%",
+            padding: "2em",
             scrollSnapAlign: "start",
             position: "relative",
             overflow: "hidden",
@@ -710,229 +756,14 @@ const Landing = () => {
               fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
               fontWeight: "700",
               color: isDarkMode ? "#ffffff" : "#F34D01",
-              paddingBottom: "1em",
+              // paddingBottom: "1em",
               position: "relative",
               zIndex: 1,
             }}
           >
             What's New
           </h2>
-          <div
-            style={{
-              maxWidth: "900px",
-              width: "100%",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            {/* Timeline line */}
-            <div
-              style={{
-                position: "absolute",
-                left: "20px",
-                top: "0",
-                bottom: "0",
-                width: "2px",
-                backgroundColor: isDarkMode ? "#333" : "#e0e0e0",
-              }}
-              className="timeline-line"
-            />
-
-            {/* Patch note items */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "40px",
-              }}
-            >
-              {/* Update 1 */}
-              <div
-                style={{
-                  position: "relative",
-                  paddingLeft: "60px",
-                }}
-                className="patch-note-update"
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    left: "12px",
-                    top: "8px",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    backgroundColor: "#8b5cf6",
-                    border: `3px solid ${isDarkMode ? "#0d0d0d" : "#f8f9fa"}`,
-                    zIndex: 1,
-                  }}
-                  className="timeline-dot"
-                />
-                <div
-                  style={{
-                    backgroundColor: isDarkMode ? "#1a1a1a" : "#ffffff",
-                    padding: "24px",
-                    borderRadius: "12px",
-                    border: `1px solid ${isDarkMode ? "#333" : "#e0e0e0"}`,
-                    transition: "all 0.3s ease",
-                  }}
-                  className="patch-note-card"
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      marginBottom: "12px",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "4px 12px",
-                        backgroundColor: isDarkMode ? "#2d1f3d" : "#faf5ff",
-                        color: "#8b5cf6",
-                        borderRadius: "6px",
-                        fontSize: "0.75rem",
-                        fontWeight: "600",
-                        border: `1px solid ${
-                          isDarkMode ? "#4a3366" : "#e9d5ff"
-                        }`,
-                      }}
-                    >
-                      IMPROVEMENT
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        color: isDarkMode ? "#888" : "#666",
-                      }}
-                    >
-                      October 2025
-                    </span>
-                  </div>
-                  <h3
-                    style={{
-                      fontSize: "1.5rem",
-                      fontWeight: "600",
-                      color: isDarkMode ? "#ffffff" : "#1f2937",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Improved User Interface
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: "1rem",
-                      color: isDarkMode ? "#b0b0b0" : "#4b5563",
-                      lineHeight: "1.6",
-                      margin: 0,
-                    }}
-                  >
-                    Redesigned interface with enhanced accessibility and
-                    smoother navigation. Dark mode support added for comfortable
-                    viewing in any lighting condition.
-                  </p>
-                </div>
-              </div>
-
-              {/* Update 2 */}
-              <div
-                style={{
-                  position: "relative",
-                  paddingLeft: "60px",
-                }}
-                className="patch-note-update"
-              >
-                {/* Timeline dot */}
-                <div
-                  style={{
-                    position: "absolute",
-                    left: "12px",
-                    top: "8px",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    backgroundColor: "#F34D01",
-                    border: `3px solid ${isDarkMode ? "#0d0d0d" : "#f8f9fa"}`,
-                    zIndex: 1,
-                  }}
-                  className="timeline-dot"
-                />
-                <div
-                  style={{
-                    backgroundColor: isDarkMode ? "#1a1a1a" : "#ffffff",
-                    padding: "24px",
-                    borderRadius: "12px",
-                    border: `1px solid ${isDarkMode ? "#333" : "#e0e0e0"}`,
-                    transition: "all 0.3s ease",
-                  }}
-                  className="patch-note-card"
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      marginBottom: "12px",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "4px 12px",
-                        backgroundColor: isDarkMode ? "#2d1f1a" : "#fff5f0",
-                        color: "#F34D01",
-                        borderRadius: "6px",
-                        fontSize: "0.75rem",
-                        fontWeight: "600",
-                        border: `1px solid ${
-                          isDarkMode ? "#4a2f24" : "#ffd4c0"
-                        }`,
-                      }}
-                    >
-                      IMPROVEMENT
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        color: isDarkMode ? "#888" : "#666",
-                      }}
-                    >
-                      August 2025
-                    </span>
-                  </div>
-                  <h3
-                    style={{
-                      fontSize: "1.5rem",
-                      fontWeight: "600",
-                      color: isDarkMode ? "#ffffff" : "#1f2937",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Enhanced AI Analysis Engine
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: "1rem",
-                      color: isDarkMode ? "#b0b0b0" : "#4b5563",
-                      lineHeight: "1.6",
-                      margin: 0,
-                    }}
-                  >
-                    Villy now provides even more accurate legal analysis with
-                    improved understanding of complex case scenarios and
-                    Philippine legal precedents. Response times have been
-                    optimized for faster insights.
-                  </p>
-                </div>
-              </div>
-
-              {/* Update 2 */}
-            </div>
-          </div>
+          <PatchNotes notes={patchNotes} isDarkMode={isDarkMode} />
         </div>
 
         {/* CTA Section */}
@@ -961,6 +792,25 @@ const Landing = () => {
           >
             Ready to Get Started?
           </h2>
+          {/* <TrustedUsers
+            avatars={[
+              "https://plus.unsplash.com/premium_photo-1668319914124-57301e0a1850?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
+              "https://images.unsplash.com/photo-1615109398623-88346a601842?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
+              "https://images.unsplash.com/photo-1508341591423-4347099e1f19?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
+              "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
+              "https://images.unsplash.com/photo-1600883662955-a82934b7cd65?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=880",
+            ]}
+            rating={5}
+            totalUsersText="5,000+"
+            caption="Loved by"
+            starColorClass="text-yellow-400"
+            ringColors={[
+              "ring-pink-500",
+              "ring-green-500",
+              "ring-blue-500",
+              "ring-purple-500",
+            ]}
+          /> */}
           <p
             style={{
               fontSize: "1.125rem",
@@ -1520,7 +1370,6 @@ const styles = {
 };
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-
   .logo-clickable:hover {
     transform: scale(1.1);
   }
@@ -1709,11 +1558,6 @@ animationStyleSheet.textContent = `
     /* Sidebar */
     .sidebar {
       background-color: #1a1a1a !important;
-<<<<<<< HEAD
-      // box-shadow: -4px 0 12px rgba(255, 255, 255, 0.1) !important;
-=======
-      box-shadow: -4px 0 12px rgba(255, 255, 255, 0.1) !important;
->>>>>>> 3c0971b6c164526b19fecd0d5047e603384a349b
     }
 
     .sidebar-overlay {
