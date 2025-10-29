@@ -469,6 +469,7 @@ const Landing = () => {
           <h2
             style={{
 <<<<<<< HEAD
+<<<<<<< HEAD
               fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
 =======
               fontSize: "3em",
