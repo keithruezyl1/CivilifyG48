@@ -453,6 +453,206 @@ public class OpenAIService {
             return new ArrayList<>();
         }
     }
+
+    /**
+     * Extract structured case facts from conversation context + latest user message.
+     * Returns a map that can be stored on a FACTS message, along with a confidence score.
+     */
+    public Map<String, Object> extractCaseFacts(List<Map<String, String>> conversationHistory,
+                                                String userMessage) {
+        try {
+            String schema = """
+            You are an information extraction system. Extract case facts strictly from the provided conversation and the latest user message.
+            Return ONLY valid JSON with this exact shape and field names. If a field is unknown, set it to null or an empty list as appropriate.
+            {
+              "parties": [{"name": string|null, "role": string|null}]|[],
+              "incident": {
+                "type": string|null,
+                "date": string|null,  // ISO-8601 if present
+                "location": {"city": string|null, "province": string|null, "country": "PH"|null},
+                "description": string|null
+              }|null,
+              "harms": [string]|[],
+              "documents": [string]|[],
+              "witnesses": [string]|[],
+              "jurisdiction": string|null,
+              "legalIssues": [string]|[],
+              "goal": string|null,
+              "confidence": number  // 0..1 reflecting how certain you are overall
+            }
+            Do not invent facts. Do not include any keys outside this schema. Output JSON only.
+            """;
+
+            // Build minimal message set: system with schema + short conversation digest + current user message
+            List<Map<String, Object>> messages = new ArrayList<>();
+            Map<String, Object> sys = new HashMap<>();
+            sys.put("role", "system");
+            sys.put("content", schema);
+            messages.add(sys);
+
+            if (conversationHistory != null && !conversationHistory.isEmpty()) {
+                StringBuilder digest = new StringBuilder();
+                digest.append("Conversation so far (ordered):\n");
+                for (Map<String, String> msg : conversationHistory) {
+                    String role = "true".equals(msg.get("isUserMessage")) ? "User" : "Assistant";
+                    String content = msg.get("content");
+                    if (content != null && content.length() > 600) content = content.substring(0, 600);
+                    digest.append(role).append(": ").append(content == null ? "" : content).append("\n");
+                }
+                Map<String, Object> ctx = new HashMap<>();
+                ctx.put("role", "system");
+                ctx.put("content", digest.toString());
+                messages.add(ctx);
+            }
+
+            Map<String, Object> user = new HashMap<>();
+            user.put("role", "user");
+            user.put("content", userMessage);
+            messages.add(user);
+
+            // Use CPA model/settings for extraction
+            String apiKey = cpaApiKey;
+            String model = cpaModel;
+            double temperature = Math.min(0.2, cpaTemperature);
+            int maxTokens = Math.min(600, cpaMaxTokens);
+
+            String apiUrl = "https://api.openai.com/v1/chat/completions";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+            headers.set("Authorization", "Bearer " + apiKey);
+            if (openAiOrganization != null && !openAiOrganization.isBlank()) {
+                headers.set("OpenAI-Organization", openAiOrganization.trim());
+            }
+            if (openAiProject != null && !openAiProject.isBlank()) {
+                headers.set("OpenAI-Project", openAiProject.trim());
+            }
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", model);
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", temperature);
+            requestBody.put("max_completion_tokens", maxTokens);
+
+            HttpEntity<Map<String, Object>> req = new HttpEntity<>(requestBody, headers);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                apiUrl, HttpMethod.POST, req, new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) return new HashMap<>();
+
+            Object choicesObj = response.getBody().get("choices");
+            if (!(choicesObj instanceof List)) return new HashMap<>();
+            List<?> choices = (List<?>) choicesObj;
+            if (choices.isEmpty()) return new HashMap<>();
+            Object first = choices.get(0);
+            if (!(first instanceof Map)) return new HashMap<>();
+            Object messageObj = ((Map<?, ?>) first).get("message");
+            if (!(messageObj instanceof Map)) return new HashMap<>();
+            Object contentObj = ((Map<?, ?>) messageObj).get("content");
+            if (!(contentObj instanceof String)) return new HashMap<>();
+            String json = (String) contentObj;
+            try {
+                // Parse strictly to Map
+                @SuppressWarnings("unchecked")
+                Map<String, Object> parsed = jsonMapper.readValue(json, Map.class);
+                return parsed != null ? parsed : new HashMap<>();
+            } catch (Exception parseEx) {
+                logger.warn("Extractor JSON parse failed; content: {}", json);
+                return new HashMap<>();
+            }
+        } catch (Exception e) {
+            logger.error("Error extracting case facts: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    public double computeCompletenessScore(Map<String, Object> facts) {
+        if (facts == null || facts.isEmpty()) return 0.0;
+        int total = 7; // parties, incident, harms/docs, witnesses, jurisdiction, legalIssues, goal
+        int have = 0;
+        if (facts.get("parties") instanceof List<?> l && !l.isEmpty()) have++;
+        if (facts.get("incident") instanceof Map<?, ?> m && !m.isEmpty()) have++;
+        boolean hasHarms = facts.get("harms") instanceof List<?> hl && !hl.isEmpty();
+        boolean hasDocs = facts.get("documents") instanceof List<?> dl && !dl.isEmpty();
+        if (hasHarms || hasDocs) have++;
+        if (facts.get("witnesses") instanceof List<?> wl && !wl.isEmpty()) have++;
+        if (facts.get("jurisdiction") instanceof String s && !s.isBlank()) have++;
+        if (facts.get("legalIssues") instanceof List<?> il && !il.isEmpty()) have++;
+        if (facts.get("goal") instanceof String g && !g.isBlank()) have++;
+        return Math.round((have * 100.0 / total));
+    }
+
+    public List<String> computeMissingSlots(Map<String, Object> facts) {
+        List<String> missing = new ArrayList<>();
+        if (!(facts != null && facts.get("parties") instanceof List<?> l && !l.isEmpty())) missing.add("Parties involved");
+        if (!(facts != null && facts.get("incident") instanceof Map<?, ?> m && !m.isEmpty())) missing.add("Incident details");
+        boolean hasHarms = facts != null && facts.get("harms") instanceof List<?> hl && !hl.isEmpty();
+        boolean hasDocs = facts != null && facts.get("documents") instanceof List<?> dl && !dl.isEmpty();
+        if (!(hasHarms || hasDocs)) missing.add("Harms or documents");
+        if (!(facts != null && facts.get("witnesses") instanceof List<?> wl && !wl.isEmpty())) missing.add("Witnesses");
+        if (!(facts != null && facts.get("jurisdiction") instanceof String s && !s.isBlank())) missing.add("Jurisdiction");
+        if (!(facts != null && facts.get("legalIssues") instanceof List<?> il && !il.isEmpty())) missing.add("Legal issues");
+        if (!(facts != null && facts.get("goal") instanceof String g && !g.isBlank())) missing.add("User's goal");
+        return missing;
+    }
+
+    public String composeReportFromFacts(Map<String, String> lastTurnsDigest,
+                                         Map<String, Object> facts,
+                                         List<KnowledgeBaseEntry> kbEntries) {
+        StringBuilder sys = new StringBuilder();
+        sys.append("You are Villy, Civilify's CPA report composer. Use ONLY provided structured facts and KB excerpts. ");
+        sys.append("If a fact is unknown, label it 'Unknown' and suggest how to obtain it. ");
+        sys.append("Do not invent. Output a clear, user-friendly assessment.\n\n");
+
+        StringBuilder ctx = new StringBuilder();
+        ctx.append("STRUCTURED FACTS:\n");
+        try { ctx.append(jsonMapper.writeValueAsString(facts)); } catch (Exception ignore) {}
+        ctx.append("\n\nKB EXCERPTS (titles & citations):\n");
+        if (kbEntries != null) {
+            for (KnowledgeBaseEntry e : kbEntries) {
+                ctx.append("- ").append(e.getTitle() != null ? e.getTitle() : "Untitled");
+                if (e.getCanonicalCitation() != null && !e.getCanonicalCitation().isEmpty()) {
+                    ctx.append(" (").append(e.getCanonicalCitation()).append(")");
+                }
+                ctx.append("\n");
+            }
+        }
+        ctx.append("\nRECENT TURNS:\n");
+        for (Map.Entry<String, String> ent : lastTurnsDigest.entrySet()) {
+            ctx.append(ent.getKey()).append(": ").append(ent.getValue()).append("\n");
+        }
+
+        StringBuilder user = new StringBuilder();
+        user.append("Using the STRUCTURED FACTS and KB EXCERPTS, produce this CPA report:\n");
+        user.append("Case Summary:\n[Brief summary]\n\n");
+        user.append("Legal Issues:\n- [Issues]\n\n");
+        user.append("Plausibility Score: [X]% - [Label]\n\n");
+        user.append("Rationale:\n- [Why, mapped to facts]\n\n");
+        user.append("Suggested Next Steps:\n- [Actions]\n\n");
+        user.append("DISCLAIMER: This is a legal pre-assessment only.\n");
+
+        // Call generateResponse with CPA model
+        List<Map<String, String>> minimalHistory = new ArrayList<>();
+        Map<String, String> sysMsg = new HashMap<>();
+        sysMsg.put("isUserMessage", "false");
+        sysMsg.put("content", sys.toString() + ctx.toString());
+        minimalHistory.add(sysMsg);
+        return generateResponse(user.toString(), getCpaSystemPrompt(), minimalHistory, "B");
+    }
+
+    public String synthesizeKbQueryFromFacts(Map<String, Object> facts) {
+        if (facts == null) return "philippine law case plausibility";
+        StringBuilder q = new StringBuilder();
+        Object type = facts.get("incident") instanceof Map<?, ?> m ? m.get("type") : null;
+        if (type instanceof String ts && !ts.isBlank()) q.append(ts).append(" ");
+        Object issues = facts.get("legalIssues");
+        if (issues instanceof List<?> il) {
+            for (Object o : il) if (o instanceof String s && !s.isBlank()) q.append(s).append(" ");
+        }
+        Object j = facts.get("jurisdiction");
+        if (j instanceof String js && !js.isBlank()) q.append(js).append(" "); else q.append("Philippines ");
+        return q.toString().trim();
+    }
     
     // Method for development/testing when API key is not available
     public String generateMockResponse(String userMessage) {

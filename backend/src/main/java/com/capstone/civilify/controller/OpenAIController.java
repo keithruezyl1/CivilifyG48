@@ -259,6 +259,68 @@ public class OpenAIController {
             ChatMessage aiChatMessage = chatService.addMessage(
                 conversationId, null, "villy@civilify.com", aiResponse, false);
             logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
+
+            // CPA: Extract and persist structured facts after each user turn to build memory
+            Double latestCompleteness = null;
+            java.util.List<String> missingSlots = new java.util.ArrayList<>();
+            boolean reportTriggered = false;
+            String reportContent = null;
+            if ("B".equals(mode)) {
+                try {
+                    long t0 = System.currentTimeMillis();
+                    Map<String, Object> facts = openAIService.extractCaseFacts(conversationHistoryForAI, userMessage);
+                    long t1 = System.currentTimeMillis();
+                    logger.info("CPA: extractor latency={}ms", (t1 - t0));
+                    if (facts != null && !facts.isEmpty()) {
+                        Double confidence = null;
+                        Object c = facts.get("confidence");
+                        if (c instanceof Number n) confidence = n.doubleValue();
+                        chatService.addFactsMessage(conversationId, facts, confidence);
+                        double score = openAIService.computeCompletenessScore(facts);
+                        latestCompleteness = score;
+                        missingSlots = openAIService.computeMissingSlots(facts);
+                        chatService.updateCompletenessScore(conversationId, score);
+                        logger.info("CPA: Extracted facts saved (confidence={}), completeness={}", confidence, score);
+
+                        boolean explicitRequest = userMessage.toLowerCase().matches(".*(assess|assessment|report|score|plausibility).*\u0000?");
+                        boolean thresholdReached = score >= 70.0;
+                        if (explicitRequest || thresholdReached) {
+                            String triggerReason = explicitRequest ? "explicit_request" : "threshold_reached";
+                            // Fetch KB only now using synthesized query from facts
+                            try {
+                                String kbQuery = openAIService.synthesizeKbQueryFromFacts(facts);
+                                java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbForReport =
+                                    openAIService.getKnowledgeBaseSources(kbQuery);
+
+                                // Compose report from facts + KB
+                                java.util.Map<String, String> digest = new java.util.LinkedHashMap<>();
+                                int take = Math.min(4, conversationHistoryForAI.size());
+                                for (int i = conversationHistoryForAI.size() - take; i < conversationHistoryForAI.size(); i++) {
+                                    java.util.Map<String, String> m = conversationHistoryForAI.get(i);
+                                    String role = "true".equals(m.get("isUserMessage")) ? "User" : "Assistant";
+                                    String content = m.get("content");
+                                    if (content != null && content.length() > 300) content = content.substring(0, 300);
+                                    digest.put(role, content);
+                                }
+                                long r0 = System.currentTimeMillis();
+                                reportContent = openAIService.composeReportFromFacts(digest, facts, kbForReport);
+                                long r1 = System.currentTimeMillis();
+                                logger.info("CPA: report composed in {}ms (reason={})", (r1 - r0), triggerReason);
+                                if (reportContent != null && !reportContent.isBlank()) {
+                                    chatService.addReportMessage(conversationId, reportContent);
+                                    reportTriggered = true;
+                                }
+                            } catch (Exception rex) {
+                                logger.warn("CPA: Report generation failed: {}", rex.getMessage());
+                            }
+                        }
+                    } else {
+                        logger.info("CPA: No facts extracted this turn");
+                    }
+                } catch (Exception ex) {
+                    logger.warn("CPA: Failed to extract/persist facts: {}", ex.getMessage());
+                }
+            }
             
             // Step 3: Source enrichment rules per mode
             if ("A".equals(mode)) {
@@ -334,6 +396,12 @@ public class OpenAIController {
             responseBody.put("success", true);
             responseBody.put("sources", new java.util.ArrayList<>()); // Empty sources array since we're integrating them into response
             responseBody.put("hasKnowledgeBaseContext", shouldProvideSources && !sources.isEmpty());
+            if ("B".equals(mode)) {
+                if (latestCompleteness != null) responseBody.put("completenessScore", latestCompleteness);
+                responseBody.put("missingSlots", missingSlots);
+                responseBody.put("reportTriggered", reportTriggered);
+                if (reportTriggered && reportContent != null) responseBody.put("reportPreview", reportContent);
+            }
 
             // Extract plausibility score label and summary from the AI response (for mode B)
             String plausibilityLabel = null;

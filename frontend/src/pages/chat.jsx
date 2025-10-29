@@ -92,6 +92,10 @@ const fetchGPTResponse = async (
         plausibilitySummary: response.data.plausibilitySummary,
         sources: response.data.sources || [], // Knowledge base sources
         hasKnowledgeBaseContext: response.data.hasKnowledgeBaseContext || false,
+        completenessScore: response.data.completenessScore,
+        missingSlots: response.data.missingSlots || [],
+        reportTriggered: response.data.reportTriggered || false,
+        reportPreview: response.data.reportPreview || null,
       };
     } else {
       console.error("Error in AI response:", response.data);
@@ -104,6 +108,10 @@ const fetchGPTResponse = async (
         plausibilitySummary: null,
         sources: [],
         hasKnowledgeBaseContext: false,
+        completenessScore: null,
+        missingSlots: [],
+        reportTriggered: false,
+        reportPreview: null,
       };
     }
   } catch (error) {
@@ -1070,6 +1078,10 @@ const Chat = () => {
           hasKnowledgeBaseContext: result.hasKnowledgeBaseContext || false,
           plausibilityLabel: result.plausibilityLabel,
           plausibilitySummary: result.plausibilitySummary,
+          completenessScore: result.completenessScore,
+          missingSlots: result.missingSlots || [],
+          reportTriggered: result.reportTriggered || false,
+          reportPreview: result.reportPreview || null,
         };
 
         const updatedMessages = [...newMessages, aiMessage];
@@ -1161,6 +1173,10 @@ const Chat = () => {
       hasKnowledgeBaseContext: aiResponse.hasKnowledgeBaseContext || false,
       plausibilityLabel: aiResponse.plausibilityLabel,
       plausibilitySummary: aiResponse.plausibilitySummary,
+      completenessScore: aiResponse.completenessScore,
+      missingSlots: aiResponse.missingSlots || [],
+      reportTriggered: aiResponse.reportTriggered || false,
+      reportPreview: aiResponse.reportPreview || null,
     };
     const finalMessages = [...updatedMessages, aiMessage];
     setMessages(finalMessages);
@@ -2234,6 +2250,55 @@ const Chat = () => {
                         <ReactMarkdown components={markdownComponents}>
                           {message.isUser ? message.text : message.text}
                         </ReactMarkdown>
+                        {selectedMode === "B" && !message.isUser && (
+                          <div style={{ marginTop: 10 }}>
+                            {typeof message.completenessScore === "number" && (
+                              <div style={{
+                                display: "inline-block",
+                                padding: "4px 8px",
+                                borderRadius: 12,
+                                background: isDarkMode ? "#2a3b2a" : "#e8f5e9",
+                                color: isDarkMode ? "#b2dfdb" : "#1b5e20",
+                                fontSize: 12,
+                                marginRight: 8,
+                              }}>
+                                Facts captured • Completeness {Math.round(message.completenessScore)}%
+                              </div>
+                            )}
+                            {Array.isArray(message.missingSlots) && message.missingSlots.length > 0 && (
+                              <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {message.missingSlots.slice(0, 5).map((slot, i) => (
+                                  <span key={i} style={{
+                                    padding: "4px 8px",
+                                    borderRadius: 12,
+                                    background: isDarkMode ? "#3a3a3a" : "#f1f5f9",
+                                    color: isDarkMode ? "#ddd" : "#334155",
+                                    fontSize: 12,
+                                    border: isDarkMode ? "1px solid #555" : "1px solid #e2e8f0",
+                                  }}>
+                                    Missing: {slot}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {message.reportTriggered && message.reportPreview && (
+                              <div style={{
+                                marginTop: 12,
+                                padding: 12,
+                                borderRadius: 8,
+                                background: isDarkMode ? "#2f2f2f" : "#fafafa",
+                                border: isDarkMode ? "1px solid #444" : "1px solid #eee",
+                              }}>
+                                <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>
+                                  Report preview
+                                </div>
+                                <ReactMarkdown components={markdownComponents}>
+                                  {message.reportPreview}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
