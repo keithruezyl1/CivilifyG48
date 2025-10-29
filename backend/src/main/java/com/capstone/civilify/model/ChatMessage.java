@@ -10,9 +10,6 @@ public class ChatMessage {
     private boolean isUserMessage;
     private Date timestamp;
     private String conversationId;
-    private String messageType; // TEXT | FACTS | REPORT
-    private java.util.Map<String, Object> extractedFacts;
-    private Double confidence;
 
     // Default constructor for Firestore
     public ChatMessage() {}
@@ -85,27 +82,4 @@ public class ChatMessage {
         this.conversationId = conversationId;
     }
 
-    public String getMessageType() {
-        return messageType;
-    }
-
-    public void setMessageType(String messageType) {
-        this.messageType = messageType;
-    }
-
-    public java.util.Map<String, Object> getExtractedFacts() {
-        return extractedFacts;
-    }
-
-    public void setExtractedFacts(java.util.Map<String, Object> extractedFacts) {
-        this.extractedFacts = extractedFacts;
-    }
-
-    public Double getConfidence() {
-        return confidence;
-    }
-
-    public void setConfidence(Double confidence) {
-        this.confidence = confidence;
-    }
 }

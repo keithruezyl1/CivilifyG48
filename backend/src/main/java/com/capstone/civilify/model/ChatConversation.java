@@ -10,8 +10,6 @@ public class ChatConversation {
     private Date createdAt;
     private Date updatedAt;
     private String status; // pending, in-progress, completed
-    private Double completenessScore; // 0..100
-    private String reportStatus; // NOT_READY | READY | SENT
 
     // Default constructor for Firestore
     public ChatConversation() {}
@@ -85,21 +83,7 @@ public class ChatConversation {
         this.status = status;
     }
 
-    public Double getCompletenessScore() {
-        return completenessScore;
-    }
-
-    public void setCompletenessScore(Double completenessScore) {
-        this.completenessScore = completenessScore;
-    }
-
-    public String getReportStatus() {
-        return reportStatus;
-    }
-
-    public void setReportStatus(String reportStatus) {
-        this.reportStatus = reportStatus;
-    }
+    
 
 
 }

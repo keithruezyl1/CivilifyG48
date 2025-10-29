@@ -115,7 +115,6 @@ public class ChatService {
             now,
             conversationId
         );
-        message.setMessageType("TEXT");
         
         // Save to Firestore
         ApiFuture<WriteResult> result = docRef.set(message);
@@ -147,94 +146,7 @@ public class ChatService {
         return message;
     }
 
-    // Add a structured FACTS message to a conversation (idempotent by provenance messageId at call site)
-    public ChatMessage addFactsMessage(String conversationId, java.util.Map<String, Object> factsMap, Double confidence)
-            throws ExecutionException, InterruptedException {
-        Firestore db = FirestoreClient.getFirestore();
 
-        DocumentReference docRef = db.collection(CONVERSATIONS_COLLECTION)
-                                     .document(conversationId)
-                                     .collection("messages")
-                                     .document();
-        String messageId = docRef.getId();
-
-        Date now = new Date();
-        ChatMessage message = new ChatMessage(
-            messageId,
-            null,
-            "villy@civilify.com",
-            null,
-            false,
-            now,
-            conversationId
-        );
-        message.setMessageType("FACTS");
-        message.setExtractedFacts(factsMap);
-        message.setConfidence(confidence);
-
-        ApiFuture<WriteResult> result = docRef.set(message);
-        result.get();
-
-        DocumentReference convRef = db.collection(CONVERSATIONS_COLLECTION).document(conversationId);
-        convRef.update("updatedAt", now);
-
-        logger.info("Added FACTS message {} to conversation {}", messageId, conversationId);
-        return message;
-    }
-
-    public void updateCompletenessScore(String conversationId, Double score) throws ExecutionException, InterruptedException {
-        Firestore db = FirestoreClient.getFirestore();
-        DocumentReference convRef = db.collection(CONVERSATIONS_COLLECTION).document(conversationId);
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("completenessScore", score);
-        updates.put("updatedAt", new Date());
-        convRef.update(updates).get();
-        logger.info("Updated completenessScore for conversation {} to {}", conversationId, score);
-    }
-
-    public ChatMessage addReportMessage(String conversationId, String content) throws ExecutionException, InterruptedException {
-        Firestore db = FirestoreClient.getFirestore();
-
-        DocumentReference docRef = db.collection(CONVERSATIONS_COLLECTION)
-                                     .document(conversationId)
-                                     .collection("messages")
-                                     .document();
-        String messageId = docRef.getId();
-
-        Date now = new Date();
-        ChatMessage message = new ChatMessage(
-            messageId,
-            null,
-            "villy@civilify.com",
-            content,
-            false,
-            now,
-            conversationId
-        );
-        message.setMessageType("REPORT");
-
-        ApiFuture<WriteResult> result = docRef.set(message);
-        result.get();
-
-        DocumentReference convRef = db.collection(CONVERSATIONS_COLLECTION).document(conversationId);
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("updatedAt", now);
-        updates.put("reportStatus", "SENT");
-        convRef.update(updates).get();
-
-        logger.info("Added REPORT message {} to conversation {}", messageId, conversationId);
-        return message;
-    }
-
-    public void updateReportStatus(String conversationId, String status) throws ExecutionException, InterruptedException {
-        Firestore db = FirestoreClient.getFirestore();
-        DocumentReference convRef = db.collection(CONVERSATIONS_COLLECTION).document(conversationId);
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("reportStatus", status);
-        updates.put("updatedAt", new Date());
-        convRef.update(updates).get();
-        logger.info("Updated reportStatus for conversation {} to {}", conversationId, status);
-    }
     
     // Get all messages for a conversation
     public List<ChatMessage> getConversationMessages(String conversationId) throws ExecutionException, InterruptedException {
