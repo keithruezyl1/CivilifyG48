@@ -468,7 +468,11 @@ const Landing = () => {
 
           <h2
             style={{
+<<<<<<< HEAD
               fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
+=======
+              fontSize: "3em",
+>>>>>>> 3c0971b6c164526b19fecd0d5047e603384a349b
               fontWeight: "700",
               color: isDarkMode ? "#ffffff" : "#F34D01",
               paddingTop: "1em",
@@ -506,7 +510,11 @@ const Landing = () => {
         >
           <h2
             style={{
+<<<<<<< HEAD
               fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
+=======
+              fontSize: "3em",
+>>>>>>> 3c0971b6c164526b19fecd0d5047e603384a349b
               fontWeight: "700",
               color: isDarkMode ? "#ffffff" : "#F34D01",
               paddingTop: "1em",
@@ -707,11 +715,19 @@ const Landing = () => {
 
           <h2
             style={{
+<<<<<<< HEAD
               fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
               fontWeight: "700",
               color: isDarkMode ? "#ffffff" : "#F34D01",
               paddingBottom: "1em",
               position: "relative",
+=======
+              fontSize: "3em",
+              color: isDarkMode ? "#ffffff" : "#F34D01",
+              marginBottom: "1em",
+              position: "relative",
+              fontWeight: "700",
+>>>>>>> 3c0971b6c164526b19fecd0d5047e603384a349b
               zIndex: 1,
             }}
           >
@@ -1709,7 +1725,11 @@ animationStyleSheet.textContent = `
     /* Sidebar */
     .sidebar {
       background-color: #1a1a1a !important;
+<<<<<<< HEAD
       // box-shadow: -4px 0 12px rgba(255, 255, 255, 0.1) !important;
+=======
+      box-shadow: -4px 0 12px rgba(255, 255, 255, 0.1) !important;
+>>>>>>> 3c0971b6c164526b19fecd0d5047e603384a349b
     }
 
     .sidebar-overlay {
