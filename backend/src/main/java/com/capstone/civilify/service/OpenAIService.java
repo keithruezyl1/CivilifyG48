@@ -116,8 +116,9 @@ public class OpenAIService {
     public OpenAIService() {
         // Configure timeouts (no extra dependency for pooling)
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(4000);
-        factory.setReadTimeout(8000);
+        // Keep connects snappy, but allow more time for OpenAI completions
+        factory.setConnectTimeout(6000);
+        factory.setReadTimeout(20000);
         this.restTemplate = new RestTemplate(factory);
     }
     
