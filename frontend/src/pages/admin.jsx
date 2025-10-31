@@ -85,6 +85,7 @@ const Admin = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -119,7 +120,8 @@ const Admin = () => {
       email: user.email || "admin@example.com",
       avatar: <ProfileAvatar size="medium" userData={formattedUserData} />,
     });
-    setCurrentUserId(user.userId || user.id || null);
+    setCurrentUserId(user.userId || user.id || user.uid || null);
+    setCurrentUserEmail(user.email || null);
   }, [navigate]);
 
   useEffect(() => {
@@ -135,8 +137,8 @@ const Admin = () => {
           );
     // Put the logged-in user at the top
     base.sort((a, b) => {
-      const aIsMe = a.userId === currentUserId;
-      const bIsMe = b.userId === currentUserId;
+      const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;
+      const bIsMe = b.userId === currentUserId || b.email === currentUserEmail;
       if (aIsMe && !bIsMe) return -1;
       if (!aIsMe && bIsMe) return 1;
       return 0;
@@ -520,7 +522,7 @@ const Admin = () => {
                           </span>
                         </td>
                         <td style={currentStyles.tableCell}>
-                          {user.userId !== currentUserId && (
+                          {!(user.userId === currentUserId || user.email === currentUserEmail) && (
                             <button
                               onClick={() => handleDeleteUser(user.userId)}
                               style={currentStyles.deleteButton}
@@ -567,7 +569,7 @@ const Admin = () => {
                         {user.role === "ROLE_ADMIN" ? "Admin" : "User"}
                       </span>
                     </div>
-                    {user.userId !== currentUserId && (
+                    {!(user.userId === currentUserId || user.email === currentUserEmail) && (
                       <button
                         onClick={() => handleDeleteUser(user.userId)}
                         style={currentStyles.mobileDeleteButton}

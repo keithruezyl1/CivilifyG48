@@ -89,6 +89,7 @@ const SystemAdminPage = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -125,7 +126,8 @@ const SystemAdminPage = () => {
       email: user.email || "sysadmin@example.com",
       avatar: <ProfileAvatar size="medium" userData={formattedUserData} />,
     });
-    setCurrentUserId(user.userId || user.id || null);
+    setCurrentUserId(user.userId || user.id || user.uid || null);
+    setCurrentUserEmail(user.email || null);
   }, [navigate]);
 
   useEffect(() => {
@@ -145,14 +147,14 @@ const SystemAdminPage = () => {
           );
     // Put the logged-in user at the top
     base.sort((a, b) => {
-      const aIsMe = a.userId === currentUserId;
-      const bIsMe = b.userId === currentUserId;
+      const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;
+      const bIsMe = b.userId === currentUserId || b.email === currentUserEmail;
       if (aIsMe && !bIsMe) return -1;
       if (!aIsMe && bIsMe) return 1;
       return 0;
     });
     setFilteredUsers(base);
-  }, [searchQuery, users, currentUserId]);
+  }, [searchQuery, users, currentUserId, currentUserEmail]);
 
   useEffect(() => {
     document.title = "Civilify | System Admin";
@@ -648,7 +650,7 @@ const SystemAdminPage = () => {
                                   Demote
                                 </button>
                               )}
-                              {role !== "ROLE_SYSTEM_ADMIN" && user.userId !== currentUserId && (
+                              {role !== "ROLE_SYSTEM_ADMIN" && !(user.userId === currentUserId || user.email === currentUserEmail) && (
                                 <button
                                   onClick={() => handleDeleteUser(user.userId)}
                                   style={currentStyles.deleteButton}
@@ -722,7 +724,7 @@ const SystemAdminPage = () => {
                             Demote to User
                           </button>
                         )}
-                        {role !== "ROLE_SYSTEM_ADMIN" && user.userId !== currentUserId && (
+                        {role !== "ROLE_SYSTEM_ADMIN" && !(user.userId === currentUserId || user.email === currentUserEmail) && (
                           <button
                             onClick={() => handleDeleteUser(user.userId)}
                             style={currentStyles.mobileDeleteButton}
