@@ -44,17 +44,9 @@ const formatAIResponse = (text) => {
     // Clean up extra whitespace but preserve line breaks for sources
     .replace(/\s+/g, " ")
     .trim();
-  
-  // Replace Markdown-like symbols with HTML tags
-  const formattedText = cleanedText
-    // Replace ***text*** with <strong><em>text</em></strong>
-    .replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>")
-    // Replace **text** with <strong>text</strong>
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    // Replace *text* with <em>text</em>
-    .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
-  return formattedText;
+  // Return plain Markdown (no HTML injection) so renderer can handle bold consistently
+  return cleanedText;
 };
 
 // Function to fetch response from GPT-3.5 Turbo API via backend
@@ -300,61 +292,27 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
 };
 
 const markdownComponents = {
-  h1: ({ node, ...props }) => (
-    <h1
-      style={{
-        fontSize: "1.3em",
-        fontWeight: 700,
-        margin: "12px 0 6px 0",
-        color: "#F34D01",
-      }}
-      {...props}
-    />
+  // Render headings as plain paragraphs with mild emphasis (no colors)
+  h1: ({ node, children, ...props }) => (
+    <p style={{ margin: "6px 0", fontWeight: 600, lineHeight: "1.5" }} {...props}>
+      {children}
+    </p>
   ),
-  h2: ({ node, ...props }) => (
-    <h2
-      style={{
-        fontSize: "1.15em",
-        fontWeight: 700,
-        margin: "10px 0 5px 0",
-        color: "#F34D01",
-      }}
-      {...props}
-    />
+  h2: ({ node, children, ...props }) => (
+    <p style={{ margin: "6px 0", fontWeight: 600, lineHeight: "1.5" }} {...props}>
+      {children}
+    </p>
   ),
-  h3: ({ node, ...props }) => (
-    <h3
-      style={{
-        fontSize: "1.05em",
-        fontWeight: 700,
-        margin: "8px 0 4px 0",
-        color: "#F34D01",
-      }}
-      {...props}
-    />
+  h3: ({ node, children, ...props }) => (
+    <p style={{ margin: "6px 0", fontWeight: 600, lineHeight: "1.5" }} {...props}>
+      {children}
+    </p>
   ),
-  p: ({ node, children, ...props }) => {
-    if (typeof children[0] === "string" && children[0].startsWith("Note:")) {
-      return (
-        <p
-          style={{
-            background: "#fffbe6",
-            color: "#b45309",
-            padding: "6px 10px",
-            borderRadius: 6,
-            margin: "8px 0",
-          }}
-        >
-          {children}
-        </p>
-      );
-    }
-    return (
-      <p style={{ margin: 0, padding: 0, lineHeight: "1.5" }} {...props}>
-        {children}
-      </p>
-    );
-  },
+  p: ({ node, children, ...props }) => (
+    <p style={{ margin: 0, padding: 0, lineHeight: "1.5" }} {...props}>
+      {children}
+    </p>
+  ),
   ul: ({ node, ...props }) => (
     <ul style={{ margin: 0, paddingLeft: 22, lineHeight: "1.5" }} {...props} />
   ),
@@ -362,23 +320,10 @@ const markdownComponents = {
     <ol style={{ margin: 0, paddingLeft: 22, lineHeight: "1.5" }} {...props} />
   ),
   li: ({ node, ...props }) => (
-    <li
-      style={{ margin: "0 0 2px 0", padding: 0, lineHeight: "1.5" }}
-      {...props}
-    />
+    <li style={{ margin: "0 0 2px 0", padding: 0, lineHeight: "1.5" }} {...props} />
   ),
   a: ({ node, ...props }) => (
-    <a
-      style={{
-        color: "#2563eb",
-        textDecoration: "underline",
-        fontWeight: 500,
-        wordBreak: "break-all",
-      }}
-      target="_blank"
-      rel="noopener noreferrer"
-      {...props}
-    />
+    <a style={{ textDecoration: "underline", wordBreak: "break-all" }} target="_blank" rel="noopener noreferrer" {...props} />
   ),
 };
 
