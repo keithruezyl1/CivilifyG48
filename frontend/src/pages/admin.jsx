@@ -84,6 +84,7 @@ const Admin = () => {
   });
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -118,6 +119,7 @@ const Admin = () => {
       email: user.email || "admin@example.com",
       avatar: <ProfileAvatar size="medium" userData={formattedUserData} />,
     });
+    setCurrentUserId(user.userId || user.id || null);
   }, [navigate]);
 
   useEffect(() => {
@@ -125,15 +127,22 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter((user) =>
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [searchQuery, users]);
+    const base =
+      searchQuery.trim() === ""
+        ? [...users]
+        : users.filter((user) =>
+            user.username.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+    // Put the logged-in user at the top
+    base.sort((a, b) => {
+      const aIsMe = a.userId === currentUserId;
+      const bIsMe = b.userId === currentUserId;
+      if (aIsMe && !bIsMe) return -1;
+      if (!aIsMe && bIsMe) return 1;
+      return 0;
+    });
+    setFilteredUsers(base);
+  }, [searchQuery, users, currentUserId]);
 
   useEffect(() => {
     document.title = "Civilify | Admin";
@@ -511,14 +520,16 @@ const Admin = () => {
                           </span>
                         </td>
                         <td style={currentStyles.tableCell}>
-                          <button
-                            onClick={() => handleDeleteUser(user.userId)}
-                            style={currentStyles.deleteButton}
-                            className="danger-button-hover"
-                          >
-                            <FaTrash style={{ marginRight: "6px" }} />
-                            Delete
-                          </button>
+                          {user.userId !== currentUserId && (
+                            <button
+                              onClick={() => handleDeleteUser(user.userId)}
+                              style={currentStyles.deleteButton}
+                              className="danger-button-hover"
+                            >
+                              <FaTrash style={{ marginRight: "6px" }} />
+                              Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -556,14 +567,16 @@ const Admin = () => {
                         {user.role === "ROLE_ADMIN" ? "Admin" : "User"}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleDeleteUser(user.userId)}
-                      style={currentStyles.mobileDeleteButton}
-                      className="danger-button-hover"
-                    >
-                      <FaTrash style={{ marginRight: "8px" }} />
-                      Delete User
-                    </button>
+                    {user.userId !== currentUserId && (
+                      <button
+                        onClick={() => handleDeleteUser(user.userId)}
+                        style={currentStyles.mobileDeleteButton}
+                        className="danger-button-hover"
+                      >
+                        <FaTrash style={{ marginRight: "8px" }} />
+                        Delete User
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

@@ -248,10 +248,10 @@ public class OpenAIService {
             }
 
             if (!lastIsSameUserMessage) {
-                Map<String, Object> userMessageMap = new HashMap<>();
-                userMessageMap.put("role", "user");
-                userMessageMap.put("content", userMessage);
-                messages.add(userMessageMap);
+            Map<String, Object> userMessageMap = new HashMap<>();
+            userMessageMap.put("role", "user");
+            userMessageMap.put("content", userMessage);
+            messages.add(userMessageMap);
             } else {
                 logger.info("Skipping duplicate current user message in request payload");
             }
@@ -263,10 +263,10 @@ public class OpenAIService {
             // Avoid sending sampling params to prevent 400 "unsupported_value" errors.
             boolean fixedSampling = isFixedSamplingModel(model);
             if (!fixedSampling) {
-                requestBody.put("temperature", temperature);
-                requestBody.put("top_p", topP);
-                requestBody.put("frequency_penalty", frequencyPenalty);
-                requestBody.put("presence_penalty", presencePenalty);
+            requestBody.put("temperature", temperature);
+            requestBody.put("top_p", topP);
+            requestBody.put("frequency_penalty", frequencyPenalty);
+            requestBody.put("presence_penalty", presencePenalty);
             }
             // Some org/project gateways for GPT-4o family require 'max_completion_tokens'
             requestBody.put("max_completion_tokens", maxTokens);

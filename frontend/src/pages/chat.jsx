@@ -44,9 +44,17 @@ const formatAIResponse = (text) => {
     // Clean up extra whitespace but preserve line breaks for sources
     .replace(/\s+/g, " ")
     .trim();
+  
+  // Replace Markdown-like symbols with HTML tags
+  const formattedText = cleanedText
+    // Replace ***text*** with <strong><em>text</em></strong>
+    .replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>")
+    // Replace **text** with <strong>text</strong>
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    // Replace *text* with <em>text</em>
+    .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
-  // Return plain Markdown (no HTML injection) so renderer can handle bold consistently
-  return cleanedText;
+  return formattedText;
 };
 
 // Function to fetch response from GPT-3.5 Turbo API via backend
@@ -73,11 +81,11 @@ const fetchGPTResponse = async (
     const response = await axios.post(
       `${API_URL}/ai/chat`,
       {
-        message: userMessage,
-        mode: mode,
-        conversationId: conversationId,
-        userId: userId || (user ? user.uid : null),
-        userEmail: userEmail || (user ? user.email : null),
+      message: userMessage,
+      mode: mode,
+      conversationId: conversationId,
+      userId: userId || (user ? user.uid : null),
+      userEmail: userEmail || (user ? user.email : null),
       },
       { signal: currentAbortController.signal }
     );
@@ -292,38 +300,19 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
 };
 
 const markdownComponents = {
-  // Render headings as plain paragraphs with mild emphasis (no colors)
-  h1: ({ node, children, ...props }) => (
-    <p style={{ margin: "6px 0", fontWeight: 600, lineHeight: "1.5" }} {...props}>
-      {children}
-    </p>
-  ),
-  h2: ({ node, children, ...props }) => (
-    <p style={{ margin: "6px 0", fontWeight: 600, lineHeight: "1.5" }} {...props}>
-      {children}
-    </p>
-  ),
-  h3: ({ node, children, ...props }) => (
-    <p style={{ margin: "6px 0", fontWeight: 600, lineHeight: "1.5" }} {...props}>
-      {children}
-    </p>
-  ),
-  p: ({ node, children, ...props }) => (
-    <p style={{ margin: 0, padding: 0, lineHeight: "1.5" }} {...props}>
-      {children}
-    </p>
-  ),
-  ul: ({ node, ...props }) => (
-    <ul style={{ margin: 0, paddingLeft: 22, lineHeight: "1.5" }} {...props} />
-  ),
-  ol: ({ node, ...props }) => (
-    <ol style={{ margin: 0, paddingLeft: 22, lineHeight: "1.5" }} {...props} />
-  ),
-  li: ({ node, ...props }) => (
-    <li style={{ margin: "0 0 2px 0", padding: 0, lineHeight: "1.5" }} {...props} />
-  ),
+  // Render headings as plain paragraphs with bold text (no colors/sizes)
+  h1: ({ node, children }) => <p><strong>{children}</strong></p>,
+  h2: ({ node, children }) => <p><strong>{children}</strong></p>,
+  h3: ({ node, children }) => <p><strong>{children}</strong></p>,
+  // Plain paragraph, no special styling for notes
+  p: ({ node, children, ...props }) => <p {...props}>{children}</p>,
+  // Plain lists with default browser styling
+  ul: ({ node, ...props }) => <ul {...props} />,
+  ol: ({ node, ...props }) => <ol {...props} />,
+  li: ({ node, ...props }) => <li {...props} />,
+  // Keep links as-is (users like current source rendering)
   a: ({ node, ...props }) => (
-    <a style={{ textDecoration: "underline", wordBreak: "break-all" }} target="_blank" rel="noopener noreferrer" {...props} />
+    <a target="_blank" rel="noopener noreferrer" {...props} />
   ),
 };
 
@@ -381,10 +370,10 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
       .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
       // Remove any remaining metadata patterns
       .replace(/\{[^}]*\}/g, "")
-      // Remove emojis from the text
+    // Remove emojis from the text
       .replace(
-        /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
-        ""
+      /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
+      ""
       )
       // Clean up extra whitespace but preserve line breaks for sources
       .replace(/\s+/g, " ")
@@ -700,7 +689,7 @@ const Chat = () => {
       e.preventDefault();
       setSendHovered(true);
       if (!isTyping) {
-        handleSubmit(e);
+      handleSubmit(e);
       }
 
       setTimeout(() => setSendHovered(false), 750);
@@ -709,14 +698,14 @@ const Chat = () => {
   };
 
   // Function to fetch user conversations from backend API - commented out as per requirements
-  /*
+  /* 
   const fetchUserConversations = async () => {
     try {
       if (!userData || !userData.email) {
         console.log('No user email available to fetch conversations');
         return;
       }
-
+      
       const response = await axios.get(`${API_URL}/chat/conversations/user/${userData.email}`);
       const data = response.data;
       console.log('Fetched conversations:', data);
@@ -1457,11 +1446,11 @@ const Chat = () => {
         .avatar-button-hover:hover {
       transform: scale(1.01); /* Scale down to 0.5 */
       box-shadow: 0 0 8px 4px rgba(243, 77, 1, 0.5); /* Orange glow */
-    }
-    .avatar-button-hover:active {
+        }
+        .avatar-button-hover:active {
       transform: scale(0.7); /* Slightly smaller on click */
       box-shadow: 0 0 6px 3px rgba(243, 77, 1, 0.4); /* Slightly dimmer glow */
-    }
+        }
     
         .dropdown-item-hover:hover {
            background-color: ${isDarkMode ? "#404040" : "#f0f0f0"};
@@ -2189,9 +2178,9 @@ const Chat = () => {
                       />
                     ) : (
                       <div>
-                        <ReactMarkdown components={markdownComponents}>
-                          {message.isUser ? message.text : message.text}
-                        </ReactMarkdown>
+                      <ReactMarkdown components={markdownComponents}>
+                        {message.isUser ? message.text : message.text}
+                      </ReactMarkdown>
                         {/* CPA facts UI removed per request */}
                       </div>
                     )}
@@ -2395,22 +2384,22 @@ const Chat = () => {
                       />
                     </svg>
                   ) : (
-                    <svg
-                      key={sendHovered ? "hovered" : "not-hovered"}
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke={sendHovered ? "#fff" : "#666"}
-                      strokeWidth="2"
-                      style={{ transition: "stroke 0.2s" }}
-                    >
-                      <path
-                        d="M12 20V4M5 11l7-7 7 7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                  <svg
+                    key={sendHovered ? "hovered" : "not-hovered"}
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={sendHovered ? "#fff" : "#666"}
+                    strokeWidth="2"
+                    style={{ transition: "stroke 0.2s" }}
+                  >
+                    <path
+                      d="M12 20V4M5 11l7-7 7 7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   )}
                 </button>
               </form>
@@ -3590,9 +3579,9 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
     }
 
     /* Mobile Header Visibility */
-    .mobile-to-header {
-      display: none !important;
-    }
+  .mobile-to-header {
+    display: none !important;
+  }
 
     /* New rule for input wrapper glow */
     .inputSection:has(textarea:focus) {
@@ -3693,17 +3682,17 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
         gap: 5px !important;
       }
       .footer-left {
-        flex-direction: column !important;
-      }
-      .header-to-mobile {
-        display: none !important;
-      }
-      .mobile-to-header {
+         flex-direction: column !important;
+        }
+        .header-to-mobile {
+          display: none !important;
+        }
+        .mobile-to-header { 
         display: inline-flex !important;
-      }
-      .right-section {
-        gap: 12px !important;
-      }
+        }
+        .right-section {
+          gap: 12px !important;
+        }
       /* Override popUpAnimationHIW for Fade-Only on Mobile */
       @keyframes popUpAnimationHIW {
         0% {
