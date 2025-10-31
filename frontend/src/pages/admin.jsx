@@ -103,18 +103,18 @@ const Admin = () => {
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-
+    
     if (user.role !== "ROLE_ADMIN") {
       navigate("/");
       return;
     }
-
+    
     const formattedUserData = {
       username: user.username,
       email: user.email,
       profile_picture_url: user.profilePictureUrl || user.profile_picture_url,
     };
-
+    
     setUserData({
       name: user.username || "Admin User",
       email: user.email || "admin@example.com",
@@ -133,8 +133,8 @@ const Admin = () => {
       searchQuery.trim() === ""
         ? [...users]
         : users.filter((user) =>
-            user.username.toLowerCase().includes(searchQuery.toLowerCase())
-          );
+        user.username.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     // Put the logged-in user at the top
     base.sort((a, b) => {
       const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;
@@ -153,13 +153,13 @@ const Admin = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     setError(null);
-
+    
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
         throw new Error("Authentication token not found");
       }
-
+      
       const response = await fetch(`${API_URL}/admin/users`, {
         method: "GET",
         headers: {
@@ -167,11 +167,11 @@ const Admin = () => {
           "Content-Type": "application/json",
         },
       });
-
+      
       if (!response.ok) {
         throw new Error(`Failed to fetch users: ${response.status}`);
       }
-
+      
       const data = await response.json();
       if (data.result === "SUCCESS") {
         setUsers(data.data || []);
@@ -194,13 +194,13 @@ const Admin = () => {
 
   const confirmDeleteUser = async () => {
     if (!selectedUser) return;
-
+    
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
         throw new Error("Authentication token not found");
       }
-
+      
       const response = await fetch(`${API_URL}/admin/users/${selectedUser}`, {
         method: "DELETE",
         headers: {
@@ -208,11 +208,11 @@ const Admin = () => {
           "Content-Type": "application/json",
         },
       });
-
+      
       if (!response.ok) {
         throw new Error(`Failed to delete user: ${response.status}`);
       }
-
+      
       const data = await response.json();
       if (data.result === "SUCCESS") {
         setUsers(users.filter((user) => user.userId !== selectedUser));
@@ -338,14 +338,14 @@ const Admin = () => {
 
         <div style={currentStyles.sidebarFooter}>
           <div style={currentStyles.sidebarUser}>
-            {userData.avatar}
+          {userData.avatar}
             <div style={currentStyles.sidebarUserInfo}>
               <div style={currentStyles.sidebarUserName}>{userData.name}</div>
               <div style={currentStyles.sidebarUserEmail}>{userData.email}</div>
-            </div>
           </div>
+        </div>
           <div style={currentStyles.sidebarActions}>
-            <button
+          <button
               onClick={toggleTheme}
               style={currentStyles.sidebarActionBtn}
               className="sidebar-action-hover"
@@ -359,19 +359,19 @@ const Admin = () => {
               ) : (
                 <FaLaptop size={16} />
               )}
-            </button>
+          </button>
 
             {/* Settings button removed as requested */}
-            <button
-              onClick={handleLogout}
+          <button
+            onClick={handleLogout}
               style={currentStyles.sidebarActionBtn}
               className="sidebar-action-hover"
               aria-label="Logout"
-            >
+          >
               <FaSignOutAlt size={16} />
-            </button>
-          </div>
+          </button>
         </div>
+      </div>
       </div>
 
       <div
@@ -451,11 +451,11 @@ const Admin = () => {
             </div>
           </div>
         </div>
-
+        
         {error && (
           <div style={currentStyles.errorMessage}>
             <span>Error: {error}</span>
-            <button
+            <button 
               onClick={() => {
                 setError(null);
                 fetchUsers();
@@ -476,25 +476,25 @@ const Admin = () => {
               {filteredUsers.length === 1 ? "user" : "users"}
             </div>
           </div>
-
-          {isLoading ? (
+        
+        {isLoading ? (
             <div style={currentStyles.loadingContainer}>
               <div style={currentStyles.loadingSpinner}></div>
               <p style={currentStyles.loadingText}>Loading users...</p>
-            </div>
-          ) : (
+          </div>
+        ) : (
             <>
               <div style={currentStyles.tableWrapper} className="table-wrapper">
                 <table style={currentStyles.table}>
-                  <thead>
-                    <tr>
+              <thead>
+                <tr>
                       <th style={currentStyles.tableHead}>Email</th>
                       <th style={currentStyles.tableHead}>Username</th>
                       <th style={currentStyles.tableHead}>Role</th>
                       <th style={currentStyles.tableHead}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                </tr>
+              </thead>
+              <tbody>
                     {filteredUsers.map((user) => (
                       <tr
                         key={user.userId}
@@ -519,25 +519,25 @@ const Admin = () => {
                             }}
                           >
                             {user.role === "ROLE_ADMIN" ? "Admin" : "User"}
-                          </span>
-                        </td>
+                      </span>
+                    </td>
                         <td style={currentStyles.tableCell}>
                           {!(user.userId === currentUserId || user.email === currentUserEmail) && (
-                            <button
-                              onClick={() => handleDeleteUser(user.userId)}
+                      <button
+                        onClick={() => handleDeleteUser(user.userId)}
                               style={currentStyles.deleteButton}
-                              className="danger-button-hover"
-                            >
+                        className="danger-button-hover"
+                      >
                               <FaTrash style={{ marginRight: "6px" }} />
-                              Delete
-                            </button>
+                        Delete
+                      </button>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
               <div
                 style={currentStyles.mobileCardContainer}
@@ -586,7 +586,7 @@ const Admin = () => {
           )}
         </div>
       </div>
-
+      
       {confirmDelete && (
         <div style={currentStyles.modal} className="modal">
           <div
@@ -601,14 +601,14 @@ const Admin = () => {
               their previous session. This action cannot be undone.
             </p>
             <div style={currentStyles.modalButtons} className="modal-buttons">
-              <button
+              <button 
                 onClick={cancelDelete}
                 style={currentStyles.cancelButton}
                 className="cancel-button-hover"
               >
                 Cancel
               </button>
-              <button
+              <button 
                 onClick={confirmDeleteUser}
                 style={currentStyles.confirmButton}
                 className="confirm-button-hover"
@@ -1261,7 +1261,7 @@ styleSheet.textContent = `
     color: #F34D01 !important;
     transform: translateY(-2px);
   }
-
+  
   body.light-mode .sidebar-action-hover:hover {
     background-color: #f9fafb !important;
     color: #F34D01 !important;
@@ -1419,4 +1419,4 @@ if (!document.getElementById("admin-no-horizontal-scroll-style")) {
   document.head.appendChild(style);
 }
 
-export default Admin;
+export default Admin; 

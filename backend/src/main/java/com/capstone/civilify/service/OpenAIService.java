@@ -534,4 +534,34 @@ public class OpenAIService {
     public KnowledgeBaseService getKnowledgeBaseService() {
         return knowledgeBaseService;
     }
+
+    /**
+     * Summarize the CPA conversation into a compact KB-friendly context.
+     * Returns null on failure so callers can fall back to raw context.
+     */
+    public String summarizeConversationForKb(String latestUserMessage,
+                                             List<Map<String, String>> conversationHistory) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            if (conversationHistory != null) {
+                for (Map<String, String> msg : conversationHistory) {
+                    String role = "assistant";
+                    if ("true".equals(msg.get("isUserMessage"))) role = "user";
+                    sb.append(role).append(": ").append(msg.get("content")).append("\n");
+                }
+            }
+            if (latestUserMessage != null && !latestUserMessage.isEmpty()) {
+                sb.append("user: ").append(latestUserMessage).append("\n");
+            }
+
+            String summarizerSystem = "You are a retrieval-focused legal assistant. Summarize the conversation into a concise, KB-friendly context for Philippine law. Focus on concrete facts (who/what/when/where), alleged acts, goals, and likely legal issues. Output either 5-8 short bullets or a tight paragraph under 160 words. No headers, no disclaimers.";
+
+            // Use CPA model with low temperature for determinism
+            String composed = sb.toString();
+            return generateResponse(composed, summarizerSystem, Collections.emptyList(), "B");
+        } catch (Exception ex) {
+            logger.warn("summarizeConversationForKb failed: {}", ex.getMessage());
+            return null;
+        }
+    }
 }

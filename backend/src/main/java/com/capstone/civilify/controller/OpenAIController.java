@@ -336,7 +336,7 @@ public class OpenAIController {
             responseBody.put("response", aiResponse);
             responseBody.put("conversationId", conversationId);
             responseBody.put("success", true);
-            responseBody.put("sources", new java.util.ArrayList<>()); // Empty sources array since we're integrating them into response
+            responseBody.put("sources", sources);
             responseBody.put("hasKnowledgeBaseContext", shouldProvideSources && !sources.isEmpty());
 
             // Extract plausibility score label and summary from the AI response (for mode B)
@@ -369,22 +369,22 @@ public class OpenAIController {
                     responseBody.put("isReport", true);
                     // CPA: Only now fetch KB sources to support the report
                     try {
-                        // Build full conversation context for KB search
-                        StringBuilder fullContext = new StringBuilder();
-                        fullContext.append("User's current message: ").append(userMessage).append("\n\n");
-                        fullContext.append("Conversation history:\n");
-                        
-                        for (Map<String, String> msg : conversationHistoryForAI) {
-                            String role = msg.get("isUserMessage").equals("true") ? "User" : "Assistant";
-                            fullContext.append(role).append(": ").append(msg.get("content")).append("\n");
+                        // Summarize the conversation for KB first
+                        String kbSummary = openAIService.summarizeConversationForKb(userMessage, conversationHistoryForAI);
+                        if (kbSummary == null || kbSummary.isBlank()) {
+                            StringBuilder fullContext = new StringBuilder();
+                            fullContext.append("User's current message: ").append(userMessage).append("\n\n");
+                            fullContext.append("Conversation history:\n");
+                            for (Map<String, String> msg : conversationHistoryForAI) {
+                                String role = msg.get("isUserMessage").equals("true") ? "User" : "Assistant";
+                                fullContext.append(role).append(": ").append(msg.get("content")).append("\n");
+                            }
+                            kbSummary = fullContext.toString();
                         }
-                        
-                        String fullContextString = fullContext.toString();
-                        logger.info("CPA: Using full conversation context for KB search (length: {})", fullContextString.length());
-                        
+                        logger.info("CPA: Using summarized KB context (length: {})", kbSummary.length());
                         int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
                         java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
-                            openAIService.getKnowledgeBaseSources(fullContextString, desiredLimitForReport);
+                            openAIService.getKnowledgeBaseSources(kbSummary, desiredLimitForReport);
                         if (reportSources != null) {
                             // Merge into kbSources without duplicates by entryId
                             java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
