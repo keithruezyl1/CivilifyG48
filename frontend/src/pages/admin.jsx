@@ -95,10 +95,13 @@ const Admin = () => {
   const [logoutYesHovered, setLogoutYesHovered] = useState(false);
   const [logoutNoHovered, setLogoutNoHovered] = useState(false);
 
+  const nonSystemUsers = users.filter(
+    (u) => u.role !== "ROLE_SYSTEM_ADMIN" && u.role !== "SYSTEM_ADMIN"
+  );
   const stats = {
-    totalUsers: users.length,
-    adminUsers: users.filter((u) => u.role === "ROLE_ADMIN").length,
-    regularUsers: users.filter((u) => u.role !== "ROLE_ADMIN").length,
+    totalUsers: nonSystemUsers.length,
+    adminUsers: nonSystemUsers.filter((u) => u.role === "ROLE_ADMIN").length,
+    regularUsers: nonSystemUsers.filter((u) => u.role !== "ROLE_ADMIN").length,
   };
 
   useEffect(() => {
@@ -129,12 +132,15 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
+    const source = users.filter(
+      (u) => u.role !== "ROLE_SYSTEM_ADMIN" && u.role !== "SYSTEM_ADMIN"
+    );
     const base =
       searchQuery.trim() === ""
-        ? [...users]
-        : users.filter((user) =>
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+        ? [...source]
+        : source.filter((user) =>
+            user.username.toLowerCase().includes(searchQuery.toLowerCase())
+          );
     // Put the logged-in user at the top
     base.sort((a, b) => {
       const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;
