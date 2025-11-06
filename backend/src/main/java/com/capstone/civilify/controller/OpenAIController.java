@@ -145,27 +145,29 @@ public class OpenAIController {
                     "- Ask about legal documents: subpoenas, complaints, police reports\n" +
                     "- When you have enough information, provide a structured assessment\n\n" +
                     "ASSESSMENT FORMAT (STRICT STRUCTURE - Follow exactly):\n" +
-                    "**Case Summary:**\n[Brief summary of the situation in a single paragraph. No bullet points, just plain text.]\n\n" +
-                    "**Legal Issues or Concerns:**\n- [First key legal issue identified]\n" +
-                    "- [Second key legal issue identified]\n" +
-                    "- [Additional issues if applicable]\n\n" +
-                    "**Plausibility Score:** [X]% - [Label]\n" +
-                    "[Label should be descriptive like 'Moderately Strong', 'Weak', 'Very Strong', 'Highly Likely', etc.]\n\n" +
-                    "**Suggested Next Steps:**\n" +
-                    "1. **[Step Label]:** [Detailed description of the step]\n" +
-                    "2. **[Step Label]:** [Detailed description of the step]\n" +
-                    "3. **[Step Label]:** [Detailed description of the step]\n" +
-                    "[Continue with numbered list, each with bold label followed by colon]\n\n" +
-                    "**DISCLAIMER:** This is a legal pre-assessment only. Please consult a licensed lawyer, especially if your situation is urgent. [Optional: Add a follow-up question if relevant]\n\n" +
+                    "Case Summary:\n[Brief summary of the situation in a single paragraph. No bullet points, no markdown bold markers, just plain text.]\n\n" +
+                    "Legal Issues or Concerns:\n- [First key legal issue identified - no markdown bold markers]\n" +
+                    "- [Second key legal issue identified - no markdown bold markers]\n" +
+                    "- [Additional issues if applicable - no markdown bold markers]\n\n" +
+                    "Plausibility Score: [X]% - [Label]\n" +
+                    "[Label should be descriptive like 'Moderately Strong', 'Weak', 'Very Strong', 'Highly Likely', etc. No markdown bold markers.]\n\n" +
+                    "Suggested Next Steps:\n" +
+                    "1. **Step Label:** [Detailed description of the step - ONLY the label should be bold with **]\n" +
+                    "2. **Step Label:** [Detailed description of the step - ONLY the label should be bold with **]\n" +
+                    "3. **Step Label:** [Detailed description of the step - ONLY the label should be bold with **]\n" +
+                    "[Continue with numbered list, each with bold label using **Label:** format]\n\n" +
+                    "DISCLAIMER: This is a legal pre-assessment only. Please consult a licensed lawyer, especially if your situation is urgent. [Optional: Add a follow-up question if relevant]\n\n" +
                     "FORMATTING RULES:\n" +
-                    "- All section headings MUST be bold with a colon: **Section Name:**\n" +
-                    "- Case Summary must be a single paragraph, no bullets\n" +
-                    "- Legal Issues or Concerns must use bullet points (-)\n" +
-                    "- Plausibility Score must be on its own line with bold heading, followed by percentage and label\n" +
+                    "- Section headings (Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER) should be plain text with colon, NO markdown bold (**)\n" +
+                    "- Case Summary must be a single paragraph, no bullets, no markdown bold markers\n" +
+                    "- Legal Issues or Concerns must use bullet points (-), no markdown bold markers in the content\n" +
+                    "- Plausibility Score must be on its own line with plain heading, followed by percentage and label (no markdown bold)\n" +
                     "- Suggested Next Steps must be a numbered list (1., 2., 3., etc.)\n" +
-                    "- Each step in Suggested Next Steps must have a bold label followed by a colon: **Label:**\n" +
-                    "- DISCLAIMER must be bold with colon and followed by the disclaimer text\n" +
-                    "- Use proper spacing between sections (blank line between each major section)\n\n" +
+                    "- Each step in Suggested Next Steps must have a bold label using **Label:** format (ONLY the label should be bold)\n" +
+                    "- DISCLAIMER must be plain text with colon (no markdown bold), followed by the disclaimer text\n" +
+                    "- Use proper spacing between sections (blank line between each major section)\n" +
+                    "- DO NOT use ** for section headings - the frontend will style them automatically\n" +
+                    "- ONLY use ** for step labels within Suggested Next Steps\n\n" +
                     "IMPORTANT: Always provide a response. Never leave the user without guidance or next steps.";
             }
             
@@ -600,12 +602,13 @@ public class OpenAIController {
             if ("B".equals(mode)) {
                 // CPA mode: Reinforce strict formatting requirements
                 enhancedPrompt.append("\n\nCRITICAL FORMATTING REQUIREMENTS FOR CPA REPORT:\n");
-                enhancedPrompt.append("- All section headings MUST be bold with colon: **Section Name:**\n");
+                enhancedPrompt.append("- Section headings (Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER) must be plain text with colon, NO markdown bold (**)\n");
                 enhancedPrompt.append("- Follow the exact structure: Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER\n");
-                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets)\n");
-                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-)\n");
-                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels: **Label:**\n");
-                enhancedPrompt.append("- DISCLAIMER must be bold with colon\n");
+                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets, no markdown bold)\n");
+                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-), no markdown bold in content\n");
+                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels using **Label:** format (ONLY labels should be bold)\n");
+                enhancedPrompt.append("- DISCLAIMER must be plain text with colon (no markdown bold)\n");
+                enhancedPrompt.append("- DO NOT use ** for section headings - only use ** for step labels within Suggested Next Steps\n");
                 enhancedPrompt.append("- Integrate KB sources naturally into your analysis, but maintain the strict formatting structure above.");
             } else {
                 enhancedPrompt.append("\n\nSOURCE INSTRUCTIONS: Include relevant sources in your response using Markdown format: ");
@@ -618,12 +621,13 @@ public class OpenAIController {
             if ("B".equals(mode)) {
                 // CPA mode: Even without KB, maintain formatting requirements
                 enhancedPrompt.append("\n\nCRITICAL FORMATTING REQUIREMENTS FOR CPA REPORT:\n");
-                enhancedPrompt.append("- All section headings MUST be bold with colon: **Section Name:**\n");
+                enhancedPrompt.append("- Section headings (Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER) must be plain text with colon, NO markdown bold (**)\n");
                 enhancedPrompt.append("- Follow the exact structure: Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER\n");
-                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets)\n");
-                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-)\n");
-                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels: **Label:**\n");
-                enhancedPrompt.append("- DISCLAIMER must be bold with colon\n");
+                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets, no markdown bold)\n");
+                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-), no markdown bold in content\n");
+                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels using **Label:** format (ONLY labels should be bold)\n");
+                enhancedPrompt.append("- DISCLAIMER must be plain text with colon (no markdown bold)\n");
+                enhancedPrompt.append("- DO NOT use ** for section headings - only use ** for step labels within Suggested Next Steps\n");
             } else {
                 enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
                 enhancedPrompt.append("Provide general guidance while acknowledging this limitation. ");

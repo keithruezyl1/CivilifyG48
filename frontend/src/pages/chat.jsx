@@ -306,6 +306,8 @@ const markdownComponents = {
   h3: ({ node, children }) => <p><strong>{children}</strong></p>,
   // Plain paragraph, no special styling for notes
   p: ({ node, children, ...props }) => <p {...props}>{children}</p>,
+  // Render bold text properly
+  strong: ({ node, children, ...props }) => <strong {...props}>{children}</strong>,
   // Plain lists with default browser styling
   ul: ({ node, ...props }) => <ul {...props} />,
   ol: ({ node, ...props }) => <ol {...props} />,

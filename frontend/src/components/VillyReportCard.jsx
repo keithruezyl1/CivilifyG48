@@ -1,5 +1,28 @@
 import React from "react";
 
+// Helper to clean markdown bold markers from text (but preserve them for step labels)
+function cleanMarkdownBold(text) {
+  if (!text) return "";
+  // Remove ** markers but preserve content
+  return text.replace(/\*\*/g, "").trim();
+}
+
+// Helper to parse step labels that may have **bold** markers
+function parseStepLabel(stepText) {
+  // Match pattern like "1. **Label:** description" or "1. Label: description"
+  const labelMatch = stepText.match(/^\d+\.\s*\*\*(.*?)\*\*:\s*(.*)$/);
+  if (labelMatch) {
+    return { label: labelMatch[1], description: labelMatch[2] };
+  }
+  // Match pattern without bold: "1. Label: description"
+  const plainMatch = stepText.match(/^\d+\.\s*(.*?):\s*(.*)$/);
+  if (plainMatch) {
+    return { label: plainMatch[1], description: plainMatch[2] };
+  }
+  // Fallback: return as-is
+  return { label: "", description: cleanMarkdownBold(stepText) };
+}
+
 // Helper to parse the report text into sections
 function parseReport(reportText) {
   const sections = {
@@ -14,47 +37,54 @@ function parseReport(reportText) {
   };
   if (!reportText) return sections;
 
-  // Extract Case Summary
+  // Extract Case Summary - clean markdown bold markers
   const summaryMatch = reportText.match(
-    /Case Summary:\s*([\s\S]*?)(?:\n\n|Legal Issues|Plausibility Score:|Suggested Next Steps:|Sources:)/i
+    /Case Summary:\s*([\s\S]*?)(?:\n\n|Legal Issues|Plausibility Score:|Suggested Next Steps:|Sources:|DISCLAIMER:)/i
   );
-  if (summaryMatch) sections.summary = summaryMatch[1].trim();
+  if (summaryMatch) sections.summary = cleanMarkdownBold(summaryMatch[1]);
 
-  // Extract Legal Issues or Concerns
+  // Extract Legal Issues or Concerns - clean markdown bold markers
   const issuesMatch = reportText.match(
-    /Legal Issues(?: or Concerns)?:\s*([\s\S]*?)(?:\n\n|Plausibility Score:|Suggested Next Steps:|Sources:)/i
+    /Legal Issues(?: or Concerns)?:\s*([\s\S]*?)(?:\n\n|Plausibility Score:|Suggested Next Steps:|Sources:|DISCLAIMER:)/i
   );
   if (issuesMatch) {
     sections.issues = issuesMatch[1]
       .split(/\n- /)
-      .map((s) => s.replace(/^[-\s]*/, "").trim())
+      .map((s) => cleanMarkdownBold(s.replace(/^[-\s]*/, "")))
       .filter(Boolean);
   }
 
-  // Extract Plausibility Score
+  // Extract Plausibility Score - clean markdown bold markers
   const scoreMatch = reportText.match(
-    /Plausibility Score:\s*(\d{1,3})%\s*-?\s*([\w\s]+)?-?\s*([\s\S]*?)(?:\n\n|Suggested Next Steps:|Sources:|$)/i
+    /Plausibility Score:\s*(\d{1,3})%\s*-?\s*([\w\s]+)?-?\s*([\s\S]*?)(?:\n\n|Suggested Next Steps:|Sources:|DISCLAIMER:|$)/i
   );
   if (scoreMatch) {
     sections.score = scoreMatch[1];
-    sections.scoreLabel = scoreMatch[2] ? scoreMatch[2].trim() : "";
-    sections.scoreExplanation = scoreMatch[3] ? scoreMatch[3].trim() : "";
+    sections.scoreLabel = scoreMatch[2] ? cleanMarkdownBold(scoreMatch[2]) : "";
+    sections.scoreExplanation = scoreMatch[3] ? cleanMarkdownBold(scoreMatch[3]) : "";
   } else {
     const scoreLine = reportText
       .split("\n")
       .find((l) => l.toLowerCase().includes("plausibility score"));
-    if (scoreLine) sections.scoreExplanation = scoreLine.trim();
+    if (scoreLine) sections.scoreExplanation = cleanMarkdownBold(scoreLine);
   }
 
-  // Extract Suggested Next Steps
+  // Extract Suggested Next Steps - parse numbered list with bold labels
   const stepsMatch = reportText.match(
-    /Suggested Next Steps:\s*([\s\S]*?)(?:\n\n|Sources:|This is a legal pre-assessment|$)/i
+    /Suggested Next Steps:\s*([\s\S]*?)(?:\n\n|Sources:|DISCLAIMER:|This is a legal pre-assessment|$)/i
   );
   if (stepsMatch) {
-    sections.steps = stepsMatch[1]
-      .split(/\n- /)
-      .map((s) => s.replace(/^[-\s]*/, "").trim())
-      .filter(Boolean);
+    // Split by numbered lines (1., 2., 3., etc.)
+    const stepsText = stepsMatch[1];
+    // Split by lines starting with a number followed by a dot and space
+    const stepLines = stepsText.split(/\n(?=\d+\.\s)/);
+    sections.steps = stepLines
+      .map((s) => s.trim().replace(/\n+/g, " ")) // Replace newlines with spaces
+      .filter(Boolean)
+      .map((step) => {
+        const parsed = parseStepLabel(step);
+        return parsed; // Return object with label and description
+      });
   }
 
   // Extract Sources
@@ -68,11 +98,13 @@ function parseReport(reportText) {
       .filter(Boolean);
   }
 
-  // Extract disclaimer
+  // Extract disclaimer - clean markdown bold markers
   const disclaimerMatch = reportText.match(
-    /(This is a legal pre-assessment[\s\S]*)/i
+    /DISCLAIMER:\s*([\s\S]*?)(?:\n\n|$)|(This is a legal pre-assessment[\s\S]*?)(?:\n\n|$)/i
   );
-  if (disclaimerMatch) sections.disclaimer = disclaimerMatch[1].trim();
+  if (disclaimerMatch) {
+    sections.disclaimer = cleanMarkdownBold(disclaimerMatch[1] || disclaimerMatch[2] || "");
+  }
 
   return sections;
 }
@@ -327,13 +359,20 @@ const VillyReportCard = ({
           <span style={{ fontWeight: 600, color: headerColor }}>
             Suggested Next Steps:
           </span>
-          <ul style={{ margin: "4px 0 4px 18px", padding: 0 }}>
+          <ol style={{ margin: "4px 0 4px 18px", padding: 0, listStyleType: "decimal" }}>
             {sections.steps.map((step, i) => (
-              <li key={i} style={{ marginBottom: 2 }}>
-                {step}
+              <li key={i} style={{ marginBottom: 8 }}>
+                {step.label ? (
+                  <>
+                    <strong style={{ fontWeight: 600 }}>{step.label}:</strong>{" "}
+                    {step.description}
+                  </>
+                ) : (
+                  <span>{step.description || (typeof step === 'string' ? step : '')}</span>
+                )}
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
       )}
       {/* Styled Sources Section */}
