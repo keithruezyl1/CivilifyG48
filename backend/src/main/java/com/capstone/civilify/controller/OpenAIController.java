@@ -144,12 +144,28 @@ public class OpenAIController {
                     "- Understand the user's goal: file a case, defend against charges, etc.\n" +
                     "- Ask about legal documents: subpoenas, complaints, police reports\n" +
                     "- When you have enough information, provide a structured assessment\n\n" +
-                    "ASSESSMENT FORMAT:\n" +
-                    "Case Summary:\n[Brief summary of the situation]\n\n" +
-                    "Legal Issues:\n- [Key legal issues identified]\n\n" +
-                    "Plausibility Score: [X]% - [Label]\n\n" +
-                    "Suggested Next Steps:\n- [Practical recommendations]\n\n" +
-                    "DISCLAIMER: This is a legal pre-assessment only. If your situation is serious or urgent, please consult a licensed lawyer.\n\n" +
+                    "ASSESSMENT FORMAT (STRICT STRUCTURE - Follow exactly):\n" +
+                    "**Case Summary:**\n[Brief summary of the situation in a single paragraph. No bullet points, just plain text.]\n\n" +
+                    "**Legal Issues or Concerns:**\n- [First key legal issue identified]\n" +
+                    "- [Second key legal issue identified]\n" +
+                    "- [Additional issues if applicable]\n\n" +
+                    "**Plausibility Score:** [X]% - [Label]\n" +
+                    "[Label should be descriptive like 'Moderately Strong', 'Weak', 'Very Strong', 'Highly Likely', etc.]\n\n" +
+                    "**Suggested Next Steps:**\n" +
+                    "1. **[Step Label]:** [Detailed description of the step]\n" +
+                    "2. **[Step Label]:** [Detailed description of the step]\n" +
+                    "3. **[Step Label]:** [Detailed description of the step]\n" +
+                    "[Continue with numbered list, each with bold label followed by colon]\n\n" +
+                    "**DISCLAIMER:** This is a legal pre-assessment only. Please consult a licensed lawyer, especially if your situation is urgent. [Optional: Add a follow-up question if relevant]\n\n" +
+                    "FORMATTING RULES:\n" +
+                    "- All section headings MUST be bold with a colon: **Section Name:**\n" +
+                    "- Case Summary must be a single paragraph, no bullets\n" +
+                    "- Legal Issues or Concerns must use bullet points (-)\n" +
+                    "- Plausibility Score must be on its own line with bold heading, followed by percentage and label\n" +
+                    "- Suggested Next Steps must be a numbered list (1., 2., 3., etc.)\n" +
+                    "- Each step in Suggested Next Steps must have a bold label followed by a colon: **Label:**\n" +
+                    "- DISCLAIMER must be bold with colon and followed by the disclaimer text\n" +
+                    "- Use proper spacing between sections (blank line between each major section)\n\n" +
                     "IMPORTANT: Always provide a response. Never leave the user without guidance or next steps.";
             }
             
@@ -580,16 +596,40 @@ public class OpenAIController {
             enhancedPrompt.append("\nIMPORTANT: Base your response primarily on the knowledge base context provided above. ");
             enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
             enhancedPrompt.append("Only cite sources that are explicitly mentioned in the knowledge base context above.");
-            enhancedPrompt.append("\n\nSOURCE INSTRUCTIONS: Include relevant sources in your response using Markdown format: ");
-            enhancedPrompt.append("- [Source Title](URL) ");
-            enhancedPrompt.append("Do not include a 'Sources:' header - just list the links directly after your main content. ");
-            enhancedPrompt.append("You may mention specific laws, acts, or regulations by name if they are essential to the main answer content. ");
-            enhancedPrompt.append("Ensure your response is comprehensive and accurate based on the knowledge base context provided.");
+            
+            if ("B".equals(mode)) {
+                // CPA mode: Reinforce strict formatting requirements
+                enhancedPrompt.append("\n\nCRITICAL FORMATTING REQUIREMENTS FOR CPA REPORT:\n");
+                enhancedPrompt.append("- All section headings MUST be bold with colon: **Section Name:**\n");
+                enhancedPrompt.append("- Follow the exact structure: Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER\n");
+                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets)\n");
+                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-)\n");
+                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels: **Label:**\n");
+                enhancedPrompt.append("- DISCLAIMER must be bold with colon\n");
+                enhancedPrompt.append("- Integrate KB sources naturally into your analysis, but maintain the strict formatting structure above.");
+            } else {
+                enhancedPrompt.append("\n\nSOURCE INSTRUCTIONS: Include relevant sources in your response using Markdown format: ");
+                enhancedPrompt.append("- [Source Title](URL) ");
+                enhancedPrompt.append("Do not include a 'Sources:' header - just list the links directly after your main content. ");
+                enhancedPrompt.append("You may mention specific laws, acts, or regulations by name if they are essential to the main answer content. ");
+                enhancedPrompt.append("Ensure your response is comprehensive and accurate based on the knowledge base context provided.");
+            }
         } else {
-            enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
-            enhancedPrompt.append("Provide general guidance while acknowledging this limitation. ");
-            enhancedPrompt.append("Do not invent or hallucinate sources. If you cannot provide accurate information, ");
-            enhancedPrompt.append("recommend consultation with a legal professional.");
+            if ("B".equals(mode)) {
+                // CPA mode: Even without KB, maintain formatting requirements
+                enhancedPrompt.append("\n\nCRITICAL FORMATTING REQUIREMENTS FOR CPA REPORT:\n");
+                enhancedPrompt.append("- All section headings MUST be bold with colon: **Section Name:**\n");
+                enhancedPrompt.append("- Follow the exact structure: Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER\n");
+                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets)\n");
+                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-)\n");
+                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels: **Label:**\n");
+                enhancedPrompt.append("- DISCLAIMER must be bold with colon\n");
+            } else {
+                enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
+                enhancedPrompt.append("Provide general guidance while acknowledging this limitation. ");
+                enhancedPrompt.append("Do not invent or hallucinate sources. If you cannot provide accurate information, ");
+                enhancedPrompt.append("recommend consultation with a legal professional.");
+            }
         }
         
         return enhancedPrompt.toString();
