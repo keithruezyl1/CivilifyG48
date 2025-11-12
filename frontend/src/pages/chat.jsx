@@ -1029,6 +1029,7 @@ const Chat = () => {
         }
 
         // Auto-scroll to bottom of messages
+        // Multiple scroll attempts to ensure visibility
         setTimeout(() => {
           if (chatContainerRef.current) {
             chatContainerRef.current.scrollTo({
@@ -1037,6 +1038,16 @@ const Chat = () => {
             });
           }
         }, 100);
+        
+        // Additional scroll for complex responses
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTo({
+              top: chatContainerRef.current.scrollHeight,
+              behavior: "smooth",
+            });
+          }
+        }, 400);
       } else {
         // Handle error
         const errorMessage = {
@@ -1117,12 +1128,25 @@ const Chat = () => {
     // Save AI response to conversation
     await saveMessageToConversation(aiResponse.response, false);
 
+    // Enhanced auto-scroll for suggested replies
     setTimeout(() => {
       if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop =
-          chatContainerRef.current.scrollHeight;
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
       }
-    }, 0);
+    }, 100);
+    
+    // Additional scroll to ensure complete visibility
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 400);
   };
 
   const handleMessageClick = (index) => {
@@ -1506,17 +1530,61 @@ const Chat = () => {
     `;
     document.head.appendChild(modeHoverStyle);
 
+    // Custom scrollbar styling for chat container
+    const scrollbarStyle = document.createElement("style");
+    scrollbarStyle.textContent = `
+      /* Scrollbar styling for chat messages container */
+      .chatMessages {
+        scrollbar-width: thin;
+        scrollbar-color: ${isDarkMode ? "rgba(150, 150, 150, 0.5) rgba(50, 50, 50, 0.3)" : "rgba(180, 180, 180, 0.6) rgba(240, 240, 240, 0.4)"};
+      }
+
+      /* Webkit browsers (Chrome, Safari, Edge) */
+      .chatMessages::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      .chatMessages::-webkit-scrollbar-track {
+        background: ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+        border-radius: 10px;
+        margin: 4px 0;
+      }
+
+      .chatMessages::-webkit-scrollbar-thumb {
+        background: ${isDarkMode ? "rgba(150, 150, 150, 0.5)" : "rgba(180, 180, 180, 0.6)"};
+        border-radius: 10px;
+        border: 2px solid ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+        transition: background 0.2s ease;
+      }
+
+      .chatMessages::-webkit-scrollbar-thumb:hover {
+        background: ${isDarkMode ? "rgba(200, 200, 200, 0.7)" : "rgba(150, 150, 150, 0.8)"};
+      }
+
+      .chatMessages::-webkit-scrollbar-thumb:active {
+        background: ${isDarkMode ? "rgba(220, 220, 220, 0.8)" : "rgba(130, 130, 130, 0.9)"};
+      }
+
+      /* Scrollbar corner (when both scrollbars are present) */
+      .chatMessages::-webkit-scrollbar-corner {
+        background: ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+      }
+    `;
+    document.head.appendChild(scrollbarStyle);
+
     return () => {
       document.head.removeChild(style); // Clean up injected style
       document.head.removeChild(hoverStyle); // Clean up hover styles
+      document.head.removeChild(modeHoverStyle); // Clean up mode hover styles
+      document.head.removeChild(scrollbarStyle); // Clean up scrollbar styles
       document.body.style.overflow = "";
       document.body.style.height = "";
       document.body.style.position = "";
       document.body.style.width = "";
       document.removeEventListener("mousedown", handleClickOutside);
-      document.head.removeChild(modeHoverStyle);
     };
-  }, [isDarkMode]); // Add isDarkMode dependency for hover styles
+  }, [isDarkMode]); // Add isDarkMode dependency for dynamic styles
 
   // Track if initial mount is done
   const initialMount = useRef(true);
@@ -1544,14 +1612,43 @@ const Chat = () => {
   }, []);
 
   // Auto-scroll chat to bottom on every new message (user or Villy)
+  // Enhanced to ensure complete visibility of AI responses, especially long CPA reports
   useEffect(() => {
     if (!chatContainerRef.current) return;
     if (messages.length === 0) return; // Don't scroll if no messages (welcome screen)
+    
     const container = chatContainerRef.current;
+    
+    // Scroll immediately for instant feedback
     container.scrollTo({
       top: container.scrollHeight,
       behavior: "smooth",
     });
+    
+    // Additional scroll after a delay to account for:
+    // - DOM rendering completion
+    // - Image loading (if any)
+    // - Complex component rendering (VillyReportCard)
+    // - Markdown parsing and layout
+    setTimeout(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 150);
+    
+    // Final scroll for very large responses (CPA reports)
+    // Ensures nothing is cut off by the input box
+    setTimeout(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 500);
   }, [messages]);
 
   useEffect(() => {
@@ -1994,12 +2091,14 @@ const Chat = () => {
               justifyContent: messages.length === 0 ? "center" : "flex-start",
               padding: selectedMode == null ? "0px !important" : "0px 24px",
               paddingTop: messages.length === 0 ? 0 : 24,
-              paddingBottom: messages.length === 0 ? 0 : inputHeight + 20,
+              // Increased padding to ensure AI responses (especially CPA reports) are fully visible
+              paddingBottom: messages.length === 0 ? 0 : inputHeight + 60,
               marginBottom: messages.length === 0 ? 0 : 24,
               // gap: messages.length === 0 ? 0 : 64,
               background: "transparent",
               minHeight: 0,
               height: "100%",
+              scrollBehavior: "smooth",
             }}
             className="chatMessages"
             ref={chatContainerRef}
