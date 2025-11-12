@@ -454,22 +454,30 @@ public class OpenAIController {
                         responseBody.put("isReport", true);
                     // CPA: Only now fetch KB sources to support the report
                     try {
-                        // Summarize the conversation for KB first
-                        String kbSummary = openAIService.summarizeConversationForKb(userMessage, conversationHistoryForAI);
-                        if (kbSummary == null || kbSummary.isBlank()) {
-                            StringBuilder fullContext = new StringBuilder();
-                            fullContext.append("User's current message: ").append(userMessage).append("\n\n");
-                            fullContext.append("Conversation history:\n");
-                            for (Map<String, String> msg : conversationHistoryForAI) {
-                                String role = msg.get("isUserMessage").equals("true") ? "User" : "Assistant";
-                                fullContext.append(role).append(": ").append(msg.get("content")).append("\n");
+                        // Extract key legal issues from the generated report for targeted KB search
+                        String kbQuery = extractLegalIssuesFromReport(aiResponse);
+                        if (kbQuery == null || kbQuery.isBlank()) {
+                            // Fallback: Use summarized conversation if extraction fails
+                            String kbSummary = openAIService.summarizeConversationForKb(userMessage, conversationHistoryForAI);
+                            if (kbSummary == null || kbSummary.isBlank()) {
+                                StringBuilder fullContext = new StringBuilder();
+                                fullContext.append("User's current message: ").append(userMessage).append("\n\n");
+                                fullContext.append("Conversation history:\n");
+                                for (Map<String, String> msg : conversationHistoryForAI) {
+                                    String role = msg.get("isUserMessage").equals("true") ? "User" : "Assistant";
+                                    fullContext.append(role).append(": ").append(msg.get("content")).append("\n");
+                                }
+                                kbQuery = fullContext.toString();
+                            } else {
+                                kbQuery = kbSummary;
                             }
-                            kbSummary = fullContext.toString();
+                            logger.info("CPA: Using fallback KB query (length: {})", kbQuery.length());
+                        } else {
+                            logger.info("CPA: Using extracted legal issues for KB query (length: {})", kbQuery.length());
                         }
-                        logger.info("CPA: Using summarized KB context (length: {})", kbSummary.length());
                         int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
                         java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
-                            openAIService.getKnowledgeBaseSources(kbSummary, desiredLimitForReport);
+                            openAIService.getKnowledgeBaseSources(kbQuery, desiredLimitForReport);
                         if (reportSources != null) {
                             // Merge into kbSources without duplicates by entryId
                             java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
@@ -706,6 +714,67 @@ public class OpenAIController {
         }
         
         return enhancedPrompt.toString();
+    }
+    
+    /**
+     * Extract key legal issues and case summary from a CPA report to use as KB query.
+     * This creates a targeted query that focuses on the core legal concepts,
+     * resulting in better knowledge base source matches.
+     */
+    private String extractLegalIssuesFromReport(String reportText) {
+        if (reportText == null || reportText.trim().isEmpty()) {
+            return null;
+        }
+        
+        StringBuilder kbQuery = new StringBuilder();
+        
+        try {
+            // Extract Case Summary
+            java.util.regex.Pattern summaryPattern = java.util.regex.Pattern.compile(
+                "Case Summary:\\s*([\\s\\S]*?)(?=\\n\\n|Legal Issues|$)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher summaryMatcher = summaryPattern.matcher(reportText);
+            if (summaryMatcher.find()) {
+                String summary = summaryMatcher.group(1).trim();
+                // Clean up markdown and formatting
+                summary = summary.replaceAll("\\*\\*", "").replaceAll("\\n+", " ").trim();
+                if (!summary.isEmpty() && summary.length() > 20) {
+                    kbQuery.append("Case: ").append(summary).append(" ");
+                }
+            }
+            
+            // Extract Legal Issues or Concerns
+            java.util.regex.Pattern issuesPattern = java.util.regex.Pattern.compile(
+                "Legal Issues(?: or Concerns)?:\\s*([\\s\\S]*?)(?=\\n\\n|Plausibility Score|Suggested Next Steps|$)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher issuesMatcher = issuesPattern.matcher(reportText);
+            if (issuesMatcher.find()) {
+                String issues = issuesMatcher.group(1).trim();
+                // Clean up markdown and bullet points
+                issues = issues.replaceAll("\\*\\*", "")
+                              .replaceAll("^-\\s*", "")
+                              .replaceAll("\\n-\\s*", ". ")
+                              .replaceAll("\\n+", " ")
+                              .trim();
+                if (!issues.isEmpty()) {
+                    kbQuery.append("Legal issues: ").append(issues);
+                }
+            }
+            
+            String result = kbQuery.toString().trim();
+            
+            // Only return if we have meaningful content (more than just labels)
+            if (result.length() > 30) {
+                return result;
+            }
+            
+        } catch (Exception e) {
+            logger.warn("Error extracting legal issues from report: {}", e.getMessage());
+        }
+        
+        return null;
     }
     
     /**
