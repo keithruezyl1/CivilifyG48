@@ -34,13 +34,9 @@ public class KnowledgeBaseSkipClassifier {
         "are you human", "are you a robot", "are you ai"
     );
 
-    // Mode explanation questions
-    private static final List<String> MODE_PATTERNS = Arrays.asList(
-        "what is gli", "what is cpa", "gli mode", "cpa mode",
-        "difference between gli and cpa", "which mode should i use",
-        "when should i use", "how does gli work", "how does cpa work",
-        "what mode", "explain the modes"
-    );
+    // Mode explanation questions - REMOVED
+    // These questions should use KB to provide accurate, detailed explanations
+    // about GLI and CPA modes based on the actual system capabilities
 
     // Usage instruction questions
     private static final List<String> USAGE_PATTERNS = Arrays.asList(
@@ -63,13 +59,9 @@ public class KnowledgeBaseSkipClassifier {
         "can you guarantee", "what can't you do", "your limitations"
     );
 
-    // Basic legal concept definitions (general enough for AI)
-    private static final List<String> BASIC_LEGAL_CONCEPTS = Arrays.asList(
-        "what is a contract", "what does liable mean", "what is evidence",
-        "what is a plaintiff", "what is a defendant", "burden of proof",
-        "what is damages", "what is negligence", "what is jurisdiction",
-        "what is due process", "criminal vs civil", "difference between criminal and civil"
-    );
+    // Basic legal concept definitions - REMOVED
+    // These should use KB to provide accurate Philippine law context
+    // and proper legal definitions with citations when available
 
     // Legal system overview (general knowledge)
     private static final List<String> LEGAL_SYSTEM_OVERVIEW = Arrays.asList(
@@ -80,7 +72,7 @@ public class KnowledgeBaseSkipClassifier {
 
     // Non-legal questions (should redirect)
     private static final List<String> NON_LEGAL_INDICATORS = Arrays.asList(
-        "what is", "how does", "photosynthesis", "capital of", "president of",
+        "photosynthesis", "capital of", "president of",
         "math", "science", "history", "geography", "medical", "health",
         "investment", "stocks", "business advice", "technology", "computer",
         "phone", "recipe", "weather", "sports", "entertainment"
@@ -128,11 +120,9 @@ public class KnowledgeBaseSkipClassifier {
         return isGreeting(lowerQuery)
             || isFarewell(lowerQuery)
             || isIdentityQuestion(lowerQuery)
-            || isModeQuestion(lowerQuery)
             || isUsageQuestion(lowerQuery)
             || isAcknowledgment(lowerQuery)
             || isMetaQuestion(lowerQuery)
-            || isBasicLegalConcept(lowerQuery)
             || isLegalSystemOverview(lowerQuery)
             || isNonLegalQuestion(lowerQuery)
             || isShortConversationalResponse(lowerQuery);
@@ -172,13 +162,7 @@ public class KnowledgeBaseSkipClassifier {
             .anyMatch(lowerQuery::contains);
     }
 
-    /**
-     * Checks if query is about modes (GLI/CPA).
-     */
-    private boolean isModeQuestion(String lowerQuery) {
-        return MODE_PATTERNS.stream()
-            .anyMatch(lowerQuery::contains);
-    }
+    // isModeQuestion method removed - mode questions now use KB for accurate explanations
 
     /**
      * Checks if query is about usage instructions.
@@ -209,13 +193,7 @@ public class KnowledgeBaseSkipClassifier {
             .anyMatch(lowerQuery::contains);
     }
 
-    /**
-     * Checks if query is asking about basic legal concepts.
-     */
-    private boolean isBasicLegalConcept(String lowerQuery) {
-        return BASIC_LEGAL_CONCEPTS.stream()
-            .anyMatch(lowerQuery::contains);
-    }
+    // isBasicLegalConcept method removed - legal concepts now use KB for accurate definitions
 
     /**
      * Checks if query is about legal system overview.
@@ -271,11 +249,9 @@ public class KnowledgeBaseSkipClassifier {
         if (isGreeting(lowerQuery)) return "Greeting";
         if (isFarewell(lowerQuery)) return "Farewell/Thank you";
         if (isIdentityQuestion(lowerQuery)) return "Identity/Capability question";
-        if (isModeQuestion(lowerQuery)) return "Mode explanation question";
         if (isUsageQuestion(lowerQuery)) return "Usage instruction question";
         if (isAcknowledgment(lowerQuery)) return "Simple acknowledgment";
         if (isMetaQuestion(lowerQuery)) return "Meta/Platform question";
-        if (isBasicLegalConcept(lowerQuery)) return "Basic legal concept (general)";
         if (isLegalSystemOverview(lowerQuery)) return "Legal system overview (general)";
         if (isNonLegalQuestion(lowerQuery)) return "Non-legal question (redirect)";
         if (isShortConversationalResponse(lowerQuery)) return "Short conversational response";
