@@ -370,49 +370,11 @@ public class OpenAIController {
                 logger.info("GLI: Skipping source enrichment for conversational query");
             }
 
-            java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
-            
-            // Only provide sources for law-related queries
-            boolean shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
-            
-            if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
-                // Limit to maximum 3 sources for relevance
-                int maxSources = Math.min(kbSources.size(), 3);
-                for (int i = 0; i < maxSources; i++) {
-                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = kbSources.get(i);
-                    Map<String, Object> source = new HashMap<>();
-                    source.put("entryId", entry.getEntryId());
-                    source.put("title", entry.getTitle());
-                    source.put("type", entry.getType());
-                    source.put("canonicalCitation", entry.getCanonicalCitation());
-                    source.put("summary", entry.getSummary());
-                    // Only include source URLs if they exist and are valid
-                    if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
-                        // Filter out any invalid or empty URLs
-                        List<String> validUrls = entry.getSourceUrls().stream()
-                            .filter(url -> url != null && !url.trim().isEmpty() && url.startsWith("http"))
-                            .collect(Collectors.toList());
-                        if (!validUrls.isEmpty()) {
-                            source.put("sourceUrls", validUrls);
-                        }
-                    }
-                    sources.add(source);
-                }
-                logger.info("Providing {} sources for law-related query", sources.size());
-            } else {
-                logger.info("Not providing sources - query not law-related or no KB sources available");
-            }
-            logger.info("Knowledge base sources included in response: {}", sources.size());
-            
-            // GLI: Let AI include sources as instructed in system prompt - no backend appending needed
-            
-            // Prepare response
+            // Prepare initial response body (will be populated with sources later)
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("response", aiResponse);
             responseBody.put("conversationId", conversationId);
             responseBody.put("success", true);
-            responseBody.put("sources", sources);
-            responseBody.put("hasKnowledgeBaseContext", shouldProvideSources && !sources.isEmpty());
 
             // Extract plausibility score label and summary from the AI response (for mode B)
             String plausibilityLabel = null;
@@ -435,7 +397,7 @@ public class OpenAIController {
             }
             if (plausibilityLabel != null) responseBody.put("plausibilityLabel", plausibilityLabel);
             if (plausibilitySummary != null) responseBody.put("plausibilitySummary", plausibilitySummary);
-
+            
             // Add isReport flag for CPA mode if the response looks like a report
             if (mode.equals("B")) {
                 // Check if this is a meta question - if so, never mark as report
@@ -512,6 +474,45 @@ public class OpenAIController {
                     }
                 }
             }
+            
+            // Prepare sources list for response (after CPA report generation to include KB sources)
+            java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
+            
+            // Only provide sources for law-related queries
+            boolean shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
+            
+            if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
+                // Limit to maximum 3 sources for relevance
+                int maxSources = Math.min(kbSources.size(), 3);
+                for (int i = 0; i < maxSources; i++) {
+                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = kbSources.get(i);
+                    Map<String, Object> source = new HashMap<>();
+                    source.put("entryId", entry.getEntryId());
+                    source.put("title", entry.getTitle());
+                    source.put("type", entry.getType());
+                    source.put("canonicalCitation", entry.getCanonicalCitation());
+                    source.put("summary", entry.getSummary());
+                    // Only include source URLs if they exist and are valid
+                    if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                        // Filter out any invalid or empty URLs
+                        List<String> validUrls = entry.getSourceUrls().stream()
+                            .filter(url -> url != null && !url.trim().isEmpty() && url.startsWith("http"))
+                            .collect(Collectors.toList());
+                        if (!validUrls.isEmpty()) {
+                            source.put("sourceUrls", validUrls);
+                        }
+                    }
+                    sources.add(source);
+                }
+                logger.info("Providing {} sources for law-related query (including CPA report sources)", sources.size());
+            } else {
+                logger.info("Not providing sources - query not law-related or no KB sources available");
+            }
+            logger.info("Knowledge base sources included in response: {}", sources.size());
+            
+            // Add sources to response body
+            responseBody.put("sources", sources);
+            responseBody.put("hasKnowledgeBaseContext", shouldProvideSources && !sources.isEmpty());
 
             // Now persist the final AI response (original or regenerated)
             ChatMessage aiChatMessage = chatService.addMessage(

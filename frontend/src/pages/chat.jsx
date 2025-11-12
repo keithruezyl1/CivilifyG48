@@ -2276,6 +2276,7 @@ const Chat = () => {
                         isDarkMode={isDarkMode}
                         plausibilityLabel={message.plausibilityLabel}
                         plausibilitySummary={message.plausibilitySummary}
+                        sources={message.sources || []}
                       />
                     ) : (
                       <div>

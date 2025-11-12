@@ -199,8 +199,12 @@ const VillyReportCard = ({
   isDarkMode = false,
   plausibilityLabel,
   plausibilitySummary,
+  sources = [], // KB sources from API response
 }) => {
   const sections = parseReport(reportText);
+  
+  // If sources are provided as prop (from API), use them; otherwise use parsed sources
+  const displaySources = sources.length > 0 ? sources : sections.sources;
   const hasContent =
     sections.summary ||
     sections.issues.length ||
@@ -433,7 +437,7 @@ const VillyReportCard = ({
         </div>
       )}
       {/* Styled Sources Section */}
-      {sections.sources.length > 0 && (
+      {displaySources.length > 0 && (
         <div
           style={{
             background: isDarkMode ? "rgba(255,251,230,0.08)" : "#fffbe6",
@@ -457,11 +461,33 @@ const VillyReportCard = ({
             </span>
           </div>
           <ul style={{ margin: 0, paddingLeft: 22 }}>
-            {sections.sources.map((src, i) => (
-              <li key={i} style={{ marginBottom: 4, wordBreak: "break-word", lineHeight: 1.6 }}>
-                {src}
-              </li>
-            ))}
+            {displaySources.map((src, i) => {
+              // Check if source is an object (from API) or string (from parsed text)
+              if (typeof src === 'object' && src.title) {
+                return (
+                  <li key={i} style={{ marginBottom: 8, wordBreak: "break-word", lineHeight: 1.6 }}>
+                    <strong style={{ color: isDarkMode ? "#ffe066" : "#8c6500" }}>{src.title}</strong>
+                    {src.canonicalCitation && (
+                      <div style={{ fontSize: 13, marginTop: 2, opacity: 0.9 }}>
+                        {src.canonicalCitation}
+                      </div>
+                    )}
+                    {src.summary && (
+                      <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85 }}>
+                        {src.summary}
+                      </div>
+                    )}
+                  </li>
+                );
+              } else {
+                // Fallback for string sources (from parsed text)
+                return (
+                  <li key={i} style={{ marginBottom: 4, wordBreak: "break-word", lineHeight: 1.6 }}>
+                    {typeof src === 'string' ? src : JSON.stringify(src)}
+                  </li>
+                );
+              }
+            })}
           </ul>
         </div>
       )}
