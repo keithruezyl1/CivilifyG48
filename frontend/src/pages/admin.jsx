@@ -139,8 +139,8 @@ const Admin = () => {
       searchQuery.trim() === ""
         ? [...source]
         : source.filter((user) =>
-            user.username.toLowerCase().includes(searchQuery.toLowerCase())
-          );
+        user.username.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     // Put the logged-in user at the top
     base.sort((a, b) => {
       const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;

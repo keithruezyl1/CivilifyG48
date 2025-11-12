@@ -164,18 +164,24 @@ public class OpenAIController {
                     "   - Generates structured reports with plausibility scores and recommended next steps\n" +
                     "   - Best for: Evaluating a specific legal situation, getting case-specific guidance\n\n" +
                     "IMPORTANT: When explaining modes, be accurate and specific about what Civilify does.\n\n" +
+                    "CRITICAL - WHEN TO USE CONVERSATIONAL RESPONSES (NOT REPORTS):\n" +
+                    "- Questions about Civilify's features, modes, or capabilities: Answer conversationally, DO NOT generate a report\n" +
+                    "- Questions about how to use the system: Answer conversationally, DO NOT generate a report\n" +
+                    "- Greetings or general chitchat: Respond conversationally, DO NOT generate a report\n" +
+                    "- Questions about what you can do: Answer conversationally, DO NOT generate a report\n" +
+                    "- ONLY generate structured assessment reports when analyzing ACTUAL LEGAL CASES with specific facts\n\n" +
                     "CONVERSATION FLOW:\n" +
                     "- Always respond with helpful, relevant questions or information\n" +
                     "- Ask one meaningful follow-up question at a time to clarify facts\n" +
                     "- Be empathetic and supportive, especially for serious legal matters\n" +
                     "- NEVER leave responses blank or empty\n" +
                     "- If uncertain, ask clarifying questions rather than staying silent\n" +
-                    "- For mode explanation questions: Use the information provided above\n\n" +
-                    "ASSESSMENT PROCESS:\n" +
+                    "- For mode explanation questions: Use the information provided above in a conversational manner\n\n" +
+                    "ASSESSMENT PROCESS (ONLY for actual legal cases with specific facts):\n" +
                     "- Gather key facts: what happened, where, when, who was involved\n" +
                     "- Understand the user's goal: file a case, defend against charges, etc.\n" +
                     "- Ask about legal documents: subpoenas, complaints, police reports\n" +
-                    "- When you have enough information, provide a structured assessment\n\n" +
+                    "- When you have enough information about an ACTUAL CASE, provide a structured assessment\n\n" +
                     "ASSESSMENT FORMAT (STRICT STRUCTURE - Follow exactly):\n" +
                     "Case Summary:\n[Brief summary of the situation in a single paragraph. No bullet points, no markdown bold markers, just plain text.]\n\n" +
                     "Legal Issues or Concerns:\n- [First key legal issue identified - no markdown bold markers]\n" +
@@ -257,6 +263,12 @@ public class OpenAIController {
             boolean canSkipKB = kbSkipClassifier.canSkipKnowledgeBase(userMessage, mode, false);
             String classificationReason = kbSkipClassifier.getClassificationReason(userMessage, mode, false);
             logger.info("KB Skip Classification: {} - Reason: {}", canSkipKB ? "SKIP KB" : "USE KB", classificationReason);
+            
+            // Check if this is a meta/informational question about Civilify itself (should not trigger CPA report)
+            boolean isMetaQuestion = isMetaOrInformationalQuestion(userMessage);
+            if (isMetaQuestion) {
+                logger.info("CPA: Detected meta/informational question - will skip report generation");
+            }
             
             // Mode-aware KB usage
             String primaryKbAnswer = null;
@@ -426,10 +438,20 @@ public class OpenAIController {
 
             // Add isReport flag for CPA mode if the response looks like a report
             if (mode.equals("B")) {
-                // Simple heuristic: plausibility score (e.g., 89% Possible) in the first 200 chars
-                String plausibilityPattern = "\\d{1,3}%\\s*(Possible|Likely|Unlikely|Highly Likely|Highly Unlikely)";
-                if (aiResponse != null && aiResponse.substring(0, Math.min(200, aiResponse.length())).matches("(?s).*" + plausibilityPattern + ".*")) {
-                    responseBody.put("isReport", true);
+                // Check if this is a meta question - if so, never mark as report
+                if (isMetaQuestion) {
+                    responseBody.put("isReport", false);
+                    logger.info("CPA: Meta question detected - marking as non-report (conversational response)");
+                } else {
+                    // Check if response contains actual report structure
+                    boolean hasReportStructure = aiResponse != null && (
+                        aiResponse.contains("Case Summary:") || 
+                        aiResponse.contains("Plausibility Score:") ||
+                        aiResponse.contains("Legal Issues or Concerns:")
+                    );
+                    
+                    if (hasReportStructure) {
+                        responseBody.put("isReport", true);
                     // CPA: Only now fetch KB sources to support the report
                     try {
                         // Summarize the conversation for KB first
@@ -476,8 +498,10 @@ public class OpenAIController {
                     } catch (Exception ex) {
                         logger.warn("CPA: Failed fetching KB sources for report: {}", ex.getMessage());
                     }
-                } else {
-                    responseBody.put("isReport", false);
+                    } else {
+                        responseBody.put("isReport", false);
+                        logger.info("CPA: No report structure detected - conversational response");
+                    }
                 }
             }
 
@@ -682,5 +706,72 @@ public class OpenAIController {
         }
         
         return enhancedPrompt.toString();
+    }
+    
+    /**
+     * Check if the user's question is about Civilify itself (meta/informational)
+     * rather than an actual legal case that needs assessment.
+     * These questions should get conversational responses, not structured reports.
+     */
+    private boolean isMetaOrInformationalQuestion(String message) {
+        if (message == null || message.trim().isEmpty()) {
+            return false;
+        }
+        
+        String lowerMessage = message.toLowerCase().trim();
+        
+        // Patterns for meta questions about Civilify
+        String[] metaPatterns = {
+            "what are the modes",
+            "what is gli",
+            "what is cpa",
+            "what are your capabilities",
+            "what can you do",
+            "how do i use",
+            "how does this work",
+            "explain the modes",
+            "tell me about",
+            "what is civilify",
+            "how do you work",
+            "what features",
+            "can you help me with",
+            "what mode should i use",
+            "difference between modes",
+            "when should i use",
+            "which mode is better"
+        };
+        
+        for (String pattern : metaPatterns) {
+            if (lowerMessage.contains(pattern)) {
+                return true;
+            }
+        }
+        
+        // Check for greeting-like questions
+        if (lowerMessage.matches("^(hi|hello|hey|greetings).*") && lowerMessage.length() < 50) {
+            return true;
+        }
+        
+        // Check if it's purely asking about capabilities (no legal context)
+        boolean hasLegalContext = lowerMessage.contains("case") || 
+                                   lowerMessage.contains("law") || 
+                                   lowerMessage.contains("legal") ||
+                                   lowerMessage.contains("lawyer") ||
+                                   lowerMessage.contains("court") ||
+                                   lowerMessage.contains("sue") ||
+                                   lowerMessage.contains("charged") ||
+                                   lowerMessage.contains("contract") ||
+                                   lowerMessage.contains("violated");
+        
+        boolean isCapabilityQuestion = lowerMessage.contains("what can") || 
+                                        lowerMessage.contains("what do") ||
+                                        lowerMessage.contains("how can");
+        
+        // If asking about capabilities without legal context, it's meta
+        if (isCapabilityQuestion && !hasLegalContext) {
+            return true;
+        }
+        
+        return false;
     }
 }
