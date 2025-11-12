@@ -4,6 +4,7 @@ import com.capstone.civilify.model.ChatConversation;
 import com.capstone.civilify.model.ChatMessage;
 import com.capstone.civilify.service.ChatService;
 import com.capstone.civilify.service.OpenAIService;
+import com.capstone.civilify.util.KnowledgeBaseSkipClassifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ public class OpenAIController {
     
     @Autowired
     private ChatService chatService;
+    
+    @Autowired
+    private KnowledgeBaseSkipClassifier kbSkipClassifier;
     
     // CPA structured facts feature removed
     
@@ -221,28 +225,39 @@ public class OpenAIController {
             logger.info("Conversation history prepared: {} messages for conversation {}", 
                 conversationHistoryForAI.size(), conversationId);
             
+            // Classify query to determine if KB lookup is needed
+            boolean canSkipKB = kbSkipClassifier.canSkipKnowledgeBase(userMessage, mode, false);
+            String classificationReason = kbSkipClassifier.getClassificationReason(userMessage, mode, false);
+            logger.info("KB Skip Classification: {} - Reason: {}", canSkipKB ? "SKIP KB" : "USE KB", classificationReason);
+            
             // Mode-aware KB usage
             String primaryKbAnswer = null;
             java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources = new java.util.ArrayList<>();
 
             if ("A".equals(mode)) {
-                // GLI: KB-first to gather context and sources for UI, but do NOT print "Sources:" in the AI text
-                com.capstone.civilify.DTO.KnowledgeBaseChatResponse kbResponse =
-                    openAIService.getKnowledgeBaseService().chatWithKnowledgeBaseEnhanced(userMessage, mode);
-
-                if (kbResponse != null && !kbResponse.hasError()) {
-                    primaryKbAnswer = kbResponse.getAnswer();
-                    if (kbResponse.getSources() != null) {
-                        kbSources.addAll(kbResponse.getSources());
-                    }
-                    logger.info("GLI: KB response obtained: answer length={}, sources count={}",
-                        primaryKbAnswer != null ? primaryKbAnswer.length() : 0, kbSources.size());
+                // GLI: Check if KB lookup can be skipped for faster response
+                if (canSkipKB) {
+                    logger.info("GLI: Skipping KB lookup - Query classified as: {}", classificationReason);
                 } else {
-                    logger.warn("GLI: KB response failed or empty: {}", kbResponse != null ? kbResponse.getError() : "null response");
+                    // GLI: KB-first to gather context and sources for UI
+                    logger.info("GLI: Fetching KB for query requiring legal provisions");
+                    com.capstone.civilify.DTO.KnowledgeBaseChatResponse kbResponse =
+                        openAIService.getKnowledgeBaseService().chatWithKnowledgeBaseEnhanced(userMessage, mode);
+
+                    if (kbResponse != null && !kbResponse.hasError()) {
+                        primaryKbAnswer = kbResponse.getAnswer();
+                        if (kbResponse.getSources() != null) {
+                            kbSources.addAll(kbResponse.getSources());
+                        }
+                        logger.info("GLI: KB response obtained: answer length={}, sources count={}",
+                            primaryKbAnswer != null ? primaryKbAnswer.length() : 0, kbSources.size());
+                    } else {
+                        logger.warn("GLI: KB response failed or empty: {}", kbResponse != null ? kbResponse.getError() : "null response");
+                    }
                 }
             } else {
                 // CPA: Do not call KB during conversational probing phase (performance + avoid blank responses)
-                logger.info("CPA: Skipping KB calls during conversational phase.");
+                logger.info("CPA: Skipping KB calls during conversational phase. Classification: {}", classificationReason);
             }
 
             // Step 2: Generate enhanced AI response with KB context (GLI may include KB context; CPA will pass nulls here)
@@ -281,8 +296,8 @@ public class OpenAIController {
             // CPA structured facts/report generation removed
             
             // Step 3: Source enrichment rules per mode
-            if ("A".equals(mode)) {
-                // GLI: Always ensure we have sources from KB - try multiple approaches if needed
+            if ("A".equals(mode) && !canSkipKB) {
+                // GLI: Only attempt additional source enrichment if query requires KB
                 if (kbSources.isEmpty()) {
                     logger.info("GLI: No sources from initial KB response, attempting additional search");
                     int desiredLimit = computeDesiredSourceLimit(userMessage);
@@ -311,6 +326,8 @@ public class OpenAIController {
                         }
                     }
                 }
+            } else if ("A".equals(mode) && canSkipKB) {
+                logger.info("GLI: Skipping source enrichment for conversational query");
             }
 
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
