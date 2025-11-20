@@ -21,6 +21,8 @@ import {
 import WaveTransition from "../components/lightswind/wave-transition";
 import ParticlesBackground from "../components/lightswind/particles-background";
 import PatchNotes from "../components/lightswind/patch-notes";
+import AnimateInView from "../components/lightswind/animate-in-view";
+import { TrustedUsers } from "../components/lightswind/trusted-users";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -30,9 +32,12 @@ const Landing = () => {
   const patchNotesRef = useRef(null);
   const ctaRef = useRef(null);
   const footerRef = useRef(null);
+  const containerRef = useRef(null);
   const [activeSection, setActiveSection] = useState("hero");
   const [loading, setLoading] = useState(false);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  const [isHeroVisible, setIsHeroVisible] = useState(false);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -42,11 +47,113 @@ const Landing = () => {
   });
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleThemeChange = (e) => {
-      setIsDarkMode(e.matches);
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Map of ref to section name
+    const sectionRefs = {
+      hero: heroRef.current,
+      features: featuresRef.current,
+      "how-it-works": howItWorksRef.current,
+      "patch-notes": patchNotesRef.current,
+      cta: ctaRef.current,
+      footer: footerRef.current,
     };
 
+    // Filter out null refs and get the list of DOM elements
+    const sections = Object.entries(sectionRefs)
+      .filter(([, element]) => element)
+      .map(([name, element]) => ({ name, element }));
+
+    if (sections.length === 0) return;
+
+    // === 1. Intersection Observer for Active Section Highlighting ===
+    // Use a high threshold (80%) and rootMargin to identify the *primary* section
+    const observerOptions = {
+      root: container,
+      rootMargin: "-50% 0px -50% 0px", // The target element only becomes active when it hits the middle 50% of the viewport.
+      threshold: 0,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          // The name is stored as the data-section-name attribute on the section div.
+          const sectionName = entry.target.id;
+          setActiveSection(sectionName);
+          if (sectionName !== "hero") {
+            setShowScrollIndicator(false);
+          } else {
+            setShowScrollIndicator(
+              container.scrollTop < window.innerHeight / 2
+            );
+          }
+        }
+      });
+    }, observerOptions);
+
+    sections.forEach((s) => observer.observe(s.element));
+
+    // === 2. Scroll Snapping Wheel Handler ===
+    const SCROLL_DURATION = 500;
+    let isScrolling = false;
+
+    const getCurrentSectionIndex = () => {
+      const center = container.scrollTop + container.clientHeight / 2;
+      return sections.findIndex((section) => {
+        return (
+          section.element.offsetTop <= center &&
+          section.element.offsetTop + section.element.offsetHeight > center
+        );
+      });
+    };
+
+    const scrollToSection = (index) => {
+      if (index < 0 || index >= sections.length || isScrolling) return;
+      isScrolling = true;
+      sections[index].element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      setTimeout(() => {
+        isScrolling = false;
+      }, SCROLL_DURATION);
+    };
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      if (isScrolling) return;
+
+      const delta = e.deltaY;
+      let currentIndex = getCurrentSectionIndex();
+      if (currentIndex === -1) currentIndex = 0;
+
+      let nextIndex = currentIndex;
+      if (delta > 0 && currentIndex < sections.length - 1)
+        nextIndex = currentIndex + 1;
+      if (delta < 0 && currentIndex > 0) nextIndex = currentIndex - 1;
+
+      if (nextIndex !== currentIndex) {
+        scrollToSection(nextIndex);
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+      observer.disconnect();
+    };
+  }, [setShowScrollIndicator]);
+
+  useEffect(() => {
+    // Triggers the Hero content to fade in once the component is mounted.
+    setIsHeroVisible(true);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleThemeChange = (e) => setIsDarkMode(e.matches);
     mediaQuery.addEventListener("change", handleThemeChange);
     return () => mediaQuery.removeEventListener("change", handleThemeChange);
   }, []);
@@ -56,53 +163,99 @@ const Landing = () => {
   }, []);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const SCROLL_DURATION = 500; // <-- CONTROL THE SPEED HERE (in milliseconds)
+    let isScrolling = false;
+
     const sections = [
-      { id: "hero", ref: heroRef },
-      { id: "features", ref: featuresRef },
-      { id: "how-it-works", ref: howItWorksRef },
-      { id: "patch-notes", ref: patchNotesRef },
-      { id: "cta", ref: ctaRef },
-      { id: "footer", ref: footerRef },
-    ];
+      heroRef.current,
+      featuresRef.current,
+      howItWorksRef.current,
+      patchNotesRef.current,
+      ctaRef.current,
+      footerRef.current,
+    ].filter(Boolean);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) setActiveSection(e.target.id);
-        });
-      },
-      { rootMargin: "-50% 0px -50% 0px", threshold: 0 }
-    );
+    const getCurrentSectionIndex = () => {
+      const offset = 50; // Account for the navbar height / scroll padding
+      return sections.findIndex((section) => {
+        const rect = section.getBoundingClientRect();
+        return rect.top <= offset && rect.bottom >= offset;
+      });
+    };
 
-    sections.forEach((s) => s.ref.current && observer.observe(s.ref.current));
-    return () =>
-      sections.forEach(
-        (s) => s.ref.current && observer.unobserve(s.ref.current)
-      );
-  }, []);
+    const scrollToSection = (index) => {
+      if (index < 0 || index >= sections.length || isScrolling) return;
+      isScrolling = true;
+      sections[index]?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => {
+        isScrolling = false;
+      }, SCROLL_DURATION);
+    };
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      if (isScrolling) return;
+
+      const delta = e.deltaY;
+      let currentIndex = getCurrentSectionIndex();
+      if (currentIndex === -1) {
+        currentIndex = Math.round(container.scrollTop / window.innerHeight);
+      }
+
+      let nextIndex = currentIndex;
+      if (delta > 0 && currentIndex < sections.length - 1)
+        nextIndex = currentIndex + 1;
+      if (delta < 0 && currentIndex > 0) nextIndex = currentIndex - 1;
+
+      if (nextIndex !== currentIndex) {
+        scrollToSection(nextIndex);
+      }
+      if (currentIndex === 0 && delta > 0) {
+        setShowScrollIndicator(false);
+      } else if (currentIndex === 1 && nextIndex === 0) {
+        setShowScrollIndicator(true);
+      } else if (currentIndex === 0 && delta < 0) {
+        setShowScrollIndicator(true);
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+    // NOTE: Make sure setShowScrollIndicator is included in the dependency array
+  }, [setShowScrollIndicator]);
 
   const handleLogoClick = (e) => {
     e.preventDefault();
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     setIsMenuOpen(false);
-  };
-
-  const smoothScroll = (element) => {
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
   };
 
   const handleNavClick = (e, ref) => {
     e.preventDefault();
-    smoothScroll(ref.current);
     setIsMenuOpen(false);
+    const index = [
+      heroRef,
+      featuresRef,
+      howItWorksRef,
+      patchNotesRef,
+      ctaRef,
+      footerRef,
+    ].findIndex((r) => r === ref);
+    const sections = [
+      heroRef.current,
+      featuresRef.current,
+      howItWorksRef.current,
+      patchNotesRef.current,
+      ctaRef.current,
+      footerRef.current,
+    ];
+    sections[index]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleSignIn = () => {
@@ -153,7 +306,7 @@ const Landing = () => {
       title: "Natural Language Processing",
       subtitle: "Ask in plain English",
       description:
-        "Communicate with Villy in plain English, just like talking to a legal expert. Our AI understands context and legal terminology to provide clear, accurate guidance for your legal needs.",
+        "Talk to Villy the way you'd talk to a person. Our AI instantly understands your question, recognizes legal terms, and provides clear, accurate guidance—no jargon needed. ",
       imageSrc: villyNaturalLanguage,
       imageAlt: "Natural language processing illustration",
       isDarkMode: isDarkMode,
@@ -162,7 +315,7 @@ const Landing = () => {
       title: "Legal Analysis",
       subtitle: "Instant case intelligence",
       description:
-        "Get comprehensive analysis of your legal situation or detailed answers to your legal questions, with potential outcomes and recommended actions tailored to your needs.",
+        "Describe your legal situation to get a comprehensive analysis. Villy provides potential outcomes, identifies key legal risks, and gives you detailed, actionable answers tailored to Philippine law. ",
       imageSrc: villyLegalAnalysis,
       imageAlt: "Legal analysis illustration",
       isDarkMode: isDarkMode,
@@ -171,7 +324,7 @@ const Landing = () => {
       title: "AI Assistance",
       subtitle: "Smart next steps, instantly",
       description:
-        "Receive intelligent suggested next steps and personalized guidance powered by advanced AI technology, whether you're asking general questions or analyzing a specific case.",
+        "Receive personalized, intelligent next steps based on your conversational query. Villy guides you through the process, making sure you always know the best way forward for your situation. ",
       imageSrc: villyAiAssistance,
       imageAlt: "AI assistance illustration",
       isDarkMode: isDarkMode,
@@ -225,44 +378,55 @@ const Landing = () => {
   return (
     <>
       <div
+        ref={containerRef}
+        className="scroll-snap-container"
         sx={{
           display: "flex",
           justifyContent: "center",
           flexDirection: "column",
           alignItems: "center",
+
+          overflowY: "scroll",
+          scrollSnapType: "y mandatory", // Primary scroll snap property
+          scrollBehavior: "smooth", // Ensure smooth scrolling
         }}
       >
         <nav style={styles.navbar}>
           <div style={styles.logoContainer}>
-            <img
-              src={logoIconOrange || "/placeholder.svg"}
-              alt="Civilify Logo"
-              style={styles.logo}
-              onClick={handleLogoClick}
-              className="logo-clickable"
-            />
+            <AnimateInView animationType="slide-left" delay={100}>
+              <img
+                src={logoIconOrange || "/placeholder.svg"}
+                alt="Civilify Logo"
+                style={styles.logo}
+                onClick={handleLogoClick}
+                className="logo-clickable"
+              />
+            </AnimateInView>
           </div>
           <div style={styles.navContainer}>
-            <button
-              style={styles.hamburgerButton}
-              onClick={toggleMenu}
-              className="hamburger-button"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
+            <AnimateInView animationType="slide-right" delay={100}>
+              <button
+                style={styles.hamburgerButton}
+                onClick={toggleMenu}
+                className="hamburger-button"
               >
-                <path
-                  d="M3 6H21M3 12H21M3 18H21"
-                  stroke="#F34D01"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M3 6H21M3 12H21M3 18H21"
+                    stroke="#F34D01"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </AnimateInView>
+
             {isMenuOpen && (
               <div
                 style={styles.sidebarOverlay}
@@ -337,57 +501,76 @@ const Landing = () => {
               style={styles.navLinks}
               className={isMenuOpen ? "nav-links open" : "nav-links"}
             >
-              <a
-                href="#features"
-                style={{
-                  ...styles.navLink,
-                  color:
-                    activeSection === "features"
-                      ? "#F34D01"
-                      : isDarkMode
-                      ? "#e0e0e0"
-                      : "#333",
-                  fontWeight: activeSection === "features" ? "600" : "500",
-                }}
-                onClick={(e) => handleNavClick(e, featuresRef)}
-              >
-                Features
-              </a>
-              <a
-                href="#how-it-works"
-                style={{
-                  ...styles.navLink,
-                  color:
-                    activeSection === "how-it-works"
-                      ? "#F34D01"
-                      : isDarkMode
-                      ? "#e0e0e0"
-                      : "#333",
-                  fontWeight: activeSection === "how-it-works" ? "600" : "500",
-                }}
-                onClick={(e) => handleNavClick(e, howItWorksRef)}
-              >
-                How It Works
-              </a>
-              <a
-                href="#patch-notes"
-                style={{
-                  ...styles.navLink,
-                  color:
-                    activeSection === "patch-notes"
-                      ? "#F34D01"
-                      : isDarkMode
-                      ? "#e0e0e0"
-                      : "#333",
-                  fontWeight: activeSection === "patch-notes" ? "600" : "500",
-                }}
-                onClick={(e) => handleNavClick(e, patchNotesRef)}
-              >
-                What's New
-              </a>
-              <button style={styles.navButton} onClick={handleSignIn}>
-                Sign In
-              </button>
+              <AnimateInView animationType="slide-right" delay={100}>
+                <a
+                  href="#features"
+                  style={{
+                    ...styles.navLink,
+                    color:
+                      activeSection === "features" || activeSection === "cta"
+                        ? "#F34D01"
+                        : isDarkMode
+                        ? "#e0e0e0"
+                        : "#333",
+                    fontWeight:
+                      activeSection === "features" || activeSection === "cta"
+                        ? "600"
+                        : "500",
+                  }}
+                  onClick={(e) => handleNavClick(e, featuresRef)}
+                >
+                  Features
+                </a>
+              </AnimateInView>
+              <AnimateInView animationType="slide-right" delay={200}>
+                <a
+                  href="#how-it-works"
+                  style={{
+                    ...styles.navLink,
+                    color:
+                      activeSection === "how-it-works" ||
+                      activeSection === "cta"
+                        ? "#F34D01"
+                        : isDarkMode
+                        ? "#e0e0e0"
+                        : "#333",
+                    fontWeight:
+                      activeSection === "how-it-works" ||
+                      activeSection === "cta"
+                        ? "600"
+                        : "500",
+                  }}
+                  onClick={(e) => handleNavClick(e, howItWorksRef)}
+                >
+                  How It Works
+                </a>
+              </AnimateInView>
+              <AnimateInView animationType="slide-right" delay={300}>
+                <a
+                  href="#patch-notes"
+                  style={{
+                    ...styles.navLink,
+                    color:
+                      activeSection === "patch-notes" || activeSection === "cta"
+                        ? "#F34D01"
+                        : isDarkMode
+                        ? "#e0e0e0"
+                        : "#333",
+                    fontWeight:
+                      activeSection === "patch-notes" || activeSection === "cta"
+                        ? "600"
+                        : "500",
+                  }}
+                  onClick={(e) => handleNavClick(e, patchNotesRef)}
+                >
+                  What's New
+                </a>
+              </AnimateInView>
+              <AnimateInView animationType="slide-right" delay={400}>
+                <button style={styles.navButton} onClick={handleSignIn}>
+                  Sign In
+                </button>
+              </AnimateInView>
             </div>
           </div>
         </nav>
@@ -396,12 +579,28 @@ const Landing = () => {
         <div
           id="hero"
           ref={heroRef}
+          className="scroll-snap-section"
           style={{
             backgroundColor: isDarkMode ? "#181818" : "#ffffff",
             overflowX: "hidden",
+            // ADD: position: relative is the anchor for the absolute grid
+            position: "relative",
+            // ADD: clip the grid if it overflows the 100vh section
+            overflow: "hidden",
+            scrollSnapAlign: "start",
+            opacity: isHeroVisible ? 1 : 0, // Control opacity with state
+            transition: "opacity 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
           }}
         >
-          <BeamGridBackground />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0, // Top, right, bottom, left 0
+              zIndex: 0, // Should be behind content
+            }}
+          >
+            <BeamGridBackground />
+          </div>
           <div
             style={{
               minHeight: "100vh",
@@ -411,54 +610,68 @@ const Landing = () => {
               alignItems: "center",
             }}
           >
-            <quiet-text-mask
-              image={villyBackground}
-              fixed
-              style={{
-                fontFamily: "'Fira Sans', sans-serif",
-                fontSize: "10vw",
-                fontWeight: 900,
-                lineHeight: 1,
-                textAlign: "center",
-                "--brightness": "90%",
-                "--contrast": "90%",
-              }}
-            >
-              CIVILIFY
-            </quiet-text-mask>
-            <h2
-              style={{
-                ...styles.subheading,
-                zIndex: 1,
-              }}
-              className="subheading-shine"
-            >
-              AI-Powered Legal Clarity
-            </h2>
-            <p
-              style={{
-                ...styles.description,
-                color: isDarkMode ? "#d1d5db" : "#4b5563",
-                padding: "1em",
-                zIndex: 1,
-              }}
-              className={`text-gray-300 p-4 sm:p-6 md:p-8 text-sm sm:text-base md:text-lg leading-relaxed z-10`}
-            >
-              Ask a legal question, assess your legal case, get insights, and
-              know what to do next with{" "}
-              <span style={styles.highlight}>Villy</span>, your intelligent
-              legal companion.
-            </p>
-            <button
-              style={{
-                ...styles.primaryButton,
-              }}
-              onClick={handleSignup}
-              className="get-started-button text-base leading-6 text-gray-600 text-center mb-8 sm:text-lg sm:leading-7 md:text-xl md:leading-8 md:mb-10"
-              variant="contained"
-            >
-              Chat Villy Now
-            </button>
+            <AnimateInView delay={100} flexDirection="col">
+              {/* 1. TITLE MASK */}
+              <quiet-text-mask
+                image={villyBackground}
+                fixed
+                style={{
+                  fontFamily: "'Fira Sans', sans-serif",
+                  fontSize: "10vw",
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  textAlign: "center",
+                  "--brightness": "90%",
+                  "--contrast": "90%",
+                }}
+              >
+                CIVILIFY
+              </quiet-text-mask>
+
+              {/* 2. SUBHEADING */}
+              <AnimateInView delay={300}>
+                <h2
+                  style={{ ...styles.subheading, zIndex: 1 }}
+                  className="subheading-shine"
+                >
+                  AI-Powered Legal Clarity
+                </h2>
+              </AnimateInView>
+
+              {/* 3. DESCRIPTION */}
+              <AnimateInView delay={500}>
+                <p
+                  style={{
+                    ...styles.description,
+                    color: isDarkMode ? "#d1d5db" : "#4b5563",
+                    padding: "1em",
+                    zIndex: 1,
+                  }}
+                  className={`text-gray-300 p-4 sm:p-6 md:p-8 text-sm sm:text-base md:text-lg leading-relaxed z-10`}
+                >
+                  Ask a legal question, assess your legal case, get insights,
+                  and know what to do next with{" "}
+                  <span style={styles.highlight}>Villy</span>, your intelligent
+                  legal companion.
+                </p>
+              </AnimateInView>
+
+              {/* 4. BUTTON */}
+              <AnimateInView
+                delay={700}
+                contentAlign="center"
+                contentJustify="center"
+              >
+                <button
+                  style={{ ...styles.primaryButton }}
+                  onClick={handleSignup}
+                  className="get-started-button text-base leading-6 text-gray-600 mb-8 sm:text-lg sm:leading-7 md:text-xl md:leading-8 md:mb-10 mx-auto"
+                  variant="contained"
+                >
+                  Chat Villy Now
+                </button>
+              </AnimateInView>
+            </AnimateInView>
           </div>
           <div
             style={{
@@ -486,6 +699,7 @@ const Landing = () => {
         <div
           id="features"
           ref={featuresRef}
+          className="scroll-snap-section"
           style={{
             background: isDarkMode
               ? "linear-gradient(to bottom, #0d0d0d, #181818)"
@@ -497,50 +711,57 @@ const Landing = () => {
             justifyContent: "center",
             position: "relative", // Added position relative for absolute positioning of wave
             overflow: "hidden", // Hide overflow to contain wave
+            scrollSnapAlign: "start",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              zIndex: 0,
-              pointerEvents: "none",
-            }}
-          >
-            <WaveTransition isDarkMode={isDarkMode} />
-          </div>
-
-          <h2
-            style={{
-              fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
-              fontWeight: "700",
-              color: isDarkMode ? "#ffffff" : "#F34D01",
-              paddingTop: "1em",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            Features
-          </h2>
-          <div
-            style={{
-              padding: "2em 2em 10em 2em ",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            <SeasonalHoverCards cards={seasonCards} />
-          </div>
+          <AnimateInView animationType="fade-in" delay={0}>
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 0,
+                pointerEvents: "none",
+              }}
+            >
+              <WaveTransition isDarkMode={isDarkMode} />
+            </div>
+          </AnimateInView>
+          <AnimateInView animationType="slide-up" delay={100}>
+            <h2
+              style={{
+                fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
+                fontWeight: "700",
+                color: isDarkMode ? "#ffffff" : "#F34D01",
+                paddingTop: "1em",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              Features
+            </h2>
+          </AnimateInView>
+          <AnimateInView animationType="slide-up" delay={200}>
+            <div
+              style={{
+                padding: "2em 2em 10em 2em ",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              <SeasonalHoverCards cards={seasonCards} />
+            </div>
+          </AnimateInView>
         </div>
         {/* How It Works Section */}
         <div
           id="how-it-works"
           ref={howItWorksRef}
+          className="scroll-snap-section"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -548,20 +769,24 @@ const Landing = () => {
             alignItems: "center",
             backgroundColor: isDarkMode ? "#181818" : "#ffffff",
             justifyContent: "center",
+            scrollSnapAlign: "start",
           }}
         >
-          <h2
-            style={{
-              fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
-              fontWeight: "700",
-              color: isDarkMode ? "#ffffff" : "#F34D01",
-              paddingTop: "1em",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            How It Works
-          </h2>
+          <AnimateInView animationType="slide-up" delay={100}>
+            <h2
+              style={{
+                fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
+                fontWeight: "700",
+                color: isDarkMode ? "#ffffff" : "#F34D01",
+                paddingTop: "1em",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              How It Works
+            </h2>
+          </AnimateInView>
+
           <div
             style={{
               display: "flex",
@@ -614,10 +839,11 @@ const Landing = () => {
                     maxWidth: "90%",
                   }}
                 >
-                  Select between General Legal Information for quick answers to
-                  legal questions, or Case Analysis for a detailed assessment of
-                  your specific legal situation. Pick the mode that fits your
-                  needs best.
+                  <strong>General Information</strong> for quick, broad legal
+                  questions, or select
+                  <br />
+                  <br /> <strong>Case Analysis</strong> for a detailed,
+                  personalized assessment of your specific legal situation.
                 </p>
               </GlowingCard>
               <GlowingCard
@@ -662,10 +888,10 @@ const Landing = () => {
                     maxWidth: "90%",
                   }}
                 >
-                  Receive detailed insights and recommendations based on
-                  Philippine law and legal precedents, tailored to your chosen
-                  mode. Villy provides clear, actionable information every step
-                  of the way.
+                  Villy uses Philippine law and legal precedents to generate
+                  instant, <strong>detailed insights</strong> based on your
+                  chosen mode. You'll receive clear, actionable information and
+                  initial recommendations.
                 </p>
               </GlowingCard>
               <GlowingCard
@@ -686,6 +912,7 @@ const Landing = () => {
                   src={number3Icon || "/placeholder.svg"}
                   style={{ width: "80%" }}
                   alt="Number three icon"
+                  className="number-three-icon"
                 ></img>
                 <h3
                   style={{
@@ -710,10 +937,11 @@ const Landing = () => {
                     maxWidth: "90%",
                   }}
                 >
-                  Follow the guided next steps, gain clear insights, and
-                  understand the best path forward for your situation—whether
-                  you need general information or specific case guidance, Villy
-                  is here to help.
+                  Review the <strong>guided next steps</strong> and clear
+                  insights provided by Villy.
+                  <br /> You'll understand the{" "}
+                  <strong>best path forward</strong> for your situation,
+                  empowering you to take effective action.
                 </p>
               </GlowingCard>
             </GlowingCards>
@@ -724,6 +952,7 @@ const Landing = () => {
         <div
           id="patch-notes"
           ref={patchNotesRef}
+          className="scroll-snap-section"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -735,6 +964,7 @@ const Landing = () => {
             scrollSnapAlign: "start",
             position: "relative",
             overflow: "hidden",
+            scrollSnapAlign: "start",
           }}
         >
           <div
@@ -750,19 +980,20 @@ const Landing = () => {
           >
             <ParticlesBackground />
           </div>
-
-          <h2
-            style={{
-              fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
-              fontWeight: "700",
-              color: isDarkMode ? "#ffffff" : "#F34D01",
-              // paddingBottom: "1em",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            What's New
-          </h2>
+          <AnimateInView animationType="slide-up" delay={100}>
+            <h2
+              style={{
+                fontSize: "clamp(2rem, 8vw, 3rem)", // Min: 2rem, Ideal: 8vw, Max: 3rem
+                fontWeight: "700",
+                color: isDarkMode ? "#ffffff" : "#F34D01",
+                // paddingBottom: "1em",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              What's New
+            </h2>
+          </AnimateInView>
           <PatchNotes notes={patchNotes} isDarkMode={isDarkMode} />
         </div>
 
@@ -770,76 +1001,125 @@ const Landing = () => {
         <div
           id="cta"
           ref={ctaRef}
+          className="scroll-snap-section"
           style={{
             padding: "80px 5%",
             textAlign: "center",
-            backgroundColor: isDarkMode ? "#181818" : "#ffffff",
+            // backgroundColor: isDarkMode ? "#181818" : "#ffffff",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            minHeight: "50vh",
+            minHeight: "90vh",
+            scrollSnapAlign: "start",
+
+            position: "relative",
+            overflow: "hidden",
           }}
         >
-          <h2
+          <video
+            id="video-background"
+            autoPlay
+            loop
+            muted
+            playsInline
+            poster="https://plus.unsplash.com/premium_photo-1698084059560-9a53de7b816b?q=80&w=1111&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3Dhttps://plus.unsplash.com/premium_photo-1698084059560-9a53de7b816b?q=80&w=2011&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" // Optional: A static image to show while loading
             style={{
-              fontSize: "2.25rem",
-              fontWeight: "700",
-              marginBottom: "16px",
-              color: isDarkMode ? "#ffffff" : "#333",
-            }}
-            className="subheading-shine"
-          >
-            Ready to Get Started?
-          </h2>
-          {/* <TrustedUsers
-            avatars={[
-              "https://plus.unsplash.com/premium_photo-1668319914124-57301e0a1850?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
-              "https://images.unsplash.com/photo-1615109398623-88346a601842?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
-              "https://images.unsplash.com/photo-1508341591423-4347099e1f19?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
-              "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687",
-              "https://images.unsplash.com/photo-1600883662955-a82934b7cd65?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=880",
-            ]}
-            rating={5}
-            totalUsersText="5,000+"
-            caption="Loved by"
-            starColorClass="text-yellow-400"
-            ringColors={[
-              "ring-pink-500",
-              "ring-green-500",
-              "ring-blue-500",
-              "ring-purple-500",
-            ]}
-          /> */}
-          <p
-            style={{
-              fontSize: "1.125rem",
-              lineHeight: "1.6",
-              color: isDarkMode ? "#d1d5db" : "#666",
-              marginBottom: "32px",
-              maxWidth: "600px",
-              margin: "0 auto 32px",
+              // CSS to make the video cover the entire area
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              minWidth: "100%",
+              minHeight: "100%",
+              width: "auto",
+              height: "auto",
+              zIndex: "0", // Send it behind the content
+              transform: "translate(-50%, -50%)", // Center it perfectly
+              objectFit: "cover", // Ensures it covers without distortion
+              opacity: 1, // Slightly dim the video for better text readability
             }}
           >
-            Join thousands of users who trust Civilify for their legal needs.
-          </p>
-          <button
-            style={styles.primaryButton}
-            onClick={handleSignup}
-            className="get-started-button"
+            <source
+              src="https://assets.mixkit.co/videos/47687/47687-720.mp4"
+              type="video/mp4"
+            />
+            Your browser does not support the video tag.
+          </video>
+          <div
+            style={{
+              position: "relative",
+              zIndex: 10, // Bring content to the front
+              width: "100%", // Optional: Add a subtle overlay color for better text readability
+              // backgroundColor: isDarkMode
+              //   ? "rgba(255, 255, 255, 0.4)"
+              //   : "rgba(0, 0, 0, 0.4)",
+              padding: "20px", // Add some padding around the text
+            }}
           >
-            Get Started
-          </button>
+            <h2
+              style={{
+                fontSize: "4rem",
+                fontWeight: "700",
+                marginBottom: "16px",
+                color: isDarkMode ? "#ffffff" : "#333",
+              }}
+              className="subheading-shine"
+            >
+              Ready to Get Started?
+            </h2>
+            <p
+              style={{
+                fontSize: "1.125rem",
+                lineHeight: "1.6",
+                color: isDarkMode ? "white" : "white",
+                marginBottom: "32px",
+                maxWidth: "600px",
+                margin: "0 auto 32px",
+              }}
+            >
+              Join thousands of users who trust Civilify for their legal needs.
+            </p>
+
+            <TrustedUsers
+              avatars={[
+                "https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn:ANd9GcQ24oBB2hUUQvi1yVx5xTgtglt1IunMbROHsMMPz34Cf5PB-V6G_uIiNjwV3-YLmfbfAw-lJqaVYCUYr3j5OLMsDQzJcCHDFiZTkxyCQqKreuWh9gw",
+                "https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn:ANd9GcQKsofwXDcBe8IsN5tj2-D1xUCTWGCrQN-2y_lDa-c-vNaI_L9L5KZ1EzIfMTI-IEHwixcHfJhom9x15nXFJD2aR14_6UayxGjAc1G0NIuyCxYUX1M",
+                "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                "https://plus.unsplash.com/premium_photo-1690407617542-2f210cf20d7e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+              ]}
+              rating={5}
+              totalUsersText={5000}
+              caption="Loved by"
+              starColorClass="text-yellow-400"
+              ringColors={[
+                "ring-pink-500",
+                "ring-green-500",
+                "ring-blue-500",
+                "ring-purple-500",
+              ]}
+            />
+            <br />
+
+            <button
+              style={styles.primaryButton}
+              onClick={handleSignup}
+              className="get-started-button"
+            >
+              Get Started
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
         <footer
           id="footer"
           ref={footerRef}
+          className="scroll-snap-footer"
           style={{
             backgroundColor: isDarkMode ? "#0d0d0d" : "#ffffff",
             padding: "20px 5%",
             borderTop: isDarkMode ? "1px solid #333" : "1px solid #eee",
+            scrollSnapAlign: "start",
           }}
         >
           <div
@@ -945,15 +1225,6 @@ const Landing = () => {
 };
 
 const styles = {
-  container: {
-    width: "100%",
-    minHeight: "100vh",
-    backgroundColor: "#ffffff",
-    fontFamily: "system-ui, Avenir, Helvetica, Arial, sans-serif",
-    overflowX: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  },
   scrollIndicator: {
     position: "absolute",
     bottom: "40px",
@@ -997,6 +1268,18 @@ const styles = {
     cursor: "pointer",
     transition: "transform 0.3s ease",
   },
+  navContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+  },
+  hamburgerButton: {
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: "6px",
+    borderRadius: "6px",
+  },
   navLinks: {
     display: "flex",
     alignItems: "center",
@@ -1011,20 +1294,6 @@ const styles = {
     cursor: "pointer",
     position: "relative",
     padding: "8px 0",
-    "&::after": {
-      content: '""',
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      width: "100%",
-      height: "2px",
-      backgroundColor: "#F34D01",
-      transform: "scaleX(0)",
-      transition: "transform 0.3s ease",
-    },
-    "&:hover::after": {
-      transform: "scaleX(1)",
-    },
   },
   navButton: {
     padding: "12px 24px",
@@ -1035,85 +1304,10 @@ const styles = {
     borderRadius: "30px",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    position: "relative",
     border: "none",
     boxShadow:
       "0 4px 10px rgba(243, 77, 1, 0.25), 1px 1px 2px rgba(255, 255, 255, 0.3) inset",
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow:
-        "0 6px 15px rgba(243, 77, 1, 0.3), 1px 1px 2px rgba(255, 255, 255, 0.3) inset",
-    },
-    "&:active": {
-      transform: "translateY(0)",
-      boxShadow:
-        "0 2px 5px rgba(243, 77, 1, 0.2), 1px 1px 1px rgba(255, 255, 255, 0.3) inset",
-    },
   },
-  feature1section: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 10%",
-    minHeight: "100vh",
-    position: "relative",
-    overflow: "hidden",
-    boxSizing: "border-box",
-  },
-  heroContainer: {
-    display: "flex",
-    width: "100%",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    justifyContent: "space-between",
-    alignItems: "center",
-    height: "100%",
-    position: "relative",
-    flex: "wrap",
-  },
-  //
-  // heroContent: {
-  //   maxWidth: "450px",
-  //   textAlign: "center",
-  // },
-  heroLogo: {
-    height: "4rem",
-  },
-
-  feature1grid: {
-    display: "grid",
-    gridTemplateColumns: window.innerWidth <= 475 ? "1fr" : "1fr 1fr",
-    // gap: "40px",
-    width: "100%",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    alignItems: "center",
-  },
-
-  feature1left: {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
-  },
-  feature1right: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  villyIllustration: {
-    maxWidth: "100%",
-    height: "auto",
-  },
-
-  // villyIllustration: {
-  //   maxWidth: "100%",
-  //   height: "auto",
-  //   position: "absolute",
-  //   bottom: "-400px",
-  // },
   subheading: {
     fontSize: "2.25rem",
     fontWeight: "600",
@@ -1135,144 +1329,6 @@ const styles = {
     color: "#F34D01",
     fontWeight: "600",
   },
-  featuresSection: {
-    padding: "80px 5% 60px",
-    backgroundColor: "#ffffff",
-    minHeight: "calc(100vh - 60px)",
-    textAlign: "center",
-  },
-  sectionHeading: {
-    fontSize: "4rem",
-    // fontWeight: "700",
-    // marginBottom: "0.8em",
-    color: "#333",
-    textAlign: "center",
-  },
-  featuresGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-    gap: "48px",
-    width: "100%",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    justifyItems: "center",
-  },
-  featureCard: {
-    padding: "2rem",
-    backgroundColor: "#f8f9fa",
-    borderRadius: "16px",
-    boxShadow: "0 6px 20px rgba(0, 0, 0, 0.08)",
-    transition: "all 0.3s ease",
-    // display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-    overflow: "visible",
-    height: "fit-content",
-    justifyContent: "space-between",
-    maxWidth: "375px",
-  },
-  featureImage: {
-    width: "auto",
-    height: "auto",
-    maxWidth: "150px",
-    // marginBottom: "24px",
-    objectFit: "contain",
-  },
-  featureTitle: {
-    fontSize: "1.25rem",
-    fontWeight: "600",
-    marginBottom: "16px",
-    color: "#333",
-    height: "60px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  featureDescription: {
-    fontSize: "0.875rem",
-    lineHeight: "1.6",
-    color: "#666",
-    marginBottom: "24px",
-    flex: "1",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  howItWorksSection: {
-    padding: "120px 5% 60px",
-    backgroundColor: "#ffffff",
-    minHeight: "calc(100vh - 60px)",
-    textAlign: "center",
-  },
-  stepsContainer: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-    gap: "32px",
-    width: "100%",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "0 5%",
-    // transform: 'translateX(-5%)',
-  },
-  step: {
-    padding: "32px",
-    backgroundColor: "#f8f9fa",
-    borderRadius: "12px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-  },
-  stepNumber: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "50%",
-    backgroundColor: "#F34D01",
-    color: "white",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    fontSize: "1.5rem",
-    fontWeight: "600",
-    marginBottom: "24px",
-  },
-  stepTitle: {
-    fontSize: "1.25rem",
-    fontWeight: "600",
-    marginBottom: "12px",
-    color: "#333",
-  },
-  stepDescription: {
-    fontSize: "1rem",
-    lineHeight: "1.6",
-    color: "#666",
-  },
-  ctaSection: {
-    padding: "80px 5%",
-    textAlign: "center",
-    backgroundColor: "#f8f9fa",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: "50vh",
-  },
-  ctaHeading: {
-    fontSize: "2.25rem",
-    fontWeight: "700",
-    marginBottom: "16px",
-    color: "#333",
-  },
-  ctaDescription: {
-    fontSize: "1.125rem",
-    lineHeight: "1.6",
-    color: "#666",
-    marginBottom: "32px",
-    maxWidth: "600px",
-    margin: "0 auto 32px",
-  },
   primaryButton: {
     padding: "16px 32px",
     fontSize: "0.875rem",
@@ -1289,83 +1345,57 @@ const styles = {
       "0 4px 10px rgba(243, 77, 1, 0.25), 1px 1px 2px rgba(255, 255, 255, 0.3) inset",
     width: "200px",
   },
-  footer: {
-    backgroundColor: "#ffffff",
-    padding: "20px 5%",
-    borderTop: "1px solid #eee",
-  },
-  footerContent: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "24px",
-    flexWrap: "wrap",
-  },
-  copyright: {
-    fontSize: "0.875rem",
-    color: "#666",
-    margin: 0,
-  },
-  footerLinks: {
-    display: "flex",
-    gap: "24px",
-    flexWrap: "wrap",
-  },
-  footerLink: {
-    color: "#666",
-    textDecoration: "none",
-    transition: "color 0.3s ease",
-    fontSize: "0.875rem",
-    "&:hover": {
-      color: "#F34D01",
-    },
-  },
   sidebarOverlay: {
     position: "fixed",
     top: 0,
     left: 0,
     width: "100%",
     height: "100%",
-    backgroundColor: "rgba(0,0,0,0.5)",
-
-    zIndex: 999,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    backdropFilter: "blur(4px)",
+    zIndex: 1000,
     display: "flex",
     justifyContent: "flex-end",
-    transition: "background 0.3s ease",
+    transition: "background 0.25s ease, opacity 0.25s ease",
   },
-
   sidebar: {
-    width: "200px",
-    maxWidth: "80%",
+    width: "280px",
+    maxWidth: "92%",
     height: "100%",
-    backgroundColor: "#fff",
-    boxShadow: "-4px 0 12px rgba(0,0,0,0.1)",
-    borderRadius: "20px 0 0px 20px",
-    padding: "2rem 1.5rem",
+    backgroundColor: "rgba(255,255,255,0.98)",
+    backdropFilter: "saturate(120%) blur(6px)",
+    boxShadow: "-18px 0 40px rgba(2,6,23,0.12)",
+    borderRadius: "16px 0 0 16px",
+    padding: "1.25rem 1.25rem",
     display: "flex",
     flexDirection: "column",
     position: "fixed",
     right: 0,
     top: 0,
+    zIndex: 1001,
+    overflowY: "auto",
+    gap: "1rem",
   },
-
   sidebarLinks: {
-    marginTop: "2rem",
+    marginTop: "1rem",
     display: "flex",
     flexDirection: "column",
-    gap: "1.5rem",
+    gap: "0.75rem",
+    paddingTop: "0.5rem",
+    borderTop: "1px solid rgba(0,0,0,0.06)",
+    minHeight: "200px",
   },
-
   closeButton: {
     alignSelf: "flex-end",
-    background: "none",
+    background: "transparent",
     border: "none",
-    fontSize: "1.5rem",
+    fontSize: "1.2rem",
     cursor: "pointer",
-    marginBottom: "1rem",
+    marginBottom: "0.25rem",
+    padding: "6px",
+    borderRadius: "8px",
+    transition: "background 0.15s ease",
+    color: "#1f2937",
   },
 };
 const styleSheet = document.createElement("style");
@@ -1373,6 +1403,54 @@ styleSheet.textContent = `
   .logo-clickable:hover {
     transform: scale(1.1);
   }
+
+  /* ADD THIS BLOCK to animationStyleSheet.textContent */
+
+/* === CSS SCROLL SNAP STYLES === */
+.scroll-snap-container {
+  scroll-snap-type: y mandatory !important; 
+  
+  height: 100vh;
+  overflow-y: scroll;
+}
+
+.scroll-snap-section {
+  scroll-snap-align: start;
+  min-height: 100vh; 
+  display: flex; 
+  flex-direction: column;
+}
+
+.scroll-snap-footer {
+  scroll-snap-align: start;
+  min-height: 10vh; 
+}
+
+/* Scroll Padding: Important for fixed header */
+.scroll-snap-container {
+  scroll-padding-top: 10px !important;
+
+/* === END CSS SCROLL SNAP STYLES === */
+
+.is-visible {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* 1. SIMPLE FADE (For sections/large blocks) */
+.animate-fade-in {
+  /* Inherits opacity transition from the component wrapper */
+  opacity: 1; 
+  /* Ensures no vertical shift if you only want a fade */
+  transform: translateY(0); 
+}
+
+/* 2. SLIDE UP (For cards/content elements) */
+.animate-slide-up {
+  /* The component wrapper handles the transition from translate-y-8 to 0 */
+  opacity: 1;
+  transform: translateY(0);
+}
 `;
 document.head.appendChild(styleSheet);
 
@@ -1566,7 +1644,7 @@ animationStyleSheet.textContent = `
 
     /* Nav links */
     .nav-links a {
-      color: #e0e0e0 !important;
+      color: #e0e0e0;
     }
 
     .nav-links a:hover {
@@ -1662,6 +1740,12 @@ animationStyleSheet.textContent = `
     }
 
   }
+@media (max-width: 768px) and (min-width: 475px){
+  .number-three-icon{
+  width: 250px !important;   /* e.g., 40px, a good size for an interactive icon */
+    height: 250px !important;  /* Ensure it's a perfect square if it's an icon */
+  }
+}
 
   @media (max-width: 475px) {
     .villy-illustration-right {
@@ -1715,7 +1799,7 @@ animationStyleSheet.textContent = `
     }
   }
 
-  @media (max-width: 376px) {
+  @media (max-width: 475px) {
     .hamburger-button {
       display: block !important;
       background: transparent !important;
@@ -1747,14 +1831,25 @@ animationStyleSheet.textContent = `
     }
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+ @keyframes fadeIn {
+  from {
+    opacity: 0;
   }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
   /* Added hover effect for patch note cards */
   .patch-note-card:hover {

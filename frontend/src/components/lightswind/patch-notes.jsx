@@ -1,9 +1,10 @@
 // components/PatchNotes.jsx
 import React, { useEffect, useState } from "react";
+import AnimateInView from "./animate-in-view";
 
 const PatchNotes = ({ notes, isDarkMode = false }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const notesPerPage = 3;
+  const notesPerPage = 2;
   const totalPages = Math.ceil(notes.length / notesPerPage);
 
   // Get current notes
@@ -164,102 +165,103 @@ const PatchNotes = ({ notes, isDarkMode = false }) => {
         </thead>
         <tbody>
           {currentNotes.map((note, i) => (
-            <tr
-              key={i}
-              className="patch-row"
-              style={rowBase}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-6px)";
-                e.currentTarget.style.boxShadow = isDarkMode
-                  ? "0 16px 32px rgba(0,0,0,0.4), 0 0 20px rgba(243,77,1,0.15)"
-                  : "0 16px 32px rgba(243,77,1,0.12), 0 0 16px rgba(243,77,1,0.08)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = rowBase.boxShadow;
-              }}
-            >
-              {/* Version Badge */}
-              <td style={cell("center")}>
-                <div
-                  className="version-badge"
-                  style={{
-                    background: `linear-gradient(135deg, ${note.colorStart}, ${note.colorEnd})`,
-                    color: "#fff",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "10px",
-                    fontWeight: "700",
-                    fontSize: "0.8rem",
-                    display: "inline-flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    minWidth: "78px",
-                    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-                    backdropFilter: "blur(4px)",
-                  }}
-                >
-                  <div>{note.appVersion}</div>
-                  <div style={{ fontSize: "0.65rem", opacity: 0.9 }}>
-                    KB {note.kbVersion}
+            <AnimateInView asChild animationType="slide-up" delay={i * 200}>
+              <tr
+                key={i}
+                className="patch-row"
+                style={rowBase}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-6px)";
+                  e.currentTarget.style.boxShadow = isDarkMode
+                    ? "0 16px 32px rgba(0,0,0,0.4), 0 0 20px rgba(243,77,1,0.15)"
+                    : "0 16px 32px rgba(243,77,1,0.12), 0 0 16px rgba(243,77,1,0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = rowBase.boxShadow;
+                }}
+              >
+                {/* Version Badge */}
+                <td style={cell("center")}>
+                  <div
+                    className="version-badge"
+                    style={{
+                      background: `linear-gradient(135deg, ${note.colorStart}, ${note.colorEnd})`,
+                      color: "#fff",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "10px",
+                      fontWeight: "700",
+                      fontSize: "0.8rem",
+                      display: "inline-flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      minWidth: "78px",
+                      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+                      backdropFilter: "blur(4px)",
+                    }}
+                  >
+                    <div>{note.appVersion}</div>
+                    <div style={{ fontSize: "0.65rem", opacity: 0.9 }}>
+                      KB {note.kbVersion}
+                    </div>
                   </div>
-                </div>
-              </td>
+                </td>
 
-              {/* Tag */}
-              <td style={cell("center")}>
-                <span
-                  style={{
-                    background: isDarkMode ? note.tagBgDark : note.tagBgLight,
-                    color: note.tagColor,
-                    padding: "0.3rem 0.75rem",
-                    borderRadius: "20px",
-                    fontSize: "0.7rem",
-                    fontWeight: "700",
-                    border: `1px solid ${
-                      isDarkMode ? note.tagBorderDark : note.tagBorderLight
-                    }`,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  {note.tag}
-                </span>
-              </td>
+                {/* Tag */}
+                <td style={cell("center")}>
+                  <span
+                    style={{
+                      background: isDarkMode ? note.tagBgDark : note.tagBgLight,
+                      color: note.tagColor,
+                      padding: "0.3rem 0.75rem",
+                      borderRadius: "20px",
+                      fontSize: "0.7rem",
+                      fontWeight: "700",
+                      border: `1px solid ${
+                        isDarkMode ? note.tagBorderDark : note.tagBorderLight
+                      }`,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    {note.tag}
+                  </span>
+                </td>
 
-              {/* Date */}
-              <td style={cell()}>{note.date}</td>
+                {/* Date */}
+                <td style={cell()}>{note.date}</td>
 
-              {/* Changes */}
-              <td style={cell()}>
-                <div
-                  style={{
-                    fontWeight: "600",
-                    marginBottom: "0.4rem",
-                    color: isDarkMode ? "#fff" : "#1f2937",
-                  }}
-                >
-                  {note.title}
-                </div>
-                <ul className="patch-changes-list" style={{ margin: 0 }}>
-                  {note.changes.map((c, idx) => (
-                    <li
-                      key={idx}
-                      style={{
-                        fontSize: "0.875rem",
-                        color: isDarkMode ? "#b0b0b0" : "#4b5563",
-                      }}
-                    >
-                      {c}
-                    </li>
-                  ))}
-                </ul>
-              </td>
-            </tr>
+                {/* Changes */}
+                <td style={cell()}>
+                  <div
+                    style={{
+                      fontWeight: "600",
+                      marginBottom: "0.4rem",
+                      color: isDarkMode ? "#fff" : "#1f2937",
+                    }}
+                  >
+                    {note.title}
+                  </div>
+                  <ul className="patch-changes-list" style={{ margin: 0 }}>
+                    {note.changes.map((c, idx) => (
+                      <li
+                        key={idx}
+                        style={{
+                          fontSize: "0.875rem",
+                          color: isDarkMode ? "#b0b0b0" : "#4b5563",
+                        }}
+                      >
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                </td>
+              </tr>
+            </AnimateInView>
           ))}
         </tbody>
       </table>
-
       {/* ====== MOBILE: STACKED GLASS CARDS ====== */}
       <div className="patch-notes-mobile">
         {currentNotes.map((note, i) => (
