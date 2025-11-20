@@ -139,8 +139,8 @@ const Admin = () => {
       searchQuery.trim() === ""
         ? [...source]
         : source.filter((user) =>
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+            user.username.toLowerCase().includes(searchQuery.toLowerCase())
+          );
     // Put the logged-in user at the top
     base.sort((a, b) => {
       const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;
@@ -358,18 +358,12 @@ const Admin = () => {
               aria-label="Toggle theme"
               title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
             >
-              {theme === "dark" ? (
-                <FaMoon size={16} />
-              ) : theme === "light" ? (
-                <FaSun size={16} />
-              ) : (
-                <FaLaptop size={16} />
-              )}
-          </button>
+              {theme === "dark" ? <FaMoon size={16} /> : <FaSun size={16} />}
+            </button>
 
             {/* Settings button removed as requested */}
-          <button
-            onClick={handleLogout}
+            <button
+              onClick={handleLogout}
               style={currentStyles.sidebarActionBtn}
               className="sidebar-action-hover"
               aria-label="Logout"
@@ -528,22 +522,25 @@ const Admin = () => {
                       </span>
                     </td>
                         <td style={currentStyles.tableCell}>
-                          {!(user.userId === currentUserId || user.email === currentUserEmail) && (
-                      <button
-                        onClick={() => handleDeleteUser(user.userId)}
+                          {!(
+                            user.userId === currentUserId ||
+                            user.email === currentUserEmail
+                          ) && (
+                            <button
+                              onClick={() => handleDeleteUser(user.userId)}
                               style={currentStyles.deleteButton}
-                        className="danger-button-hover"
-                      >
+                              className="danger-button-hover"
+                            >
                               <FaTrash style={{ marginRight: "6px" }} />
-                        Delete
-                      </button>
+                              Delete
+                            </button>
                           )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               <div
                 style={currentStyles.mobileCardContainer}
@@ -575,7 +572,10 @@ const Admin = () => {
                         {user.role === "ROLE_ADMIN" ? "Admin" : "User"}
                       </span>
                     </div>
-                    {!(user.userId === currentUserId || user.email === currentUserEmail) && (
+                    {!(
+                      user.userId === currentUserId ||
+                      user.email === currentUserEmail
+                    ) && (
                       <button
                         onClick={() => handleDeleteUser(user.userId)}
                         style={currentStyles.mobileDeleteButton}
