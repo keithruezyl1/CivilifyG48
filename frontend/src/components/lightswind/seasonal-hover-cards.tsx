@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "../lib/utils";
+import AnimateInView from "./animate-in-view";
 
 /* -------------------------------------------------
    Helper – random pastel colour (light background)
@@ -44,101 +45,107 @@ const SeasonCard = ({
   const pastelBg = React.useMemo(() => getRandomPastelColor(), []);
 
   return (
-    <div
-      className={cn(
-        // Base: full width on mobile, equal flex on md+
-        "group relative flex flex-col justify-stretch w-full md:flex-1",
-        // Hover: this card takes 2/3, others take 1/3 of remaining
-        "md:hover:flex-[0_0_50%] md:hover:max-w-[50%]",
-        // Smooth transition
-        "transition-all duration-500 ease-in-out",
-        // Height
-        "h-[350px] lg:h-[450px]",
-        // Styling
-        "bg-black rounded-xl overflow-hidden shadow-lg",
-        className
-      )}
-      style={{
-        backgroundColor: isDarkMode ? "#000000" : pastelBg,
-      }}
-    >
-      <img
-        src={imageSrc}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          objectPosition: "center",
-        }}
-        alt={imageAlt || title}
-      />
-
-      {/* Dark overlay */}
+    <>
       <div
+        className={cn(
+          // Base: full width on mobile, equal flex on md+
+          "group relative flex flex-col justify-stretch w-full md:flex-1",
+          // Hover: this card takes 2/3, others take 1/3 of remaining
+          "md:hover:flex-[0_0_50%] md:hover:max-w-[50%]",
+          // Smooth transition
+          "transition-all duration-500 ease-in-out",
+          // Height
+          // "h-[350px] lg:h-[450px]",
+          "h-auto lg:h-[450px]",
+          // Styling
+          "bg-black rounded-xl overflow-hidden shadow-lg",
+          className
+        )}
         style={{
-          position: "absolute",
-          inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.6)",
-        }}
-      />
-
-      {/* Content */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
-          height: "100%",
-          padding: "1.5rem",
+          backgroundColor: isDarkMode ? "#000000" : pastelBg,
         }}
       >
-        <div>
-          <h2
-            style={{
-              fontSize: "1.5rem",
-              color: "#ffffff",
-              textShadow: "0 2px 4px rgba(0,0,0,0.5)",
-              fontWeight: 500,
-            }}
-          >
-            {title}
-          </h2>
-          <p
-            style={{
-              fontSize: "0.875rem",
-              color: "#d1d5db",
-              padding: "0.75rem 0",
-            }}
-          >
-            {subtitle}
-          </p>
-        </div>
+        <img
+          src={imageSrc}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center",
+          }}
+          alt={imageAlt || title}
+        />
 
-        {/* Description – hidden on md, shown on hover */}
+        {/* Dark overlay */}
         <div
-          className={cn(
-            "md:opacity-0 md:group-hover:opacity-100 md:max-h-0 md:group-hover:max-h-32",
-            "transition-all duration-500 ease-in-out overflow-hidden"
-          )}
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
+          }}
+        />
+
+        {/* Content */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 10,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            height: "100%",
+            padding: "1.5rem",
+          }}
         >
-          <p
-            style={{
-              fontSize: "1rem",
-              color: "#f3f4f6",
-              lineHeight: 1.625,
-              paddingTop: "0.25rem",
-            }}
+          <div>
+            <h2
+              style={{
+                fontSize: "1.5rem",
+                color: "#ffffff",
+                textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+                fontWeight: 500,
+              }}
+            >
+              {title}
+            </h2>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                color: "#d1d5db",
+                padding: "0.75rem 0",
+              }}
+            >
+              {subtitle}
+            </p>
+          </div>
+
+          <div
+            className={cn(
+              // Default state (sm, md screens): fully visible
+              // "opacity-100 max-h-32", // Large screens (1024px) and up: hide by default
+              "opacity-100 max-h-full",
+              "lg:opacity-0 lg:max-h-0", // Large screens on hover: show
+              "lg:group-hover:opacity-100 lg:group-hover:max-h-32",
+              "transition-all duration-500 ease-in-out overflow-hidden"
+            )}
           >
-            {description}
-          </p>
+            <p
+              style={{
+                fontSize: "1rem",
+                color: "#f3f4f6",
+                lineHeight: 1.625,
+                paddingTop: "0.25rem",
+              }}
+            >
+              {description}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
