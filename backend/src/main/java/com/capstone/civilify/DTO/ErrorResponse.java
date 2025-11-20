@@ -1,4 +1,4 @@
-package com.capstone.civilify.dto;
+package com.capstone.civilify.DTO;
 
 public class ErrorResponse {
     private String message;

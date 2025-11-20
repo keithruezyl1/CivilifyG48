@@ -4,6 +4,7 @@ import com.capstone.civilify.model.ChatConversation;
 import com.capstone.civilify.model.ChatMessage;
 import com.capstone.civilify.service.ChatService;
 import com.capstone.civilify.service.OpenAIService;
+import com.capstone.civilify.util.KnowledgeBaseSkipClassifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,11 @@ public class OpenAIController {
     
     @Autowired
     private ChatService chatService;
+    
+    @Autowired
+    private KnowledgeBaseSkipClassifier kbSkipClassifier;
+    
+    // CPA structured facts feature removed
     
     // Endpoint to delete all previous conversations for a user
     @PostMapping("/delete-previous-conversations")
@@ -96,74 +102,111 @@ public class OpenAIController {
             String systemPrompt;
             if (mode.equals("A")) {
                 // General Legal Information Mode
-                systemPrompt = "You are Villy, Civilify's AI-powered legal assistant.\n\n" +
-                    "**Formatting & Source Rules (ALWAYS FOLLOW):**\n" +
-                    "- Use clear formatting: bullet points, numbered lists, bold text, spacing, section headers, and quotation marks for clarity.\n" +
-                    "- Always include at least one relevant online source link in your response, unless truly unnecessary.\n" +
-                    "- Format sources as clickable links when possible.\n" +
-                    "\n" +
-                    "**Example of a well-formatted answer:**\n" +
-                    "---\n" +
-                    "**How to File a Civil Marriage Certificate in Cebu City:**\n" +
-                    "1. **Secure the Necessary Documents:**\n" +
-                    "   - Valid IDs, birth certificates, CENOMAR, etc.\n" +
-                    "2. **Visit the Local Civil Registrar's Office**\n" +
-                    "3. **Submit the Documents**\n" +
-                    "4. **Attend the Marriage Ceremony**\n" +
-                    "\n" +
-                    "For more details, visit the [Cebu City Government Official Website](https://www.cebucity.gov.ph/).\n" +
-                    "---\n\n" +
-                    "You are a separate digital entity operating under Civilify.\n" +
-                    "You are not Civilify itself — you are Villy, a bot created by Civilify to answer general legal questions clearly, calmly, and accurately using Philippine law as the default reference.\n\n" +
-                    "Purpose:\n" +
-                    "Your task is to provide concise and understandable answers to law-related questions using clear, everyday language. These may include definitions, deadlines, legal processes, basic rights, and procedures — all under Philippine law, unless the user specifies a different jurisdiction.\n\n" +
-                    "Tone:\n" +
-                    "- Be calm, friendly, and professional at all times.\n\n" +
-                    "Behavioral Guidelines:\n" +
-                    "- If a user asks about any of the following topics, do NOT answer the question directly. Instead, light-heartedly redirect the user and inform them that you only answer law-related questions.\n" +
-                    "  Topics to redirect include: technology & programming, medical/health/psychology, finance/business/investments, personal advice/life coaching, academic/educational help, philosophy/religion/ethics, creative/entertainment, and general chat or casual conversation.\n" +
-                    "- If the user's question might have a legal angle, politely ask if they mean it in a law-related sense before proceeding.\n" +
-                    "- Example redirection: 'I'm here to help with law-related questions! If your question is about legal rights, obligations, or procedures, just let me know.'\n" +
-                    "- Stick only to legal questions.\n" +
-                    "  If a user asks about unrelated topics (e.g., coding, fitness, business strategy), politely redirect:\n" +
-                    "  > 'Civilify is designed to assist with law-related questions. Feel free to ask me anything about legal concerns, especially those involving Philippine law!'\n\n" +
-                    "- Do not initiate structured case analysis or reports. If the user begins to describe a personal legal issue:\n" +
-                    "  > 'That sounds like a specific legal situation. If you'd like, I can switch to Case Plausibility Mode to help you assess it more thoroughly.'\n\n" +
-                    "- If the user asks for step-by-step legal help or whether they have a valid case, politely suggest switching to Case Plausibility Mode.\n\n" +
-                    "Jurisdiction Handling:\n" +
-                    "- Always default to Philippine law unless another country is explicitly mentioned.\n" +
-                    "- If unsure which jurisdiction applies, ask:\n" +
-                    "  > 'Just to clarify, are you asking about Philippine law or another country's system?'\n\n" +
-                    "Limitations:\n" +
-                    "- Do not give legally binding advice or represent users.\n" +
-                    "- Do not generate downloadable documents or connect users with lawyers.\n" +
-                    "- Do not save or store user data.\n\n" +
-                    "Privacy & Data:\n" +
-                    "- No personal data is retained or stored.\n" +
-                    "- Villy operates in compliance with Civilify's privacy standards and transparency policies.\n\n" +
-                    "Your role is to help users understand the law, not to assess or analyze specific personal cases.";
+                systemPrompt = "YOU ARE VILLY, CIVILIFY'S AI-POWERED LEGAL ASSISTANT.\n\n" +
+                    "ROLE: Answer ONLY general legal questions using Philippine law as default reference.\n\n" +
+                    "STRICT SCOPE:\n" +
+                    "- ONLY answer questions related to Philippine law, legal processes, rights, duties, and legal concepts\n" +
+                    "- DO NOT answer general knowledge questions (math, science, history, geography, etc.)\n" +
+                    "- DO NOT answer personal advice, medical, financial, or non-legal questions\n" +
+                    "- For non-legal questions: Politely redirect to legal topics ONLY\n" +
+                    "- Example redirect: \"I specialize in Philippine legal information. Please ask me about laws, legal processes, or legal rights instead.\"\n\n" +
+                    "ABOUT CIVILIFY MODES (when asked):\n" +
+                    "Civilify offers TWO modes to assist users with Philippine legal matters:\n\n" +
+                    "1. **General Legal Information (GLI) Mode** - This mode (the current mode you're in):\n" +
+                    "   - Provides general legal information about Philippine laws, rights, and legal processes\n" +
+                    "   - Answers questions about legal concepts, procedures, and requirements\n" +
+                    "   - Offers educational legal information backed by authoritative sources\n" +
+                    "   - Best for: Learning about laws, understanding legal rights, researching legal topics\n\n" +
+                    "2. **Case Plausibility Assessment (CPA) Mode**:\n" +
+                    "   - Analyzes specific legal situations and provides plausibility assessments\n" +
+                    "   - Asks clarifying questions to gather case facts and details\n" +
+                    "   - Generates structured reports with plausibility scores and recommended next steps\n" +
+                    "   - Best for: Evaluating a specific legal situation, getting case-specific guidance\n\n" +
+                    "IMPORTANT: When explaining modes, be accurate and specific about what Civilify does.\n\n" +
+                    "RESPONSE FORMAT:\n" +
+                    "- Use clear headings, bullet points, and numbered lists\n" +
+                    "- Be concise but comprehensive\n" +
+                    "- Use plain language, avoid legalese\n" +
+                    "- Structure information logically (general to specific)\n" +
+                    "- Include actionable information when possible\n" +
+                    "- Use examples to clarify complex legal concepts\n\n" +
+                    "BEHAVIOR:\n" +
+                    "- For legal questions: Provide accurate, helpful information\n" +
+                    "- For mode explanation questions: Use the information provided above\n" +
+                    "- For non-legal questions: Redirect to legal topics without answering the original question\n" +
+                    "- Always be professional and respectful\n" +
+                    "- When uncertain: Acknowledge limitations and recommend consulting a licensed attorney\n\n" +
+                    "LIMITATIONS:\n" +
+                    "- Do not provide legal advice or representation\n" +
+                    "- Do not draft legal documents\n" +
+                    "- Do not connect users with lawyers\n" +
+                    "- Recommend consulting licensed attorneys for serious matters\n\n" +
+                    "SOURCES: Include relevant sources in your response using this format:\n" +
+                    "- [Source Title](URL)\n" +
+                    "- [Another Source](URL)\n" +
+                    "Do not include a 'Sources:' header - just list the links directly after your main content.\n" +
+                    "Only include sources that are relevant to the legal question asked.\n\n" +
+                    "You are Villy, created by Civilify to help with legal questions using Philippine law.";
             } else {
                 // Case Plausibility Assessment Mode
                 systemPrompt = "You are Villy, Civilify's AI-powered legal assistant.\n\n" +
-                    "You are a separate digital entity operating under Civilify.\n" +
-                    "You are not Civilify itself — you are Villy, a bot created by Civilify to help users determine whether their legal concerns have plausible standing under Philippine law.\n\n" +
-                    "Your task is to:\n" +
-                    "- Understand the user's personal legal situation.\n" +
-                    "- Ask one meaningful follow-up question at a time to clarify the facts.\n" +
-                    "- If a user asks about any of the following topics, do NOT answer the question directly. Instead, light-heartedly redirect the user and inform them that you only answer law-related questions.\n" +
-                    "  Topics to redirect include: technology & programming, medical/health/psychology, finance/business/investments, personal advice/life coaching, academic/educational help, philosophy/religion/ethics, creative/entertainment, and general chat or casual conversation.\n" +
-                    "- If the user's question might have a legal angle, politely ask if they mean it in a law-related sense before proceeding.\n" +
-                    "- After you have gathered enough information to make a reasonable assessment, generate a structured case assessment report that includes:\n\n" +
-                    "Case Summary:\nA concise summary of the user's situation.\n\n" +
-                    "Legal Issues or Concerns:\n- Bullet points of relevant legal issues.\n\n" +
-                    "Plausibility Score: [number]% - [label]\n" +
-                    "Suggested Next Steps:\n- Bullet points of practical next steps.\n\n" +
-                    "Sources:\n- As much as possible, provide at least one online link to a working, reputable reference (such as a law, government website, or legal guide) that supports your assessment.\n- If you did not use any sources, suggest reputable online sources the user can consult for more information.\n\n" +
-                    "At the end, add this disclaimer: This is a legal pre-assessment only. If your situation is serious or urgent, please consult a licensed lawyer.\n\n" +
-                    "Formatting:\n- Use plain text, line breaks, and dashes for bullets.\n- Do NOT use markdown, HTML, or tables.\n- Use clear section headers as shown above.\n\n" +
-                    "Tone:\n- Be warm, respectful, and helpful.\n- Avoid repeating 'under Philippine law' unless contextually needed.\n- Do not start any section with a comma or incomplete sentence.\n\n" +
-                    "If a user continues the conversation after a report has already been generated, ask more clarifying questions to gather additional facts or updates. After gathering enough new information, generate a new, updated report.\n\n" +
-                    "Do NOT include an 'Explanation' section. Only include the sections listed above.";
+                    "ROLE: Help users assess the plausibility of their legal cases under Philippine law.\n\n" +
+                    "ABOUT CIVILIFY MODES (when asked):\n" +
+                    "Civilify offers TWO modes to assist users with Philippine legal matters:\n\n" +
+                    "1. **General Legal Information (GLI) Mode**:\n" +
+                    "   - Provides general legal information about Philippine laws, rights, and legal processes\n" +
+                    "   - Answers questions about legal concepts, procedures, and requirements\n" +
+                    "   - Offers educational legal information backed by authoritative sources\n" +
+                    "   - Best for: Learning about laws, understanding legal rights, researching legal topics\n\n" +
+                    "2. **Case Plausibility Assessment (CPA) Mode** - This mode (the current mode you're in):\n" +
+                    "   - Analyzes specific legal situations and provides plausibility assessments\n" +
+                    "   - Asks clarifying questions to gather case facts and details\n" +
+                    "   - Generates structured reports with plausibility scores and recommended next steps\n" +
+                    "   - Best for: Evaluating a specific legal situation, getting case-specific guidance\n\n" +
+                    "IMPORTANT: When explaining modes, be accurate and specific about what Civilify does.\n\n" +
+                    "CRITICAL - WHEN TO USE CONVERSATIONAL RESPONSES (NOT REPORTS):\n" +
+                    "- Questions about Civilify's features, modes, or capabilities: Answer conversationally, DO NOT generate a report\n" +
+                    "- Questions about how to use the system: Answer conversationally, DO NOT generate a report\n" +
+                    "- Greetings or general chitchat: Respond conversationally, DO NOT generate a report\n" +
+                    "- Questions about what you can do: Answer conversationally, DO NOT generate a report\n" +
+                    "- ONLY generate structured assessment reports when analyzing ACTUAL LEGAL CASES with specific facts\n\n" +
+                    "CONVERSATION FLOW:\n" +
+                    "- Always respond with helpful, relevant questions or information\n" +
+                    "- Ask one meaningful follow-up question at a time to clarify facts\n" +
+                    "- Be empathetic and supportive, especially for serious legal matters\n" +
+                    "- NEVER leave responses blank or empty\n" +
+                    "- If uncertain, ask clarifying questions rather than staying silent\n" +
+                    "- For mode explanation questions: Use the information provided above in a conversational manner\n\n" +
+                    "ASSESSMENT PROCESS (ONLY for actual legal cases with specific facts):\n" +
+                    "- Gather key facts: what happened, where, when, who was involved\n" +
+                    "- Understand the user's goal: file a case, defend against charges, etc.\n" +
+                    "- Ask about legal documents: subpoenas, complaints, police reports\n" +
+                    "- When you have enough information about an ACTUAL CASE, provide a structured assessment\n\n" +
+                    "ASSESSMENT FORMAT (STRICT STRUCTURE - Follow exactly):\n" +
+                    "Case Summary:\n[Brief summary of the situation in a single paragraph. No bullet points, no markdown bold markers, just plain text.]\n\n" +
+                    "Legal Issues or Concerns:\n- [First key legal issue identified - no markdown bold markers]\n" +
+                    "- [Second key legal issue identified - no markdown bold markers]\n" +
+                    "- [Additional issues if applicable - no markdown bold markers]\n\n" +
+                    "Plausibility Score: [X]% - [Label]\n" +
+                    "[Label should be descriptive like 'Moderately Strong', 'Weak', 'Very Strong', 'Highly Likely', etc. No markdown bold markers.]\n\n" +
+                    "Suggested Next Steps:\n" +
+                    "1. **Step Label:** [Detailed description of the step - ONLY the label should be bold with **]\n" +
+                    "2. **Step Label:** [Detailed description of the step - ONLY the label should be bold with **]\n" +
+                    "3. **Step Label:** [Detailed description of the step - ONLY the label should be bold with **]\n" +
+                    "[Continue with numbered list, each with bold label using **Label:** format]\n\n" +
+                    "DISCLAIMER: This is a legal pre-assessment only. Please consult a licensed lawyer, especially if your situation is urgent. [Optional: Add a follow-up question if relevant]\n\n" +
+                    "FORMATTING RULES:\n" +
+                    "- Section headings (Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER) should be plain text with colon, NO markdown bold (**)\n" +
+                    "- Case Summary must be a single paragraph, no bullets, no markdown bold markers\n" +
+                    "- Legal Issues or Concerns must use bullet points (-), no markdown bold markers in the content\n" +
+                    "- Plausibility Score must be on its own line with plain heading, followed by percentage and label (no markdown bold)\n" +
+                    "- Suggested Next Steps must be a numbered list (1., 2., 3., etc.)\n" +
+                    "- Each step in Suggested Next Steps must have a bold label using **Label:** format (ONLY the label should be bold)\n" +
+                    "- DISCLAIMER must be plain text with colon (no markdown bold), followed by the disclaimer text\n" +
+                    "- Use proper spacing between sections (blank line between each major section)\n" +
+                    "- DO NOT use ** for section headings - the frontend will style them automatically\n" +
+                    "- ONLY use ** for step labels within Suggested Next Steps\n\n" +
+                    "IMPORTANT: Always provide a response. Never leave the user without guidance or next steps.";
             }
             
             // Get or create conversation
@@ -191,10 +234,8 @@ public class OpenAIController {
                 conversationId = conversation.getId();
             }
             
-            // Add user message to the conversation
-            ChatMessage userChatMessage = chatService.addMessage(
-                conversationId, userId, userEmail, userMessage, true);
-            logger.info("Added user message to conversation: {}", userChatMessage.getId());
+            // Do NOT re-save the user message here to avoid duplicates; frontend already persists it
+            logger.info("Skipping backend user-message save to avoid duplicates (conversationId={})", conversationId);
             
             // Prepare conversation history for OpenAI
             List<Map<String, String>> conversationHistoryForAI = conversationMessages.stream()
@@ -206,20 +247,130 @@ public class OpenAIController {
                 })
                 .collect(Collectors.toList());
             
-            // Generate AI response with mode-specific API key and model
-            String aiResponse = openAIService.generateResponse(userMessage, systemPrompt, conversationHistoryForAI, mode);
+            // Limit conversation history for CPA mode to prevent context confusion
+            if ("B".equals(mode) && conversationHistoryForAI.size() > 8) {
+                logger.info("CPA: Limiting conversation history from {} to 8 messages", conversationHistoryForAI.size());
+                conversationHistoryForAI = conversationHistoryForAI.subList(
+                    Math.max(0, conversationHistoryForAI.size() - 8), 
+                    conversationHistoryForAI.size()
+                );
+            }
             
-            logger.info("Generated AI response using mode: {}", mode);
+            logger.info("Conversation history prepared: {} messages for conversation {}", 
+                conversationHistoryForAI.size(), conversationId);
             
-            // For development, you can use the mock response instead
-            // String aiResponse = openAIService.generateMockResponse(userMessage);
+            // Classify query to determine if KB lookup is needed
+            boolean canSkipKB = kbSkipClassifier.canSkipKnowledgeBase(userMessage, mode, false);
+            String classificationReason = kbSkipClassifier.getClassificationReason(userMessage, mode, false);
+            logger.info("KB Skip Classification: {} - Reason: {}", canSkipKB ? "SKIP KB" : "USE KB", classificationReason);
             
-            // Add AI response to the conversation
-            ChatMessage aiChatMessage = chatService.addMessage(
-                conversationId, null, "villy@civilify.com", aiResponse, false);
-            logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
+            // Check if this is a meta/informational question about Civilify itself (should not trigger CPA report)
+            boolean isMetaQuestion = isMetaOrInformationalQuestion(userMessage);
+            if (isMetaQuestion) {
+                logger.info("CPA: Detected meta/informational question - will skip report generation");
+            }
             
-            // Prepare response
+            // Mode-aware KB usage
+            String primaryKbAnswer = null;
+            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources = new java.util.ArrayList<>();
+
+            if ("A".equals(mode)) {
+                // GLI: Check if KB lookup can be skipped for faster response
+                if (canSkipKB) {
+                    logger.info("GLI: Skipping KB lookup - Query classified as: {}", classificationReason);
+                } else {
+                    // GLI: KB-first to gather context and sources for UI
+                    logger.info("GLI: Fetching KB for query requiring legal provisions");
+                    com.capstone.civilify.DTO.KnowledgeBaseChatResponse kbResponse =
+                        openAIService.getKnowledgeBaseService().chatWithKnowledgeBaseEnhanced(userMessage, mode);
+
+                    if (kbResponse != null && !kbResponse.hasError()) {
+                        primaryKbAnswer = kbResponse.getAnswer();
+                        if (kbResponse.getSources() != null) {
+                            kbSources.addAll(kbResponse.getSources());
+                        }
+                        logger.info("GLI: KB response obtained: answer length={}, sources count={}",
+                            primaryKbAnswer != null ? primaryKbAnswer.length() : 0, kbSources.size());
+                    } else {
+                        logger.warn("GLI: KB response failed or empty: {}", kbResponse != null ? kbResponse.getError() : "null response");
+                    }
+                }
+            } else {
+                // CPA: Do not call KB during conversational probing phase (performance + avoid blank responses)
+                logger.info("CPA: Skipping KB calls during conversational phase. Classification: {}", classificationReason);
+            }
+
+            // Step 2: Generate enhanced AI response with KB context (GLI may include KB context; CPA will pass nulls here)
+            String enhancedSystemPrompt = buildEnhancedSystemPrompt(systemPrompt, primaryKbAnswer, kbSources, mode);
+            
+            String aiResponse;
+            try {
+                aiResponse = openAIService.generateResponse(
+                    userMessage,
+                    enhancedSystemPrompt,
+                    conversationHistoryForAI,
+                    mode
+                );
+                logger.info("Enhanced AI response generated with mode {} using KB context. Response length: {}", 
+                    mode, aiResponse != null ? aiResponse.length() : 0);
+            } catch (Exception e) {
+                logger.error("Error generating AI response: {}", e.getMessage(), e);
+                aiResponse = "I apologize, but I'm experiencing technical difficulties. Please try again or consult with a licensed attorney for urgent matters.";
+            }
+            
+            // Handle blank responses - provide fallback
+            if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                logger.warn("AI generated blank response, providing fallback");
+                if ("B".equals(mode)) {
+                    aiResponse = "I understand you're going through a difficult situation. Could you please provide more details about your case so I can better assist you? For urgent legal matters, I recommend consulting with a licensed attorney immediately.";
+                } else {
+                    aiResponse = "I apologize, but I'm having trouble processing your request right now. Please try rephrasing your question or ask about Philippine legal matters.";
+                }
+            }
+
+            // GLI: Allow AI to include sources as instructed in system prompt
+            
+            // Defer saving AI response until after CPA report enrichment (if any)
+
+            // CPA: Extract and persist structured facts after each user turn to build memory
+            // CPA structured facts/report generation removed
+            
+            // Step 3: Source enrichment rules per mode
+            if ("A".equals(mode) && !canSkipKB) {
+                // GLI: Only attempt additional source enrichment if query requires KB
+                if (kbSources.isEmpty()) {
+                    logger.info("GLI: No sources from initial KB response, attempting additional search");
+                    int desiredLimit = computeDesiredSourceLimit(userMessage);
+                    java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> additionalKbEntries =
+                        openAIService.getKnowledgeBaseSources(userMessage, desiredLimit);
+                    if (additionalKbEntries != null) {
+                        kbSources.addAll(additionalKbEntries);
+                    }
+                    logger.info("GLI: Additional KB sources obtained: {}", kbSources.size());
+                }
+                
+                // If still no sources, try a broader search with keywords
+                if (kbSources.isEmpty()) {
+                    logger.info("GLI: Still no sources, attempting broader keyword search");
+                    String[] keywords = userMessage.toLowerCase().split("\\s+");
+                    for (String keyword : keywords) {
+                        if (keyword.length() > 3) { // Only search meaningful keywords
+                            int desiredLimit = computeDesiredSourceLimit(userMessage);
+                            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> keywordResults =
+                                openAIService.getKnowledgeBaseSources(keyword, desiredLimit);
+                            if (keywordResults != null && !keywordResults.isEmpty()) {
+                                kbSources.addAll(keywordResults);
+                                logger.info("GLI: Found sources for keyword '{}': {}", keyword, keywordResults.size());
+                                break; // Stop at first successful keyword search
+                            }
+                        }
+                    }
+                }
+            } else if ("A".equals(mode) && canSkipKB) {
+                logger.info("GLI: Skipping source enrichment for conversational query");
+            }
+
+            // Prepare initial response body (will be populated with sources later)
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("response", aiResponse);
             responseBody.put("conversationId", conversationId);
@@ -246,17 +397,127 @@ public class OpenAIController {
             }
             if (plausibilityLabel != null) responseBody.put("plausibilityLabel", plausibilityLabel);
             if (plausibilitySummary != null) responseBody.put("plausibilitySummary", plausibilitySummary);
-
+            
             // Add isReport flag for CPA mode if the response looks like a report
             if (mode.equals("B")) {
-                // Simple heuristic: plausibility score (e.g., 89% Possible) in the first 200 chars
-                String plausibilityPattern = "\\d{1,3}%\\s*(Possible|Likely|Unlikely|Highly Likely|Highly Unlikely)";
-                if (aiResponse != null && aiResponse.substring(0, Math.min(200, aiResponse.length())).matches("(?s).*" + plausibilityPattern + ".*")) {
-                    responseBody.put("isReport", true);
-                } else {
+                // Check if this is a meta question - if so, never mark as report
+                if (isMetaQuestion) {
                     responseBody.put("isReport", false);
+                    logger.info("CPA: Meta question detected - marking as non-report (conversational response)");
+                } else {
+                    // Check if response contains actual report structure
+                    boolean hasReportStructure = aiResponse != null && (
+                        aiResponse.contains("Case Summary:") || 
+                        aiResponse.contains("Plausibility Score:") ||
+                        aiResponse.contains("Legal Issues or Concerns:")
+                    );
+                    
+                    if (hasReportStructure) {
+                        responseBody.put("isReport", true);
+                    // CPA: Only now fetch KB sources to support the report
+                    try {
+                        // Extract key legal issues from the generated report for targeted KB search
+                        String kbQuery = extractLegalIssuesFromReport(aiResponse);
+                        if (kbQuery == null || kbQuery.isBlank()) {
+                            // Fallback: Use summarized conversation if extraction fails
+                            String kbSummary = openAIService.summarizeConversationForKb(userMessage, conversationHistoryForAI);
+                            if (kbSummary == null || kbSummary.isBlank()) {
+                                StringBuilder fullContext = new StringBuilder();
+                                fullContext.append("User's current message: ").append(userMessage).append("\n\n");
+                                fullContext.append("Conversation history:\n");
+                                for (Map<String, String> msg : conversationHistoryForAI) {
+                                    String role = msg.get("isUserMessage").equals("true") ? "User" : "Assistant";
+                                    fullContext.append(role).append(": ").append(msg.get("content")).append("\n");
+                                }
+                                kbQuery = fullContext.toString();
+                            } else {
+                                kbQuery = kbSummary;
+                            }
+                            logger.info("CPA: Using fallback KB query (length: {})", kbQuery.length());
+                        } else {
+                            logger.info("CPA: Using extracted legal issues for KB query (length: {})", kbQuery.length());
+                        }
+                        int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
+                        java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
+                            openAIService.getKnowledgeBaseSources(kbQuery, desiredLimitForReport);
+                        if (reportSources != null) {
+                            // Merge into kbSources without duplicates by entryId
+                            java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : kbSources) {
+                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
+                            }
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : reportSources) {
+                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
+                            }
+                            kbSources = new java.util.ArrayList<>(uniq.values());
+                        }
+                        logger.info("CPA: KB sources fetched for report: {}", kbSources.size());
+
+                        // Regenerate the report with KB context and strict source-citation instructions
+                        String reportPrompt = buildEnhancedSystemPrompt(systemPrompt, null, kbSources, mode);
+                        String regenerated = openAIService.generateResponse(
+                            userMessage,
+                            reportPrompt,
+                            conversationHistoryForAI,
+                            mode
+                        );
+                        if (regenerated != null && !regenerated.isBlank()) {
+                            aiResponse = regenerated;
+                            logger.info("CPA: Regenerated report with KB context and citations.");
+                        }
+                    } catch (Exception ex) {
+                        logger.warn("CPA: Failed fetching KB sources for report: {}", ex.getMessage());
+                    }
+                    } else {
+                        responseBody.put("isReport", false);
+                        logger.info("CPA: No report structure detected - conversational response");
+                    }
                 }
             }
+            
+            // Prepare sources list for response (after CPA report generation to include KB sources)
+            java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
+            
+            // Only provide sources for law-related queries
+            boolean shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
+            
+            if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
+                // Limit to maximum 3 sources for relevance
+                int maxSources = Math.min(kbSources.size(), 3);
+                for (int i = 0; i < maxSources; i++) {
+                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = kbSources.get(i);
+                    Map<String, Object> source = new HashMap<>();
+                    source.put("entryId", entry.getEntryId());
+                    source.put("title", entry.getTitle());
+                    source.put("type", entry.getType());
+                    source.put("canonicalCitation", entry.getCanonicalCitation());
+                    source.put("summary", entry.getSummary());
+                    // Only include source URLs if they exist and are valid
+                    if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                        // Filter out any invalid or empty URLs
+                        List<String> validUrls = entry.getSourceUrls().stream()
+                            .filter(url -> url != null && !url.trim().isEmpty() && url.startsWith("http"))
+                            .collect(Collectors.toList());
+                        if (!validUrls.isEmpty()) {
+                            source.put("sourceUrls", validUrls);
+                        }
+                    }
+                    sources.add(source);
+                }
+                logger.info("Providing {} sources for law-related query (including CPA report sources)", sources.size());
+            } else {
+                logger.info("Not providing sources - query not law-related or no KB sources available");
+            }
+            logger.info("Knowledge base sources included in response: {}", sources.size());
+            
+            // Add sources to response body
+            responseBody.put("sources", sources);
+            responseBody.put("hasKnowledgeBaseContext", shouldProvideSources && !sources.isEmpty());
+
+            // Now persist the final AI response (original or regenerated)
+            ChatMessage aiChatMessage = chatService.addMessage(
+                conversationId, null, "villy@civilify.com", aiResponse, false);
+            logger.info("Added AI response to conversation: {}", aiChatMessage.getId());
 
             return ResponseEntity.ok(responseBody);
         } catch (Exception e) {
@@ -271,5 +532,316 @@ public class OpenAIController {
         response.put("success", false);
         response.put("error", message);
         return response;
+    }
+    
+    /**
+     * Build enhanced system prompt with KB context for Villy RAG
+     */
+    /**
+     * Determines if a query is law-related based on user message and AI response
+     */
+    private boolean isLawRelatedQuery(String userMessage, String aiResponse) {
+        if (userMessage == null || aiResponse == null) {
+            return false;
+        }
+        
+        String lowerUserMessage = userMessage.toLowerCase();
+        String lowerAiResponse = aiResponse.toLowerCase();
+        
+        // Non-law-related queries that should not have sources
+        String[] nonLegalPatterns = {
+            "who are you", "what are you", "what is your", "what can you do", 
+            "what are your capabilities", "introduce yourself", "tell me about yourself",
+            "hello", "hi", "good morning", "good afternoon", "good evening",
+            "how are you", "thank you", "thanks", "bye", "goodbye"
+        };
+        
+        // Check if user message matches non-legal patterns
+        for (String pattern : nonLegalPatterns) {
+            if (lowerUserMessage.contains(pattern)) {
+                return false;
+            }
+        }
+        
+        // Check if AI response indicates it's not providing legal information
+        String[] nonLegalResponsePatterns = {
+            "i am villy", "i am designed to assist", "my capabilities", 
+            "i can help", "i'm here to help", "what would you like to ask",
+            "general legal information", "case plausibility assessment"
+        };
+        
+        for (String pattern : nonLegalResponsePatterns) {
+            if (lowerAiResponse.contains(pattern) && lowerAiResponse.length() < 200) {
+                return false;
+            }
+        }
+        
+        // Check if AI response contains legal terms (indicating it's law-related)
+        String[] legalTerms = {
+            "law", "legal", "statute", "act", "code", "article", "section", 
+            "court", "judge", "lawyer", "attorney", "rights", "duties", 
+            "penalty", "punishment", "crime", "criminal", "civil", "contract",
+            "property", "family", "marriage", "divorce", "inheritance", "tax",
+            "constitution", "bill", "amendment", "regulation", "ordinance",
+            "obligations", "liability", "damages", "compensation", "agreement",
+            "violation", "fine", "legal advice", "jurisdiction", "precedent",
+            "lawsuit", "litigation", "mediation", "arbitration", "settlement",
+            "evidence", "testimony", "witness", "plaintiff", "defendant",
+            "prosecution", "defense", "verdict", "judgment", "appeal",
+            "bail", "arrest", "detention", "custody", "probation", "parole",
+            "tort", "negligence", "fraud", "theft", "assault", "battery",
+            "defamation", "libel", "slander", "copyright", "patent", "trademark",
+            "employment", "labor", "discrimination", "harassment", "termination",
+            "immigration", "citizenship", "visa", "deportation", "asylum",
+            "bankruptcy", "debt", "credit", "loan", "mortgage", "foreclosure",
+            "insurance", "coverage", "claim", "premium", "deductible",
+            "real estate", "landlord", "tenant", "lease", "eviction",
+            "business", "corporation", "partnership", "sole proprietorship",
+            "intellectual property", "trade secret", "confidentiality",
+            "environmental", "zoning", "permits", "licenses", "compliance"
+        };
+        
+        for (String term : legalTerms) {
+            if (lowerUserMessage.contains(term) || lowerAiResponse.contains(term)) {
+                return true;
+            }
+        }
+        
+        // If AI response is very short and doesn't contain legal terms, likely not law-related
+        if (lowerAiResponse.length() < 150 && !lowerAiResponse.contains("law")) {
+            return false;
+        }
+        
+        // Default to true for longer responses that might be law-related
+        return lowerAiResponse.length() > 200;
+    }
+
+    /**
+     * Determine desired number of KB sources from the user's message.
+     * Defaults to 4. Allows 1..10. If user mentions a number before 'source(s)/citations/references', use it.
+     * If user asks for 'multiple/more sources' without a number, use 6.
+     */
+    private int computeDesiredSourceLimit(String userMessage) {
+        int defaultLimit = 4;
+        if (userMessage == null) return defaultLimit;
+        String lower = userMessage.toLowerCase();
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("(\\d{1,2})\\s*(source|sources|citation|citations|reference|references)");
+        java.util.regex.Matcher m = p.matcher(lower);
+        if (m.find()) {
+            try {
+                int n = Integer.parseInt(m.group(1));
+                if (n < 1) n = 1;
+                if (n > 10) n = 10;
+                return n;
+            } catch (NumberFormatException ignore) {}
+        }
+        if (lower.contains("multiple sources") || lower.contains("more sources") || lower.contains("several sources")) {
+            return 6;
+        }
+        return defaultLimit;
+    }
+
+    private String buildEnhancedSystemPrompt(String baseSystemPrompt, String primaryKbAnswer,
+                                           java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> kbSources, String mode) {
+        StringBuilder enhancedPrompt = new StringBuilder(baseSystemPrompt);
+        
+        // Add KB context if available and meaningful
+        if (primaryKbAnswer != null && !primaryKbAnswer.trim().isEmpty() && 
+            !primaryKbAnswer.trim().equalsIgnoreCase("I don't know") && 
+            !primaryKbAnswer.trim().equalsIgnoreCase("No relevant information found")) {
+            
+            enhancedPrompt.append("\n\nKNOWLEDGE BASE CONTEXT:\n");
+            enhancedPrompt.append("The following information was retrieved from the legal knowledge base:\n\n");
+            enhancedPrompt.append(primaryKbAnswer);
+            
+            if (kbSources != null && !kbSources.isEmpty()) {
+                enhancedPrompt.append("\n\nSUPPORTING LEGAL SOURCES:\n");
+                for (com.capstone.civilify.DTO.KnowledgeBaseEntry source : kbSources) {
+                    enhancedPrompt.append("- ").append(source.getTitle());
+                    if (source.getCanonicalCitation() != null && !source.getCanonicalCitation().isEmpty()) {
+                        enhancedPrompt.append(" (").append(source.getCanonicalCitation()).append(")");
+                    }
+                    // Include source URLs if available and valid
+                    if (source.getSourceUrls() != null && !source.getSourceUrls().isEmpty()) {
+                        enhancedPrompt.append(" - Available Sources: ");
+                        for (int i = 0; i < source.getSourceUrls().size(); i++) {
+                            if (i > 0) enhancedPrompt.append(", ");
+                            enhancedPrompt.append(source.getSourceUrls().get(i));
+                        }
+                    }
+                    enhancedPrompt.append("\n");
+                }
+            }
+            
+            enhancedPrompt.append("\nIMPORTANT: Base your response primarily on the knowledge base context provided above. ");
+            enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
+            enhancedPrompt.append("Only cite sources that are explicitly mentioned in the knowledge base context above.");
+            
+            if ("B".equals(mode)) {
+                // CPA mode: Reinforce strict formatting requirements
+                enhancedPrompt.append("\n\nCRITICAL FORMATTING REQUIREMENTS FOR CPA REPORT:\n");
+                enhancedPrompt.append("- Section headings (Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER) must be plain text with colon, NO markdown bold (**)\n");
+                enhancedPrompt.append("- Follow the exact structure: Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER\n");
+                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets, no markdown bold)\n");
+                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-), no markdown bold in content\n");
+                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels using **Label:** format (ONLY labels should be bold)\n");
+                enhancedPrompt.append("- DISCLAIMER must be plain text with colon (no markdown bold)\n");
+                enhancedPrompt.append("- DO NOT use ** for section headings - only use ** for step labels within Suggested Next Steps\n");
+                enhancedPrompt.append("- Integrate KB sources naturally into your analysis, but maintain the strict formatting structure above.");
+            } else {
+                enhancedPrompt.append("\n\nSOURCE INSTRUCTIONS: Include relevant sources in your response using Markdown format: ");
+                enhancedPrompt.append("- [Source Title](URL) ");
+                enhancedPrompt.append("Do not include a 'Sources:' header - just list the links directly after your main content. ");
+                enhancedPrompt.append("You may mention specific laws, acts, or regulations by name if they are essential to the main answer content. ");
+                enhancedPrompt.append("Ensure your response is comprehensive and accurate based on the knowledge base context provided.");
+            }
+        } else {
+            if ("B".equals(mode)) {
+                // CPA mode: Even without KB, maintain formatting requirements
+                enhancedPrompt.append("\n\nCRITICAL FORMATTING REQUIREMENTS FOR CPA REPORT:\n");
+                enhancedPrompt.append("- Section headings (Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER) must be plain text with colon, NO markdown bold (**)\n");
+                enhancedPrompt.append("- Follow the exact structure: Case Summary, Legal Issues or Concerns, Plausibility Score, Suggested Next Steps, DISCLAIMER\n");
+                enhancedPrompt.append("- Case Summary must be a single paragraph (no bullets, no markdown bold)\n");
+                enhancedPrompt.append("- Legal Issues or Concerns must use bullet points (-), no markdown bold in content\n");
+                enhancedPrompt.append("- Suggested Next Steps must be numbered (1., 2., 3.) with bold labels using **Label:** format (ONLY labels should be bold)\n");
+                enhancedPrompt.append("- DISCLAIMER must be plain text with colon (no markdown bold)\n");
+                enhancedPrompt.append("- DO NOT use ** for section headings - only use ** for step labels within Suggested Next Steps\n");
+            } else {
+                enhancedPrompt.append("\n\nNOTE: No relevant information was found in the knowledge base for this query. ");
+                enhancedPrompt.append("Provide general guidance while acknowledging this limitation. ");
+                enhancedPrompt.append("Do not invent or hallucinate sources. If you cannot provide accurate information, ");
+                enhancedPrompt.append("recommend consultation with a legal professional.");
+            }
+        }
+        
+        return enhancedPrompt.toString();
+    }
+    
+    /**
+     * Extract key legal issues and case summary from a CPA report to use as KB query.
+     * This creates a targeted query that focuses on the core legal concepts,
+     * resulting in better knowledge base source matches.
+     */
+    private String extractLegalIssuesFromReport(String reportText) {
+        if (reportText == null || reportText.trim().isEmpty()) {
+            return null;
+        }
+        
+        StringBuilder kbQuery = new StringBuilder();
+        
+        try {
+            // Extract Case Summary
+            java.util.regex.Pattern summaryPattern = java.util.regex.Pattern.compile(
+                "Case Summary:\\s*([\\s\\S]*?)(?=\\n\\n|Legal Issues|$)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher summaryMatcher = summaryPattern.matcher(reportText);
+            if (summaryMatcher.find()) {
+                String summary = summaryMatcher.group(1).trim();
+                // Clean up markdown and formatting
+                summary = summary.replaceAll("\\*\\*", "").replaceAll("\\n+", " ").trim();
+                if (!summary.isEmpty() && summary.length() > 20) {
+                    kbQuery.append("Case: ").append(summary).append(" ");
+                }
+            }
+            
+            // Extract Legal Issues or Concerns
+            java.util.regex.Pattern issuesPattern = java.util.regex.Pattern.compile(
+                "Legal Issues(?: or Concerns)?:\\s*([\\s\\S]*?)(?=\\n\\n|Plausibility Score|Suggested Next Steps|$)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher issuesMatcher = issuesPattern.matcher(reportText);
+            if (issuesMatcher.find()) {
+                String issues = issuesMatcher.group(1).trim();
+                // Clean up markdown and bullet points
+                issues = issues.replaceAll("\\*\\*", "")
+                              .replaceAll("^-\\s*", "")
+                              .replaceAll("\\n-\\s*", ". ")
+                              .replaceAll("\\n+", " ")
+                              .trim();
+                if (!issues.isEmpty()) {
+                    kbQuery.append("Legal issues: ").append(issues);
+                }
+            }
+            
+            String result = kbQuery.toString().trim();
+            
+            // Only return if we have meaningful content (more than just labels)
+            if (result.length() > 30) {
+                return result;
+            }
+            
+        } catch (Exception e) {
+            logger.warn("Error extracting legal issues from report: {}", e.getMessage());
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Check if the user's question is about Civilify itself (meta/informational)
+     * rather than an actual legal case that needs assessment.
+     * These questions should get conversational responses, not structured reports.
+     */
+    private boolean isMetaOrInformationalQuestion(String message) {
+        if (message == null || message.trim().isEmpty()) {
+            return false;
+        }
+        
+        String lowerMessage = message.toLowerCase().trim();
+        
+        // Patterns for meta questions about Civilify
+        String[] metaPatterns = {
+            "what are the modes",
+            "what is gli",
+            "what is cpa",
+            "what are your capabilities",
+            "what can you do",
+            "how do i use",
+            "how does this work",
+            "explain the modes",
+            "tell me about",
+            "what is civilify",
+            "how do you work",
+            "what features",
+            "can you help me with",
+            "what mode should i use",
+            "difference between modes",
+            "when should i use",
+            "which mode is better"
+        };
+        
+        for (String pattern : metaPatterns) {
+            if (lowerMessage.contains(pattern)) {
+                return true;
+            }
+        }
+        
+        // Check for greeting-like questions
+        if (lowerMessage.matches("^(hi|hello|hey|greetings).*") && lowerMessage.length() < 50) {
+            return true;
+        }
+        
+        // Check if it's purely asking about capabilities (no legal context)
+        boolean hasLegalContext = lowerMessage.contains("case") || 
+                                   lowerMessage.contains("law") || 
+                                   lowerMessage.contains("legal") ||
+                                   lowerMessage.contains("lawyer") ||
+                                   lowerMessage.contains("court") ||
+                                   lowerMessage.contains("sue") ||
+                                   lowerMessage.contains("charged") ||
+                                   lowerMessage.contains("contract") ||
+                                   lowerMessage.contains("violated");
+        
+        boolean isCapabilityQuestion = lowerMessage.contains("what can") || 
+                                        lowerMessage.contains("what do") ||
+                                        lowerMessage.contains("how can");
+        
+        // If asking about capabilities without legal context, it's meta
+        if (isCapabilityQuestion && !hasLegalContext) {
+            return true;
+        }
+        
+        return false;
     }
 }

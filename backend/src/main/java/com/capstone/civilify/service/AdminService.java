@@ -3,7 +3,7 @@ package com.capstone.civilify.service;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import com.capstone.civilify.dto.UserDTO;
+import com.capstone.civilify.DTO.UserDTO;
 
 /**
  * Service interface for admin operations.

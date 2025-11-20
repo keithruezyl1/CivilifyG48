@@ -81,4 +81,5 @@ public class ChatMessage {
     public void setConversationId(String conversationId) {
         this.conversationId = conversationId;
     }
+
 }

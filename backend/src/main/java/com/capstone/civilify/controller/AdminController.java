@@ -17,9 +17,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
-import com.capstone.civilify.dto.ApiResponse;
-import com.capstone.civilify.dto.UserDTO;
+import com.capstone.civilify.DTO.ApiResponse;
+import com.capstone.civilify.DTO.UserDTO;
 import com.capstone.civilify.service.AdminService;
 
 /**
@@ -39,6 +40,7 @@ public class AdminController {
      * 
      * @return ResponseEntity containing a list of all users.
      */
+    @PreAuthorize("hasAnyRole('ADMIN','SYSTEM_ADMIN')")
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<UserDTO>>> getAllUsers() {
         try {
@@ -57,6 +59,7 @@ public class AdminController {
      * @param roleData Map containing the new role to assign to the user.
      * @return ResponseEntity containing the updated user data.
      */
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @PutMapping("/users/{userId}/role")
     public ResponseEntity<ApiResponse<UserDTO>> updateUserRole(@PathVariable String userId, @RequestBody RoleUpdateRequest roleData) {
         try {
@@ -82,6 +85,7 @@ public class AdminController {
      * @param userId The unique identifier of the user to delete.
      * @return ResponseEntity with a success or error message.
      */
+    @PreAuthorize("hasAnyRole('ADMIN','SYSTEM_ADMIN')")
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable String userId) {
         try {
@@ -105,6 +109,7 @@ public class AdminController {
      * @param userEmail The email of the user to promote to admin.
      * @return ResponseEntity containing the updated user data.
      */
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
     @PostMapping("/setup-initial-admin")
     public ResponseEntity<ApiResponse<UserDTO>> setupInitialAdmin(@RequestParam String userEmail) {
         try {

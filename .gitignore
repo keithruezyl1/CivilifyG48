@@ -5,6 +5,9 @@
 .env.*
 !.env.example
 
+# Backend local env file (do not commit secrets)
+backend/env
+
 
 # Firebase service account
 *firebase*.json
@@ -47,11 +50,8 @@ target/
 *.war
 *.ear
 
-# Windsurf rules
-.windsurfrules
-.windsurfrules.*
-*.windsurfrules
-.windsurf/
-.windsurf/**
-
 frontend-reference
+
+law-entry-extension-reference
+
+.cursor/rules/

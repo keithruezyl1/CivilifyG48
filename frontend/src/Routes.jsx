@@ -12,6 +12,8 @@ import EditProfile from "./pages/editprofile";
 import Profile from "./pages/profile";
 import DiagnosticsPage from "./pages/diagnostics";
 import Admin from "./pages/admin";
+import AdminKnowledgeBase from "./pages/admin/knowledge-base";
+import SystemAdminPage from "./pages/system";
 import ProtectedRoute from "./components/ProtectedRoute";
 // import LoadingScreen from "./pages/LoadingScreen";
 import LoadingScreen from "./pages/LoadingScreen";
@@ -53,14 +55,22 @@ const AppRoutes = () => {
         }
       />
       <Route path="/diagnostics" element={<DiagnosticsPage />} />
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute>
-            <Admin />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin" element={
+        <ProtectedRoute requiredRole="ADMIN">
+          <Admin />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/knowledge-base" element={
+        <ProtectedRoute requiredRole="ADMIN">
+          <AdminKnowledgeBase />
+        </ProtectedRoute>
+      } />
+      <Route path="/system" element={
+        <ProtectedRoute requiredRole="SYSTEM_ADMIN">
+          <SystemAdminPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/unauthorized" element={<div style={{padding:20}}>Unauthorized</div>} />
     </Routes>
   );
 };

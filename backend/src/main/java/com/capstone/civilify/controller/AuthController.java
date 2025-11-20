@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 
-import com.capstone.civilify.dto.AuthResponse;
-import com.capstone.civilify.dto.ErrorResponse;
-import com.capstone.civilify.dto.LoginRequest;
+import com.capstone.civilify.DTO.AuthResponse;
+import com.capstone.civilify.DTO.ErrorResponse;
+import com.capstone.civilify.DTO.LoginRequest;
 import com.capstone.civilify.service.FirebaseAuthService;
 import com.capstone.civilify.service.FirestoreService;
 import com.capstone.civilify.util.JwtUtil;
@@ -108,9 +108,16 @@ public class AuthController {
                 logger.info("User details retrieved successfully: {}", userDetails.keySet());
             }
             
-            // Generate JWT token
-            logger.info("Generating JWT token...");
-            String jwtToken = jwtUtil.generateToken(loginRequest.getEmail());
+            // Determine role from userDetails or default
+            String role = "ROLE_USER";
+            Object rd = userDetails.get("role");
+            if (rd instanceof String r && !r.isBlank()) {
+                role = r.startsWith("ROLE_") ? r : ("ROLE_" + r.toUpperCase());
+            }
+
+            // Generate JWT token including role claim
+            logger.info("Generating JWT token with role {}...", role);
+            String jwtToken = jwtUtil.generateToken(loginRequest.getEmail(), role);
             
             // Get token expiration date
             Date expiresAt = jwtUtil.getTokenExpirationDate();
@@ -236,12 +243,6 @@ public class AuthController {
             // Create a custom token for the user (Firebase token)
             firebaseAuthService.createCustomToken(uid);
             
-            // Generate JWT token for our application
-            String jwtToken = jwtUtil.generateToken(email);
-            
-            // Get token expiration date
-            Date expiresAt = jwtUtil.getTokenExpirationDate();
-            
             // Get or create user profile in Firestore
             Map<String, Object> userProfile = firestoreService.getUserByEmail(email);
             if (userProfile == null || userProfile.isEmpty()) {
@@ -256,6 +257,17 @@ public class AuthController {
                 
                 userProfile = newUserProfile;
             }
+            // Determine role from profile or default
+            String role = "ROLE_USER";
+            Object rd = userProfile.get("role");
+            if (rd instanceof String r && !r.isBlank()) {
+                role = r.startsWith("ROLE_") ? r : ("ROLE_" + r.toUpperCase());
+            }
+            // Generate JWT token with role
+            String jwtToken = jwtUtil.generateToken(email, role);
+            
+            // Get token expiration date
+            Date expiresAt = jwtUtil.getTokenExpirationDate();
             
             // Remove password from user profile for security
             if (userProfile.containsKey("password")) {

@@ -145,6 +145,8 @@ public class ChatService {
         logger.info("Added message with ID: {} to conversation: {}", messageId, conversationId);
         return message;
     }
+
+
     
     // Get all messages for a conversation
     public List<ChatMessage> getConversationMessages(String conversationId) throws ExecutionException, InterruptedException {

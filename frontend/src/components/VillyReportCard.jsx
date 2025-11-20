@@ -1,5 +1,28 @@
 import React from "react";
 
+// Helper to clean markdown bold markers from text (but preserve them for step labels)
+function cleanMarkdownBold(text) {
+  if (!text) return "";
+  // Remove ** markers but preserve content
+  return text.replace(/\*\*/g, "").trim();
+}
+
+// Helper to parse step labels that may have **bold** markers
+function parseStepLabel(stepText) {
+  // Match pattern like "1. **Label:** description" or "1. Label: description"
+  const labelMatch = stepText.match(/^\d+\.\s*\*\*(.*?)\*\*:\s*(.*)$/);
+  if (labelMatch) {
+    return { label: labelMatch[1], description: labelMatch[2] };
+  }
+  // Match pattern without bold: "1. Label: description"
+  const plainMatch = stepText.match(/^\d+\.\s*(.*?):\s*(.*)$/);
+  if (plainMatch) {
+    return { label: plainMatch[1], description: plainMatch[2] };
+  }
+  // Fallback: return as-is
+  return { label: "", description: cleanMarkdownBold(stepText) };
+}
+
 // Helper to parse the report text into sections
 function parseReport(reportText) {
   const sections = {
@@ -14,47 +37,54 @@ function parseReport(reportText) {
   };
   if (!reportText) return sections;
 
-  // Extract Case Summary
+  // Extract Case Summary - clean markdown bold markers
   const summaryMatch = reportText.match(
-    /Case Summary:\s*([\s\S]*?)(?:\n\n|Legal Issues|Plausibility Score:|Suggested Next Steps:|Sources:)/i
+    /Case Summary:\s*([\s\S]*?)(?:\n\n|Legal Issues|Plausibility Score:|Suggested Next Steps:|Sources:|DISCLAIMER:)/i
   );
-  if (summaryMatch) sections.summary = summaryMatch[1].trim();
+  if (summaryMatch) sections.summary = cleanMarkdownBold(summaryMatch[1]);
 
-  // Extract Legal Issues or Concerns
+  // Extract Legal Issues or Concerns - clean markdown bold markers
   const issuesMatch = reportText.match(
-    /Legal Issues(?: or Concerns)?:\s*([\s\S]*?)(?:\n\n|Plausibility Score:|Suggested Next Steps:|Sources:)/i
+    /Legal Issues(?: or Concerns)?:\s*([\s\S]*?)(?:\n\n|Plausibility Score:|Suggested Next Steps:|Sources:|DISCLAIMER:)/i
   );
   if (issuesMatch) {
     sections.issues = issuesMatch[1]
       .split(/\n- /)
-      .map((s) => s.replace(/^[-\s]*/, "").trim())
+      .map((s) => cleanMarkdownBold(s.replace(/^[-\s]*/, "")))
       .filter(Boolean);
   }
 
-  // Extract Plausibility Score
+  // Extract Plausibility Score - clean markdown bold markers
   const scoreMatch = reportText.match(
-    /Plausibility Score:\s*(\d{1,3})%\s*-?\s*([\w\s]+)?-?\s*([\s\S]*?)(?:\n\n|Suggested Next Steps:|Sources:|$)/i
+    /Plausibility Score:\s*(\d{1,3})%\s*-?\s*([\w\s]+)?-?\s*([\s\S]*?)(?:\n\n|Suggested Next Steps:|Sources:|DISCLAIMER:|$)/i
   );
   if (scoreMatch) {
     sections.score = scoreMatch[1];
-    sections.scoreLabel = scoreMatch[2] ? scoreMatch[2].trim() : "";
-    sections.scoreExplanation = scoreMatch[3] ? scoreMatch[3].trim() : "";
+    sections.scoreLabel = scoreMatch[2] ? cleanMarkdownBold(scoreMatch[2]) : "";
+    sections.scoreExplanation = scoreMatch[3] ? cleanMarkdownBold(scoreMatch[3]) : "";
   } else {
     const scoreLine = reportText
       .split("\n")
       .find((l) => l.toLowerCase().includes("plausibility score"));
-    if (scoreLine) sections.scoreExplanation = scoreLine.trim();
+    if (scoreLine) sections.scoreExplanation = cleanMarkdownBold(scoreLine);
   }
 
-  // Extract Suggested Next Steps
+  // Extract Suggested Next Steps - parse numbered list with bold labels
   const stepsMatch = reportText.match(
-    /Suggested Next Steps:\s*([\s\S]*?)(?:\n\n|Sources:|This is a legal pre-assessment|$)/i
+    /Suggested Next Steps:\s*([\s\S]*?)(?:\n\n|Sources:|DISCLAIMER:|This is a legal pre-assessment|$)/i
   );
   if (stepsMatch) {
-    sections.steps = stepsMatch[1]
-      .split(/\n- /)
-      .map((s) => s.replace(/^[-\s]*/, "").trim())
-      .filter(Boolean);
+    // Split by numbered lines (1., 2., 3., etc.)
+    const stepsText = stepsMatch[1];
+    // Split by lines starting with a number followed by a dot and space
+    const stepLines = stepsText.split(/\n(?=\d+\.\s)/);
+    sections.steps = stepLines
+      .map((s) => s.trim().replace(/\n+/g, " ")) // Replace newlines with spaces
+      .filter(Boolean)
+      .map((step) => {
+        const parsed = parseStepLabel(step);
+        return parsed; // Return object with label and description
+      });
   }
 
   // Extract Sources
@@ -68,11 +98,13 @@ function parseReport(reportText) {
       .filter(Boolean);
   }
 
-  // Extract disclaimer
+  // Extract disclaimer - clean markdown bold markers
   const disclaimerMatch = reportText.match(
-    /(This is a legal pre-assessment[\s\S]*)/i
+    /DISCLAIMER:\s*([\s\S]*?)(?:\n\n|$)|(This is a legal pre-assessment[\s\S]*?)(?:\n\n|$)/i
   );
-  if (disclaimerMatch) sections.disclaimer = disclaimerMatch[1].trim();
+  if (disclaimerMatch) {
+    sections.disclaimer = cleanMarkdownBold(disclaimerMatch[1] || disclaimerMatch[2] || "");
+  }
 
   return sections;
 }
@@ -167,16 +199,20 @@ const VillyReportCard = ({
   isDarkMode = false,
   plausibilityLabel,
   plausibilitySummary,
+  sources = [], // KB sources from API response
 }) => {
   const sections = parseReport(reportText);
+  
+  // If sources are provided as prop (from API), use them; otherwise use parsed sources
+  const displaySources = sources.length > 0 ? sources : sections.sources;
   const hasContent =
     sections.summary ||
     sections.issues.length ||
     sections.score ||
     sections.steps.length;
   const scoreNum = parseInt(sections.score, 10) || 0;
-  const headerColor = isDarkMode ? "#fff" : "#444";
-  const bodyColor = isDarkMode ? "#e0e0e0" : "#232323";
+  const headerColor = isDarkMode ? "#fff" : "#2c2c2c";
+  const bodyColor = isDarkMode ? "#e0e0e0" : "#3a3a3a";
   // Use backend-provided label/summary if available, else extract from reportText
   let label = plausibilityLabel;
   let description = plausibilitySummary;
@@ -187,7 +223,15 @@ const VillyReportCard = ({
   }
   const scoreLabelColor = getScoreColor(label);
   const scoreTextColor = getScoreColor(label);
-  const plausibilityBg = isDarkMode ? "#3a2f29" : "rgba(243,77,1,0.13)";
+  
+  // Enhanced plausibility background with gradient based on score
+  const getScoreBgColor = () => {
+    if (isDarkMode) return "#3a2f29";
+    if (scoreNum >= 65) return "linear-gradient(135deg, rgba(22,163,74,0.08) 0%, rgba(22,163,74,0.15) 100%)";
+    if (scoreNum >= 40) return "linear-gradient(135deg, rgba(245,158,66,0.08) 0%, rgba(245,158,66,0.15) 100%)";
+    return "linear-gradient(135deg, rgba(220,38,38,0.08) 0%, rgba(220,38,38,0.15) 100%)";
+  };
+  const plausibilityBg = getScoreBgColor();
   return (
     <div
       style={{
@@ -230,48 +274,51 @@ const VillyReportCard = ({
           width: "100%",
           maxWidth: 850,
           minWidth: 120,
-          margin: "0 auto 18px auto",
+          margin: "0 auto 24px auto",
           background: plausibilityBg,
           borderRadius: 18,
-          padding: "24px 0 20px 0",
+          padding: "28px 20px 24px 20px",
           boxSizing: "border-box",
           overflowWrap: "break-word",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           boxShadow: isDarkMode
-            ? "0 2px 12px rgba(0,0,0,0.18)"
-            : "0 2px 12px rgba(243,77,1,0.07)",
+            ? "0 4px 16px rgba(0,0,0,0.25)"
+            : "0 4px 20px rgba(0,0,0,0.08)",
+          border: isDarkMode ? "1px solid rgba(243,77,1,0.2)" : `2px solid ${scoreTextColor}20`,
         }}
       >
         <div
           style={{
-            fontSize: 20,
+            fontSize: 18,
             color: scoreTextColor,
-            fontWeight: 800,
-            marginBottom: 10,
-            letterSpacing: 0.2,
+            fontWeight: 700,
+            marginBottom: 16,
+            letterSpacing: 0.3,
             textAlign: "center",
+            textTransform: "uppercase",
           }}
         >
           Plausibility Score
         </div>
-        <div style={{ margin: "0 auto", marginBottom: 10 }}>
+        <div style={{ margin: "0 auto", marginBottom: 16 }}>
           <ProgressCircle
             percent={scoreNum}
-            size={90}
+            size={100}
+            stroke={8}
             color={scoreTextColor}
-            bg={isDarkMode ? "#5a463a" : "#ffe5d6"}
+            bg={isDarkMode ? "#5a463a" : "#f0f0f0"}
           />
         </div>
         {label && (
           <div
             style={{
-              fontSize: 20,
+              fontSize: 22,
               color: scoreLabelColor,
               fontWeight: 700,
-              marginTop: 2,
-              marginBottom: description ? 0 : 2,
+              marginTop: 4,
+              marginBottom: description ? 8 : 4,
               textAlign: "center",
             }}
           >
@@ -281,105 +328,252 @@ const VillyReportCard = ({
         {description && (
           <div
             style={{
-              fontSize: 16,
-              color: isDarkMode ? "#e0e0e0" : "#444",
-              marginTop: 4,
+              fontSize: 15,
+              color: isDarkMode ? "#d0d0d0" : "#555",
+              marginTop: 0,
               textAlign: "center",
-              maxWidth: 700,
+              maxWidth: 650,
               fontWeight: 400,
+              lineHeight: 1.6,
+              padding: "0 12px",
             }}
           >
             {description}
           </div>
         )}
       </div>
-      <div
-        style={{
-          borderTop: isDarkMode ? "1px solid #444" : "1px solid #f3f3f3",
-          margin: "4px 0 10px 0",
-        }}
-      />
+      {/* Case Summary Section */}
       {sections.summary && (
-        <div style={{ marginBottom: 8, color: bodyColor }}>
-          <span style={{ fontWeight: 600, color: headerColor }}>
-            Case Summary:
-          </span>
-          <br />
-          <span>{sections.summary}</span>
+        <div style={{ 
+          marginBottom: 16, 
+          color: bodyColor,
+          background: isDarkMode ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+          padding: "16px 18px",
+          borderRadius: 12,
+          borderLeft: `4px solid ${isDarkMode ? "#F34D01" : "#F59E42"}`,
+        }}>
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            marginBottom: 10,
+            gap: 8,
+          }}>
+            <span style={{ fontSize: 18 }}>📋</span>
+            <span style={{ fontWeight: 700, color: headerColor, fontSize: 16 }}>
+              Case Summary
+            </span>
+          </div>
+          <span style={{ fontSize: 15, lineHeight: 1.7 }}>{sections.summary}</span>
         </div>
       )}
+      
+      {/* Legal Issues Section */}
       {sections.issues.length > 0 && (
-        <div style={{ marginBottom: 8, color: bodyColor }}>
-          <span style={{ fontWeight: 600, color: headerColor }}>
-            Legal Issues or Concerns:
-          </span>
-          <ul style={{ margin: "4px 0 4px 18px", padding: 0 }}>
+        <div style={{ 
+          marginBottom: 16, 
+          color: bodyColor,
+          background: isDarkMode ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+          padding: "16px 18px",
+          borderRadius: 12,
+          borderLeft: `4px solid ${isDarkMode ? "#dc2626" : "#F34D01"}`,
+        }}>
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            marginBottom: 10,
+            gap: 8,
+          }}>
+            <span style={{ fontSize: 18 }}>⚖️</span>
+            <span style={{ fontWeight: 700, color: headerColor, fontSize: 16 }}>
+              Legal Issues or Concerns
+            </span>
+          </div>
+          <ul style={{ margin: "4px 0 0 20px", padding: 0 }}>
             {sections.issues.map((issue, i) => (
-              <li key={i} style={{ marginBottom: 2 }}>
+              <li key={i} style={{ marginBottom: 8, fontSize: 15, lineHeight: 1.7 }}>
                 {issue}
               </li>
             ))}
           </ul>
         </div>
       )}
+      
+      {/* Suggested Next Steps Section - Most Important */}
       {sections.steps.length > 0 && (
-        <div style={{ marginBottom: 8, color: bodyColor }}>
-          <span style={{ fontWeight: 600, color: headerColor }}>
-            Suggested Next Steps:
-          </span>
-          <ul style={{ margin: "4px 0 4px 18px", padding: 0 }}>
+        <div style={{ 
+          marginBottom: 16, 
+          color: bodyColor,
+          background: isDarkMode ? "rgba(22,163,74,0.08)" : "rgba(22,163,74,0.06)",
+          padding: "18px 18px",
+          borderRadius: 12,
+          borderLeft: `4px solid ${isDarkMode ? "#16a34a" : "#16a34a"}`,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        }}>
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            marginBottom: 12,
+            gap: 8,
+          }}>
+            <span style={{ fontSize: 18 }}>📝</span>
+            <span style={{ fontWeight: 700, color: "#16a34a", fontSize: 17 }}>
+              Suggested Next Steps
+            </span>
+          </div>
+          <ol style={{ margin: "4px 0 0 20px", padding: 0, listStyleType: "decimal" }}>
             {sections.steps.map((step, i) => (
-              <li key={i} style={{ marginBottom: 2 }}>
-                {step}
+              <li key={i} style={{ marginBottom: 12, fontSize: 15, lineHeight: 1.7 }}>
+                {step.label ? (
+                  <>
+                    <strong style={{ fontWeight: 700, color: isDarkMode ? "#fff" : "#2c2c2c" }}>{step.label}:</strong>{" "}
+                    {step.description}
+                  </>
+                ) : (
+                  <span>{step.description || (typeof step === 'string' ? step : '')}</span>
+                )}
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
       )}
       {/* Styled Sources Section */}
-      {sections.sources.length > 0 && (
+      {displaySources.length > 0 && (
         <div
           style={{
-            background: "#fffbe6",
-            border: "1px solid #ffe5a0",
-            borderRadius: 8,
-            padding: "12px 16px",
-            margin: "10px 0 8px 0",
-            color: "#7c5a00",
+            background: isDarkMode ? "rgba(255,251,230,0.08)" : "#fffbe6",
+            border: isDarkMode ? "1px solid rgba(255,229,160,0.2)" : "1px solid #ffe5a0",
+            borderRadius: 10,
+            padding: "14px 18px",
+            margin: "0 0 16px 0",
+            color: isDarkMode ? "#ffd96a" : "#7c5a00",
             fontSize: 15,
-            boxShadow: "0 1px 4px rgba(243,77,1,0.04)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             display: "flex",
             flexDirection: "column",
           }}
         >
           <div
-            style={{ display: "flex", alignItems: "center", marginBottom: 6 }}
+            style={{ display: "flex", alignItems: "center", marginBottom: 8, gap: 8 }}
           >
-            <span style={{ fontSize: 18, marginRight: 8 }}>📚</span>
-            <span style={{ fontWeight: 700, fontSize: 16, color: "#b97a00" }}>
+            <span style={{ fontSize: 18 }}>📚</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: isDarkMode ? "#ffd96a" : "#b97a00" }}>
               Sources
             </span>
           </div>
           <ul style={{ margin: 0, paddingLeft: 22 }}>
-            {sections.sources.map((src, i) => (
-              <li key={i} style={{ marginBottom: 2, wordBreak: "break-word" }}>
-                {src}
-              </li>
-            ))}
+            {displaySources.map((src, i) => {
+              // Check if source is an object (from API) or string (from parsed text)
+              if (typeof src === 'object' && src.title) {
+                // Check if source has valid URLs
+                const hasValidUrl = src.sourceUrls && src.sourceUrls.length > 0;
+                const firstUrl = hasValidUrl ? src.sourceUrls[0] : null;
+                
+                return (
+                  <li key={i} style={{ marginBottom: 8, wordBreak: "break-word", lineHeight: 1.6 }}>
+                    {/* Title - clickable if URL available */}
+                    {hasValidUrl ? (
+                      <a
+                        href={firstUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: isDarkMode ? "#ffe066" : "#8c6500",
+                          fontWeight: 700,
+                          textDecoration: "none",
+                          cursor: "pointer",
+                          borderBottom: `2px solid ${isDarkMode ? "rgba(255, 224, 102, 0.3)" : "rgba(140, 101, 0, 0.3)"}`,
+                          transition: "all 0.2s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.borderBottomColor = isDarkMode ? "#ffe066" : "#8c6500";
+                          e.target.style.opacity = "0.8";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.borderBottomColor = isDarkMode ? "rgba(255, 224, 102, 0.3)" : "rgba(140, 101, 0, 0.3)";
+                          e.target.style.opacity = "1";
+                        }}
+                      >
+                        {src.title} 🔗
+                      </a>
+                    ) : (
+                      <strong style={{ color: isDarkMode ? "#ffe066" : "#8c6500" }}>{src.title}</strong>
+                    )}
+                    
+                    {/* Citation */}
+                    {src.canonicalCitation && (
+                      <div style={{ fontSize: 13, marginTop: 2, opacity: 0.9 }}>
+                        {src.canonicalCitation}
+                      </div>
+                    )}
+                    
+                    {/* Summary */}
+                    {src.summary && (
+                      <div style={{ fontSize: 13, marginTop: 4, opacity: 0.85 }}>
+                        {src.summary}
+                      </div>
+                    )}
+                    
+                    {/* Show additional URLs if available */}
+                    {hasValidUrl && src.sourceUrls.length > 1 && (
+                      <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
+                        {src.sourceUrls.slice(1).map((url, urlIdx) => (
+                          <a
+                            key={urlIdx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: isDarkMode ? "#ffcc66" : "#996600",
+                              textDecoration: "none",
+                              marginRight: 8,
+                              fontSize: 11,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.textDecoration = "underline";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.textDecoration = "none";
+                            }}
+                          >
+                            Additional Source {urlIdx + 1} 🔗
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              } else {
+                // Fallback for string sources (from parsed text)
+                return (
+                  <li key={i} style={{ marginBottom: 4, wordBreak: "break-word", lineHeight: 1.6 }}>
+                    {typeof src === 'string' ? src : JSON.stringify(src)}
+                  </li>
+                );
+              }
+            })}
           </ul>
         </div>
       )}
+      
+      {/* Disclaimer Section - Enhanced */}
       {sections.disclaimer && (
         <div
           style={{
-            fontSize: 12,
-            color: isDarkMode ? "#aaa" : "#888",
+            fontSize: 13,
+            color: isDarkMode ? "#b0b0b0" : "#666",
             marginTop: 8,
-            borderTop: isDarkMode ? "1px solid #444" : "1px solid #f3f3f3",
-            paddingTop: 6,
+            background: isDarkMode ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.03)",
+            borderRadius: 8,
+            padding: "12px 14px",
+            borderLeft: `3px solid ${isDarkMode ? "#666" : "#999"}`,
+            lineHeight: 1.6,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
           }}
         >
-          {sections.disclaimer}
+          <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>ℹ️</span>
+          <span>{sections.disclaimer}</span>
         </div>
       )}
       {/* Fallback: if everything is missing, show the raw text */}

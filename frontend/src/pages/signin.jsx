@@ -8,6 +8,9 @@ import logoIconOrange from "../assets/images/logoiconorange.png";
 import { API_URL, clearAuthData, validateAuthToken } from "../utils/auth";
 import LoadingScreen from "./LoadingScreen";
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  "433624047904-ea5ipm4k3ogi6fumrpjdu9c59hq1119l.apps.googleusercontent.com";
+
 const SignIn = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -228,7 +231,19 @@ const SignIn = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      navigate("/chat");
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const role = (u.role || '').toString();
+        if (role === 'ROLE_SYSTEM_ADMIN' || role === 'SYSTEM_ADMIN') {
+          navigate('/system');
+        } else if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/chat');
+        }
+      } catch {
+        navigate('/chat');
+      }
     }, 1000);
   };
 
@@ -246,8 +261,7 @@ const SignIn = () => {
       if (window.google && !window.googleSignInInitialized) {
         console.log("Initializing Google Sign-In in signin page...");
         window.google.accounts.id.initialize({
-          client_id:
-            "433624047904-ea5ipm4k3ogi6fumrpjdu9c59hq1119l.apps.googleusercontent.com",
+          client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleSignIn,
           prompt_parent_id: "googleSignInButton",
           ux_mode: "popup",
@@ -255,6 +269,9 @@ const SignIn = () => {
             window.location.origin,
             "http://localhost:3000",
             "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://civilify.vercel.app",
           ],
         });
         window.googleSignInInitialized = true;
@@ -295,7 +312,19 @@ const SignIn = () => {
   useEffect(() => {
     const authStatus = validateAuthToken();
     if (authStatus.valid) {
-      navigate("/chat");
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const role = (u.role || '').toString();
+        if (role === 'ROLE_SYSTEM_ADMIN' || role === 'SYSTEM_ADMIN') {
+          navigate('/system');
+        } else if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/chat');
+        }
+      } catch {
+        navigate('/chat');
+      }
     }
   }, [navigate]);
 

@@ -83,5 +83,7 @@ public class ChatConversation {
         this.status = status;
     }
 
+    
+
 
 }

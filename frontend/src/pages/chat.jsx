@@ -33,8 +33,20 @@ const CPA_SYSTEM_PROMPT =
 
 // Function to format AI response text
 const formatAIResponse = (text) => {
+  if (!text) return "";
+  
+  // Clean up only metadata tags, preserve sources
+  let cleanedText = text
+    // Remove metadata tags like {sourcesUsed: [...]}
+    .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
+    // Remove any remaining metadata patterns
+    .replace(/\{[^}]*\}/g, "")
+    // Clean up extra whitespace but preserve line breaks for sources
+    .replace(/\s+/g, " ")
+    .trim();
+  
   // Replace Markdown-like symbols with HTML tags
-  const formattedText = text
+  const formattedText = cleanedText
     // Replace ***text*** with <strong><em>text</em></strong>
     .replace(/\*\*\*(.*?)\*\*\*/g, "<strong><em>$1</em></strong>")
     // Replace **text** with <strong>text</strong>
@@ -46,6 +58,7 @@ const formatAIResponse = (text) => {
 };
 
 // Function to fetch response from GPT-3.5 Turbo API via backend
+let currentAbortController = null;
 const fetchGPTResponse = async (
   userMessage,
   mode = "A",
@@ -61,13 +74,21 @@ const fetchGPTResponse = async (
     const user = getUserData();
 
     // Call the backend API endpoint with conversation context
-    const response = await axios.post(`${API_URL}/ai/chat`, {
+    if (currentAbortController) {
+      try { currentAbortController.abort(); } catch (e) {}
+    }
+    currentAbortController = new AbortController();
+    const response = await axios.post(
+      `${API_URL}/ai/chat`,
+      {
       message: userMessage,
       mode: mode,
       conversationId: conversationId,
       userId: userId || (user ? user.uid : null),
       userEmail: userEmail || (user ? user.email : null),
-    });
+      },
+      { signal: currentAbortController.signal }
+    );
 
     console.log("AI response received:", response.data);
 
@@ -78,6 +99,9 @@ const fetchGPTResponse = async (
         conversationId: response.data.conversationId, // Get the conversation ID from the response
         plausibilityLabel: response.data.plausibilityLabel,
         plausibilitySummary: response.data.plausibilitySummary,
+        sources: response.data.sources || [], // Knowledge base sources
+        hasKnowledgeBaseContext: response.data.hasKnowledgeBaseContext || false,
+        // CPA facts UI disabled by default
       };
     } else {
       console.error("Error in AI response:", response.data);
@@ -88,6 +112,9 @@ const fetchGPTResponse = async (
         conversationId: conversationId,
         plausibilityLabel: null,
         plausibilitySummary: null,
+        sources: [],
+        hasKnowledgeBaseContext: false,
+        // CPA facts UI disabled by default
       };
     }
   } catch (error) {
@@ -273,85 +300,21 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
 };
 
 const markdownComponents = {
-  h1: ({ node, ...props }) => (
-    <h1
-      style={{
-        fontSize: "1.3em",
-        fontWeight: 700,
-        margin: "12px 0 6px 0",
-        color: "#F34D01",
-      }}
-      {...props}
-    />
-  ),
-  h2: ({ node, ...props }) => (
-    <h2
-      style={{
-        fontSize: "1.15em",
-        fontWeight: 700,
-        margin: "10px 0 5px 0",
-        color: "#F34D01",
-      }}
-      {...props}
-    />
-  ),
-  h3: ({ node, ...props }) => (
-    <h3
-      style={{
-        fontSize: "1.05em",
-        fontWeight: 700,
-        margin: "8px 0 4px 0",
-        color: "#F34D01",
-      }}
-      {...props}
-    />
-  ),
-  p: ({ node, children, ...props }) => {
-    if (typeof children[0] === "string" && children[0].startsWith("Note:")) {
-      return (
-        <p
-          style={{
-            background: "#fffbe6",
-            color: "#b45309",
-            padding: "6px 10px",
-            borderRadius: 6,
-            margin: "8px 0",
-          }}
-        >
-          {children}
-        </p>
-      );
-    }
-    return (
-      <p style={{ margin: 0, padding: 0, lineHeight: "1.5" }} {...props}>
-        {children}
-      </p>
-    );
-  },
-  ul: ({ node, ...props }) => (
-    <ul style={{ margin: 0, paddingLeft: 22, lineHeight: "1.5" }} {...props} />
-  ),
-  ol: ({ node, ...props }) => (
-    <ol style={{ margin: 0, paddingLeft: 22, lineHeight: "1.5" }} {...props} />
-  ),
-  li: ({ node, ...props }) => (
-    <li
-      style={{ margin: "0 0 2px 0", padding: 0, lineHeight: "1.5" }}
-      {...props}
-    />
-  ),
+  // Render headings as plain paragraphs with bold text (no colors/sizes)
+  h1: ({ node, children }) => <p><strong>{children}</strong></p>,
+  h2: ({ node, children }) => <p><strong>{children}</strong></p>,
+  h3: ({ node, children }) => <p><strong>{children}</strong></p>,
+  // Plain paragraph, no special styling for notes
+  p: ({ node, children, ...props }) => <p {...props}>{children}</p>,
+  // Render bold text properly
+  strong: ({ node, children, ...props }) => <strong {...props}>{children}</strong>,
+  // Plain lists with default browser styling
+  ul: ({ node, ...props }) => <ul {...props} />,
+  ol: ({ node, ...props }) => <ol {...props} />,
+  li: ({ node, ...props }) => <li {...props} />,
+  // Keep links as-is (users like current source rendering)
   a: ({ node, ...props }) => (
-    <a
-      style={{
-        color: "#2563eb",
-        textDecoration: "underline",
-        fontWeight: 500,
-        wordBreak: "break-all",
-      }}
-      target="_blank"
-      rel="noopener noreferrer"
-      {...props}
-    />
+    <a target="_blank" rel="noopener noreferrer" {...props} />
   ),
 };
 
@@ -402,13 +365,24 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
   // Helper to style report text for dark mode
   function formatReportText(text, isDarkMode) {
     if (!text) return "";
+    
+    // Clean up only metadata tags, preserve sources
+    let cleanedText = text
+      // Remove metadata tags like {sourcesUsed: [...]}
+      .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
+      // Remove any remaining metadata patterns
+      .replace(/\{[^}]*\}/g, "")
     // Remove emojis from the text
-    text = text.replace(
+      .replace(
       /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
       ""
-    );
+      )
+      // Clean up extra whitespace but preserve line breaks for sources
+      .replace(/\s+/g, " ")
+      .trim();
+    
     // Split into lines
-    const lines = text.split("\n");
+    const lines = cleanedText.split("\n");
     let html = "";
     lines.forEach((line) => {
       let styledLine = line;
@@ -659,11 +633,8 @@ const Chat = () => {
 
     // Prepare to send the request with conversation context
     let aiResponse;
-    const messageToSend = prependSystem
-      ? `${prependSystem}
-
-${userMessage}`
-      : userMessage;
+    // Do NOT include the system hint in the text sent to backend; send plain user message
+    const messageToSend = userMessage;
 
     if (userData) {
       aiResponse = await fetchGPTResponse(
@@ -720,7 +691,7 @@ ${userMessage}`
       e.preventDefault();
       setSendHovered(true);
       if (!isTyping) {
-        handleSubmit(e);
+      handleSubmit(e);
       }
 
       setTimeout(() => setSendHovered(false), 750);
@@ -729,14 +700,14 @@ ${userMessage}`
   };
 
   // Function to fetch user conversations from backend API - commented out as per requirements
-  /*
+  /* 
   const fetchUserConversations = async () => {
     try {
       if (!userData || !userData.email) {
         console.log('No user email available to fetch conversations');
         return;
       }
-
+      
       const response = await axios.get(`${API_URL}/chat/conversations/user/${userData.email}`);
       const data = response.data;
       console.log('Fetched conversations:', data);
@@ -833,7 +804,8 @@ ${userMessage}`
   // Function to save a message to the current conversation
   const saveMessageToConversation = async (content, isUserMessage) => {
     try {
-      if (!currentConversationId) {
+      let conversationIdToUse = currentConversationId;
+      if (!conversationIdToUse) {
         // Create a new conversation first if none exists
         const response = await axios.post(`${API_URL}/chat/conversations`, {
           userId: userData.uid || "unknown",
@@ -844,7 +816,8 @@ ${userMessage}`
 
         const newConversation = response.data;
         console.log("Created new conversation for message:", newConversation);
-        setCurrentConversationId(newConversation.id);
+        conversationIdToUse = newConversation.id;
+        setCurrentConversationId(conversationIdToUse);
 
         // We're not fetching conversations as per requirements
         // await fetchUserConversations();
@@ -852,7 +825,7 @@ ${userMessage}`
 
       // Now save the message
       await axios.post(
-        `${API_URL}/chat/conversations/${currentConversationId}/messages`,
+        `${API_URL}/chat/conversations/${conversationIdToUse}/messages`,
         {
           userId: userData.uid || "unknown",
           userEmail: userData.email,
@@ -1040,8 +1013,11 @@ ${userMessage}`
             minute: "2-digit",
           }),
           isReport: result.isReport || false,
+          sources: result.sources || [],
+          hasKnowledgeBaseContext: result.hasKnowledgeBaseContext || false,
           plausibilityLabel: result.plausibilityLabel,
           plausibilitySummary: result.plausibilitySummary,
+          // CPA facts UI disabled by default
         };
 
         const updatedMessages = [...newMessages, aiMessage];
@@ -1053,6 +1029,7 @@ ${userMessage}`
         }
 
         // Auto-scroll to bottom of messages
+        // Multiple scroll attempts to ensure visibility
         setTimeout(() => {
           if (chatContainerRef.current) {
             chatContainerRef.current.scrollTo({
@@ -1061,6 +1038,16 @@ ${userMessage}`
             });
           }
         }, 100);
+        
+        // Additional scroll for complex responses
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTo({
+              top: chatContainerRef.current.scrollHeight,
+              behavior: "smooth",
+            });
+          }
+        }, 400);
       } else {
         // Handle error
         const errorMessage = {
@@ -1129,6 +1116,11 @@ ${userMessage}`
         hour: "2-digit",
         minute: "2-digit",
       }),
+      sources: aiResponse.sources || [],
+      hasKnowledgeBaseContext: aiResponse.hasKnowledgeBaseContext || false,
+      plausibilityLabel: aiResponse.plausibilityLabel,
+      plausibilitySummary: aiResponse.plausibilitySummary,
+      // CPA facts UI disabled by default
     };
     const finalMessages = [...updatedMessages, aiMessage];
     setMessages(finalMessages);
@@ -1136,12 +1128,25 @@ ${userMessage}`
     // Save AI response to conversation
     await saveMessageToConversation(aiResponse.response, false);
 
+    // Enhanced auto-scroll for suggested replies
     setTimeout(() => {
       if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop =
-          chatContainerRef.current.scrollHeight;
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
       }
-    }, 0);
+    }, 100);
+    
+    // Additional scroll to ensure complete visibility
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 400);
   };
 
   const handleMessageClick = (index) => {
@@ -1467,11 +1472,11 @@ ${userMessage}`
         .avatar-button-hover:hover {
       transform: scale(1.01); /* Scale down to 0.5 */
       box-shadow: 0 0 8px 4px rgba(243, 77, 1, 0.5); /* Orange glow */
-    }
-    .avatar-button-hover:active {
+        }
+        .avatar-button-hover:active {
       transform: scale(0.7); /* Slightly smaller on click */
       box-shadow: 0 0 6px 3px rgba(243, 77, 1, 0.4); /* Slightly dimmer glow */
-    }
+        }
     
         .dropdown-item-hover:hover {
            background-color: ${isDarkMode ? "#404040" : "#f0f0f0"};
@@ -1525,17 +1530,61 @@ ${userMessage}`
     `;
     document.head.appendChild(modeHoverStyle);
 
+    // Custom scrollbar styling for chat container
+    const scrollbarStyle = document.createElement("style");
+    scrollbarStyle.textContent = `
+      /* Scrollbar styling for chat messages container */
+      .chatMessages {
+        scrollbar-width: thin;
+        scrollbar-color: ${isDarkMode ? "rgba(150, 150, 150, 0.5) rgba(50, 50, 50, 0.3)" : "rgba(180, 180, 180, 0.6) rgba(240, 240, 240, 0.4)"};
+      }
+
+      /* Webkit browsers (Chrome, Safari, Edge) */
+      .chatMessages::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      .chatMessages::-webkit-scrollbar-track {
+        background: ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+        border-radius: 10px;
+        margin: 4px 0;
+      }
+
+      .chatMessages::-webkit-scrollbar-thumb {
+        background: ${isDarkMode ? "rgba(150, 150, 150, 0.5)" : "rgba(180, 180, 180, 0.6)"};
+        border-radius: 10px;
+        border: 2px solid ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+        transition: background 0.2s ease;
+      }
+
+      .chatMessages::-webkit-scrollbar-thumb:hover {
+        background: ${isDarkMode ? "rgba(200, 200, 200, 0.7)" : "rgba(150, 150, 150, 0.8)"};
+      }
+
+      .chatMessages::-webkit-scrollbar-thumb:active {
+        background: ${isDarkMode ? "rgba(220, 220, 220, 0.8)" : "rgba(130, 130, 130, 0.9)"};
+      }
+
+      /* Scrollbar corner (when both scrollbars are present) */
+      .chatMessages::-webkit-scrollbar-corner {
+        background: ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+      }
+    `;
+    document.head.appendChild(scrollbarStyle);
+
     return () => {
       document.head.removeChild(style); // Clean up injected style
       document.head.removeChild(hoverStyle); // Clean up hover styles
+      document.head.removeChild(modeHoverStyle); // Clean up mode hover styles
+      document.head.removeChild(scrollbarStyle); // Clean up scrollbar styles
       document.body.style.overflow = "";
       document.body.style.height = "";
       document.body.style.position = "";
       document.body.style.width = "";
       document.removeEventListener("mousedown", handleClickOutside);
-      document.head.removeChild(modeHoverStyle);
     };
-  }, [isDarkMode]); // Add isDarkMode dependency for hover styles
+  }, [isDarkMode]); // Add isDarkMode dependency for dynamic styles
 
   // Track if initial mount is done
   const initialMount = useRef(true);
@@ -1563,14 +1612,43 @@ ${userMessage}`
   }, []);
 
   // Auto-scroll chat to bottom on every new message (user or Villy)
+  // Enhanced to ensure complete visibility of AI responses, especially long CPA reports
   useEffect(() => {
     if (!chatContainerRef.current) return;
     if (messages.length === 0) return; // Don't scroll if no messages (welcome screen)
+    
     const container = chatContainerRef.current;
+    
+    // Scroll immediately for instant feedback
     container.scrollTo({
       top: container.scrollHeight,
       behavior: "smooth",
     });
+    
+    // Additional scroll after a delay to account for:
+    // - DOM rendering completion
+    // - Image loading (if any)
+    // - Complex component rendering (VillyReportCard)
+    // - Markdown parsing and layout
+    setTimeout(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 150);
+    
+    // Final scroll for very large responses (CPA reports)
+    // Ensures nothing is cut off by the input box
+    setTimeout(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 500);
   }, [messages]);
 
   useEffect(() => {
@@ -2013,12 +2091,14 @@ ${userMessage}`
               justifyContent: messages.length === 0 ? "center" : "flex-start",
               padding: selectedMode == null ? "0px !important" : "0px 24px",
               paddingTop: messages.length === 0 ? 0 : 24,
-              paddingBottom: messages.length === 0 ? 0 : inputHeight + 20,
+              // Increased padding to ensure AI responses (especially CPA reports) are fully visible
+              paddingBottom: messages.length === 0 ? 0 : inputHeight + 60,
               marginBottom: messages.length === 0 ? 0 : 24,
               // gap: messages.length === 0 ? 0 : 64,
               background: "transparent",
               minHeight: 0,
               height: "100%",
+              scrollBehavior: "smooth",
             }}
             className="chatMessages"
             ref={chatContainerRef}
@@ -2196,11 +2276,15 @@ ${userMessage}`
                         isDarkMode={isDarkMode}
                         plausibilityLabel={message.plausibilityLabel}
                         plausibilitySummary={message.plausibilitySummary}
+                        sources={message.sources || []}
                       />
                     ) : (
+                      <div>
                       <ReactMarkdown components={markdownComponents}>
                         {message.isUser ? message.text : message.text}
                       </ReactMarkdown>
+                        {/* CPA facts UI removed per request */}
+                      </div>
                     )}
                   </div>
                   {showTimestamp === index && message.timestamp && (
@@ -2402,22 +2486,22 @@ ${userMessage}`
                       />
                     </svg>
                   ) : (
-                    <svg
-                      key={sendHovered ? "hovered" : "not-hovered"}
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke={sendHovered ? "#fff" : "#666"}
-                      strokeWidth="2"
-                      style={{ transition: "stroke 0.2s" }}
-                    >
-                      <path
-                        d="M12 20V4M5 11l7-7 7 7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                  <svg
+                    key={sendHovered ? "hovered" : "not-hovered"}
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={sendHovered ? "#fff" : "#666"}
+                    strokeWidth="2"
+                    style={{ transition: "stroke 0.2s" }}
+                  >
+                    <path
+                      d="M12 20V4M5 11l7-7 7 7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   )}
                 </button>
               </form>
@@ -3597,9 +3681,9 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
     }
 
     /* Mobile Header Visibility */
-    .mobile-to-header {
-      display: none !important;
-    }
+  .mobile-to-header {
+    display: none !important;
+  }
 
     /* New rule for input wrapper glow */
     .inputSection:has(textarea:focus) {
@@ -3700,17 +3784,17 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
         gap: 5px !important;
       }
       .footer-left {
-        flex-direction: column !important;
-      }
-      .header-to-mobile {
-        display: none !important;
-      }
-      .mobile-to-header {
+         flex-direction: column !important;
+        }
+        .header-to-mobile {
+          display: none !important;
+        }
+        .mobile-to-header { 
         display: inline-flex !important;
-      }
-      .right-section {
-        gap: 12px !important;
-      }
+        }
+        .right-section {
+          gap: 12px !important;
+        }
       /* Override popUpAnimationHIW for Fade-Only on Mobile */
       @keyframes popUpAnimationHIW {
         0% {

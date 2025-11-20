@@ -1,7 +1,6 @@
-"use client";
-
 import React, { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils";
+import { AnimateInView } from "./animate-in-view";
 
 export interface GlowingCardProps {
   children: React.ReactNode;
@@ -52,12 +51,12 @@ export const GlowingCard: React.FC<GlowingCardProps> = ({
   ...props
 }) => {
   return (
+    // NOTE: flex-1 min-w-[14rem] removed and applied to the AnimateInView wrapper
     <div
       className={cn(
-        "relative flex-1 min-w-[14rem] p-6 rounded-2xl text-black dark:text-white",
+        "relative w-full h-full p-6 rounded-2xl text-black dark:text-white",
         "bg-background border",
         "flex flex-col items-center justify-center",
-        hoverEffect && "md:hover:scale-105",
         "transition-all duration-400 ease-out transform",
         className
       )}
@@ -93,7 +92,6 @@ export const GlowingCards: React.FC<GlowingCardsProps> = ({
   const overlayRef = useRef<HTMLDivElement>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [showOverlay, setShowOverlay] = useState(false);
-  // Added: State to track which card is hovered
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -118,7 +116,6 @@ export const GlowingCards: React.FC<GlowingCardsProps> = ({
     const handleMouseLeave = () => {
       setShowOverlay(false);
       overlay.style.setProperty("--opacity", "0");
-      // Added: Reset hovered card index
       setHoveredCardIndex(null);
     };
 
@@ -147,81 +144,115 @@ export const GlowingCards: React.FC<GlowingCardsProps> = ({
     ...customTheme,
   } as React.CSSProperties;
 
-  return (
-    <div className={cn("relative w-full", className)} style={containerStyle}>
-      <div
-        ref={containerRef}
-        className={cn("relative max-w-[var(--max-width)] mx-auto", "px-6 py-2")}
-        style={{ padding: "var(--padding)" }}
-      >
-        <div
-          className={cn(
-            "flex items-center justify-center flex-wrap gap-[var(--gap)]",
-            responsive && "flex-col sm:flex-row"
-          )}
-        >
-          {React.Children.map(children, (child, index) => {
-            if (React.isValidElement(child) && child.type === GlowingCard) {
-              return React.cloneElement(child as React.ReactElement<any>, {
-                // Added: Add mouse enter/leave handlers to track hover state
-                onMouseEnter: () => enableHover && setHoveredCardIndex(index),
-                onMouseLeave: () => enableHover && setHoveredCardIndex(null),
-              });
-            }
-            return child;
-          })}
-        </div>
+  // Define the staggered delay increment (200ms is a good visible cascade speed)
+  const delayIncrement = 200;
 
-        {enableGlow && (
+  return (
+    <>
+      <div className={cn("relative w-full", className)} style={containerStyle}>
+        <div
+          ref={containerRef}
+          className={cn(
+            "relative max-w-[var(--max-width)] mx-auto",
+            "px-6 py-2"
+          )}
+          style={{ padding: "var(--padding)" }}
+        >
+          {/* Card Container - Removed outer AnimateInView */}
           <div
-            ref={overlayRef}
             className={cn(
-              "absolute inset-0 pointer-events-none select-none",
-              "opacity-0 transition-all duration-[var(--animation-duration)] ease-out"
+              "flex items-center justify-center flex-wrap gap-[var(--gap)]",
+              responsive && "flex-col sm:flex-row"
             )}
-            style={{
-              WebkitMask:
-                "radial-gradient(var(--glow-radius) var(--glow-radius) at var(--x, 0) var(--y, 0), #000 1%, transparent 50%)",
-              mask: "radial-gradient(var(--glow-radius) var(--glow-radius) at var(--x, 0) var(--y, 0), #000 1%, transparent 50%)",
-              opacity: showOverlay ? "var(--opacity)" : "0",
-            }}
           >
-            <div
-              className={cn(
-                "flex items-center justify-center flex-wrap gap-[var(--gap)] max-w-[var(--max-width)] mx-auto",
-                responsive && "flex-col sm:flex-row"
-              )}
-              style={{ padding: "var(--padding)" }}
-            >
-              {React.Children.map(children, (child, index) => {
-                if (React.isValidElement(child) && child.type === GlowingCard) {
-                  const cardGlowColor = child.props.glowColor || "#3b82f6";
-                  return React.cloneElement(child as React.ReactElement<any>, {
-                    className: cn(
-                      child.props.className,
-                      "bg-opacity-15 dark:bg-opacity-15",
-                      "border-opacity-100 dark:border-opacity-100",
-                      // Added: Apply scale transform to overlay card when hovered
-                      enableHover && hoveredCardIndex === index && "scale-105",
-                      // Added: Ensure transform is included in transition
-                      "transition-all duration-[var(--animation-duration)] ease-out transform"
-                    ),
-                    style: {
-                      ...child.props.style,
-                      backgroundColor: cardGlowColor + "15",
-                      borderColor: cardGlowColor,
-                      boxShadow: "0 0 0 1px inset " + cardGlowColor,
-                    },
-                  });
-                }
-                return child;
-              })}
-            </div>
+            {React.Children.map(children, (child, index) => {
+              if (React.isValidElement(child) && child.type === GlowingCard) {
+                return (
+                  // Wrap each card in AnimateInView for staggered entry
+                  <AnimateInView
+                    key={index}
+                    animationType="slide-up"
+                    delay={index * delayIncrement} // Apply the staggered delay
+                    // The AnimateInView wrapper must inherit the layout properties to behave correctly in the flex-wrap
+                    className="flex-1 min-w-[14rem] w-full"
+                  >
+                    {React.cloneElement(child as React.ReactElement<any>, {
+                      // Pass mouse handlers for glow effect
+                      onMouseEnter: () =>
+                        enableHover && setHoveredCardIndex(index),
+                      onMouseLeave: () =>
+                        enableHover && setHoveredCardIndex(null),
+                    })}
+                  </AnimateInView>
+                );
+              }
+              return child;
+            })}
           </div>
-        )}
+
+          {/* Glowing Overlay (Moved outside the AnimateInView wrapper) */}
+          {enableGlow && (
+            <div
+              ref={overlayRef}
+              className={cn(
+                "absolute inset-0 pointer-events-none select-none",
+                "opacity-0 transition-all duration-[var(--animation-duration)] ease-out"
+              )}
+              style={{
+                WebkitMask:
+                  "radial-gradient(var(--glow-radius) var(--glow-radius) at var(--x, 0) var(--y, 0), #000 1%, transparent 50%)",
+                mask: "radial-gradient(var(--glow-radius) var(--glow-radius) at var(--x, 0) var(--y, 0), #000 1%, transparent 50%)",
+                opacity: showOverlay ? "var(--opacity)" : "0",
+              }}
+            >
+              {/* This masked area contains the overlay duplicates of the cards */}
+              <div
+                className={cn(
+                  "flex items-center justify-center flex-wrap gap-[var(--gap)] max-w-[var(--max-width)] mx-auto",
+                  responsive && "flex-col sm:flex-row"
+                )}
+                style={{ padding: "var(--padding)" }}
+              >
+                {React.Children.map(children, (child, index) => {
+                  if (
+                    React.isValidElement(child) &&
+                    child.type === GlowingCard
+                  ) {
+                    const cardGlowColor = child.props.glowColor || "#3b82f6";
+                    return (
+                      <AnimateInView
+                        key={`overlay-${index}`}
+                        animationType="slide-up"
+                        delay={index * delayIncrement} // No delay on the overlay card
+                        className="flex-1 min-w-[14rem] w-full"
+                      >
+                        {React.cloneElement(child as React.ReactElement<any>, {
+                          className: cn(
+                            child.props.className,
+                            "bg-opacity-15 dark:bg-opacity-15",
+                            "border-opacity-100 dark:border-opacity-100",
+                            // Added: Apply scale transform to overlay card when hovered
+                            enableHover && hoveredCardIndex === index,
+                            // Added: Ensure transform is included in transition
+                            "transition-all duration-[var(--animation-duration)] ease-out transform"
+                          ),
+                          style: {
+                            ...child.props.style,
+                            backgroundColor: cardGlowColor + "15",
+                            borderColor: cardGlowColor,
+                            boxShadow: "0 0 0 1px inset " + cardGlowColor,
+                          },
+                        })}
+                      </AnimateInView>
+                    );
+                  }
+                  return child;
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
-
-export { GlowingCards as default };
