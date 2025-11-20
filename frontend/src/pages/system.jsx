@@ -12,7 +12,6 @@ import {
   FaSun,
   FaUsers,
   FaUserShield,
-  FaCog,
   FaLaptop,
   FaBars,
   FaTimes,
@@ -89,6 +88,8 @@ const SystemAdminPage = () => {
   });
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -125,6 +126,8 @@ const SystemAdminPage = () => {
       email: user.email || "sysadmin@example.com",
       avatar: <ProfileAvatar size="medium" userData={formattedUserData} />,
     });
+    setCurrentUserId(user.userId || user.id || user.uid || null);
+    setCurrentUserEmail(user.email || null);
   }, [navigate]);
 
   useEffect(() => {
@@ -132,17 +135,24 @@ const SystemAdminPage = () => {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter(
-        (user) =>
-          user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [searchQuery, users]);
+    const base =
+      searchQuery.trim() === ""
+        ? [...users]
+        : users.filter(
+            (user) =>
+              user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              user.email.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+    // Put the logged-in user at the top
+    base.sort((a, b) => {
+      const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;
+      const bIsMe = b.userId === currentUserId || b.email === currentUserEmail;
+      if (aIsMe && !bIsMe) return -1;
+      if (!aIsMe && bIsMe) return 1;
+      return 0;
+    });
+    setFilteredUsers(base);
+  }, [searchQuery, users, currentUserId, currentUserEmail]);
 
   useEffect(() => {
     document.title = "Civilify | System Admin";
@@ -300,6 +310,33 @@ const SystemAdminPage = () => {
     localStorage.setItem("darkMode", isDarkMode);
   }, [isDarkMode]);
 
+  // Inject small spinner CSS used for promote/demote buttons
+  useEffect(() => {
+    const styleId = "sysadmin-btn-spinner-style";
+    if (document.getElementById(styleId)) return;
+    const s = document.createElement("style");
+    s.id = styleId;
+    s.textContent = `
+      .btn-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.25);
+        border-top-color: rgba(255,255,255,0.95);
+        border-radius: 50%;
+        vertical-align: middle;
+        margin-right: 8px;
+        animation: spin 0.8s linear infinite;
+      }
+      /* darker spinner on light backgrounds */
+      body.light-mode .btn-spinner {
+        border: 2px solid rgba(0,0,0,0.15);
+        border-top-color: rgba(0,0,0,0.6);
+      }
+    `;
+    document.head.appendChild(s);
+  }, []);
+
   const getRoleBadge = (role) => {
     const roleMap = {
       ROLE_SYSTEM_ADMIN: { label: "System Admin", color: "#8b5cf6" },
@@ -426,26 +463,10 @@ const SystemAdminPage = () => {
               aria-label="Toggle theme"
               title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
             >
-              {theme === "dark" ? (
-                <FaMoon size={16} />
-              ) : theme === "light" ? (
-                <FaSun size={16} />
-              ) : (
-                <FaLaptop size={16} />
-              )}
+              {theme === "dark" ? <FaMoon size={16} /> : <FaSun size={16} />}
             </button>
 
-            <button
-              onClick={() => {
-                localStorage.setItem("forceLightMode", "true");
-                navigate("/edit-profile");
-              }}
-              style={currentStyles.sidebarActionBtn}
-              className="sidebar-action-hover"
-              aria-label="Edit profile"
-            >
-              <FaCog size={16} />
-            </button>
+            {/* Settings button removed as requested */}
             <button
               onClick={handleLogout}
               style={currentStyles.sidebarActionBtn}
@@ -631,8 +652,19 @@ const SystemAdminPage = () => {
                                   className="promote-button-hover"
                                   disabled={isBusyPromote}
                                 >
-                                  <FaArrowUp style={{ marginRight: "6px" }} />
-                                  Promote
+                                  {isBusyPromote ? (
+                                    <>
+                                      <span className="btn-spinner" />
+                                      Promoting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaArrowUp
+                                        style={{ marginRight: "6px" }}
+                                      />
+                                      Promote
+                                    </>
+                                  )}
                                 </button>
                               )}
                               {role === "ROLE_ADMIN" && (
@@ -644,21 +676,38 @@ const SystemAdminPage = () => {
                                   className="demote-button-hover"
                                   disabled={isBusyDemote}
                                 >
-                                  <FaArrowDown style={{ marginRight: "6px" }} />
-                                  Demote
+                                  {isBusyDemote ? (
+                                    <>
+                                      <span className="btn-spinner" />
+                                      Demoting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaArrowDown
+                                        style={{ marginRight: "6px" }}
+                                      />
+                                      Demote
+                                    </>
+                                  )}
                                 </button>
                               )}
-                              {role !== "ROLE_SYSTEM_ADMIN" && (
-                                <button
-                                  onClick={() => handleDeleteUser(user.userId)}
-                                  style={currentStyles.deleteButton}
-                                  className="danger-button-hover"
-                                  disabled={isBusyDelete}
-                                >
-                                  <FaTrash style={{ marginRight: "6px" }} />
-                                  Delete
-                                </button>
-                              )}
+                              {role !== "ROLE_SYSTEM_ADMIN" &&
+                                !(
+                                  user.userId === currentUserId ||
+                                  user.email === currentUserEmail
+                                ) && (
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteUser(user.userId)
+                                    }
+                                    style={currentStyles.deleteButton}
+                                    className="danger-button-hover"
+                                    disabled={isBusyDelete}
+                                  >
+                                    <FaTrash style={{ marginRight: "6px" }} />
+                                    Delete
+                                  </button>
+                                )}
                             </div>
                           </td>
                         </tr>
@@ -707,8 +756,17 @@ const SystemAdminPage = () => {
                             className="promote-button-hover"
                             disabled={isBusyPromote}
                           >
-                            <FaArrowUp style={{ marginRight: "8px" }} />
-                            Promote to Admin
+                            {isBusyPromote ? (
+                              <>
+                                <span className="btn-spinner" />
+                                Promoting...
+                              </>
+                            ) : (
+                              <>
+                                <FaArrowUp style={{ marginRight: "8px" }} />
+                                Promote to Admin
+                              </>
+                            )}
                           </button>
                         )}
                         {role === "ROLE_ADMIN" && (
@@ -718,21 +776,34 @@ const SystemAdminPage = () => {
                             className="demote-button-hover"
                             disabled={isBusyDemote}
                           >
-                            <FaArrowDown style={{ marginRight: "8px" }} />
-                            Demote to User
+                            {isBusyDemote ? (
+                              <>
+                                <span className="btn-spinner" />
+                                Demoting...
+                              </>
+                            ) : (
+                              <>
+                                <FaArrowDown style={{ marginRight: "8px" }} />
+                                Demote to User
+                              </>
+                            )}
                           </button>
                         )}
-                        {role !== "ROLE_SYSTEM_ADMIN" && (
-                          <button
-                            onClick={() => handleDeleteUser(user.userId)}
-                            style={currentStyles.mobileDeleteButton}
-                            className="danger-button-hover"
-                            disabled={isBusyDelete}
-                          >
-                            <FaTrash style={{ marginRight: "8px" }} />
-                            Delete User
-                          </button>
-                        )}
+                        {role !== "ROLE_SYSTEM_ADMIN" &&
+                          !(
+                            user.userId === currentUserId ||
+                            user.email === currentUserEmail
+                          ) && (
+                            <button
+                              onClick={() => handleDeleteUser(user.userId)}
+                              style={currentStyles.mobileDeleteButton}
+                              className="danger-button-hover"
+                              disabled={isBusyDelete}
+                            >
+                              <FaTrash style={{ marginRight: "8px" }} />
+                              Delete User
+                            </button>
+                          )}
                       </div>
                     </div>
                   );

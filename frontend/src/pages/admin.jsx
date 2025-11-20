@@ -14,7 +14,6 @@ import {
   FaSun,
   FaUsers,
   FaUserShield,
-  FaCog,
   FaLaptop,
   FaBars,
   FaTimes,
@@ -85,6 +84,8 @@ const Admin = () => {
   });
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -94,10 +95,13 @@ const Admin = () => {
   const [logoutYesHovered, setLogoutYesHovered] = useState(false);
   const [logoutNoHovered, setLogoutNoHovered] = useState(false);
 
+  const nonSystemUsers = users.filter(
+    (u) => u.role !== "ROLE_SYSTEM_ADMIN" && u.role !== "SYSTEM_ADMIN"
+  );
   const stats = {
-    totalUsers: users.length,
-    adminUsers: users.filter((u) => u.role === "ROLE_ADMIN").length,
-    regularUsers: users.filter((u) => u.role !== "ROLE_ADMIN").length,
+    totalUsers: nonSystemUsers.length,
+    adminUsers: nonSystemUsers.filter((u) => u.role === "ROLE_ADMIN").length,
+    regularUsers: nonSystemUsers.filter((u) => u.role !== "ROLE_ADMIN").length,
   };
 
   useEffect(() => {
@@ -119,6 +123,8 @@ const Admin = () => {
       email: user.email || "admin@example.com",
       avatar: <ProfileAvatar size="medium" userData={formattedUserData} />,
     });
+    setCurrentUserId(user.userId || user.id || user.uid || null);
+    setCurrentUserEmail(user.email || null);
   }, [navigate]);
 
   useEffect(() => {
@@ -126,15 +132,25 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter((user) =>
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    }
-  }, [searchQuery, users]);
+    const source = users.filter(
+      (u) => u.role !== "ROLE_SYSTEM_ADMIN" && u.role !== "SYSTEM_ADMIN"
+    );
+    const base =
+      searchQuery.trim() === ""
+        ? [...source]
+        : source.filter((user) =>
+            user.username.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+    // Put the logged-in user at the top
+    base.sort((a, b) => {
+      const aIsMe = a.userId === currentUserId || a.email === currentUserEmail;
+      const bIsMe = b.userId === currentUserId || b.email === currentUserEmail;
+      if (aIsMe && !bIsMe) return -1;
+      if (!aIsMe && bIsMe) return 1;
+      return 0;
+    });
+    setFilteredUsers(base);
+  }, [searchQuery, users, currentUserId]);
 
   useEffect(() => {
     document.title = "Civilify | Admin";
@@ -342,26 +358,10 @@ const Admin = () => {
               aria-label="Toggle theme"
               title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
             >
-              {theme === "dark" ? (
-                <FaMoon size={16} />
-              ) : theme === "light" ? (
-                <FaSun size={16} />
-              ) : (
-                <FaLaptop size={16} />
-              )}
+              {theme === "dark" ? <FaMoon size={16} /> : <FaSun size={16} />}
             </button>
 
-            <button
-              onClick={() => {
-                localStorage.setItem("forceLightMode", "true");
-                navigate("/edit-profile");
-              }}
-              style={currentStyles.sidebarActionBtn}
-              className="sidebar-action-hover"
-              aria-label="Edit profile"
-            >
-              <FaCog size={16} />
-            </button>
+            {/* Settings button removed as requested */}
             <button
               onClick={handleLogout}
               style={currentStyles.sidebarActionBtn}
@@ -522,14 +522,19 @@ const Admin = () => {
                           </span>
                         </td>
                         <td style={currentStyles.tableCell}>
-                          <button
-                            onClick={() => handleDeleteUser(user.userId)}
-                            style={currentStyles.deleteButton}
-                            className="danger-button-hover"
-                          >
-                            <FaTrash style={{ marginRight: "6px" }} />
-                            Delete
-                          </button>
+                          {!(
+                            user.userId === currentUserId ||
+                            user.email === currentUserEmail
+                          ) && (
+                            <button
+                              onClick={() => handleDeleteUser(user.userId)}
+                              style={currentStyles.deleteButton}
+                              className="danger-button-hover"
+                            >
+                              <FaTrash style={{ marginRight: "6px" }} />
+                              Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -567,14 +572,19 @@ const Admin = () => {
                         {user.role === "ROLE_ADMIN" ? "Admin" : "User"}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleDeleteUser(user.userId)}
-                      style={currentStyles.mobileDeleteButton}
-                      className="danger-button-hover"
-                    >
-                      <FaTrash style={{ marginRight: "8px" }} />
-                      Delete User
-                    </button>
+                    {!(
+                      user.userId === currentUserId ||
+                      user.email === currentUserEmail
+                    ) && (
+                      <button
+                        onClick={() => handleDeleteUser(user.userId)}
+                        style={currentStyles.mobileDeleteButton}
+                        className="danger-button-hover"
+                      >
+                        <FaTrash style={{ marginRight: "8px" }} />
+                        Delete User
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1257,7 +1267,7 @@ styleSheet.textContent = `
     color: #F34D01 !important;
     transform: translateY(-2px);
   }
-
+  
   body.light-mode .sidebar-action-hover:hover {
     background-color: #f9fafb !important;
     color: #F34D01 !important;
