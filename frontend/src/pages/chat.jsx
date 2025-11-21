@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -299,19 +299,187 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
   return text.trim();
 };
 
+// Function to capitalize the first letter of sentences in text
+const capitalizeSentences = (text) => {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Split by common sentence endings, but preserve markdown formatting
+  return text
+    .split(/([.!?]\s+)/)
+    .map((segment, index) => {
+      // Skip the punctuation segments
+      if (/^[.!?]\s+$/.test(segment)) return segment;
+      
+      // Capitalize first letter if it's the start or after punctuation
+      if (index === 0 || /^[.!?]\s+$/.test(text.split(/([.!?]\s+)/)[index - 1])) {
+        // Don't capitalize if it starts with markdown formatting
+        if (/^(\*\*|\*|#|\[|`)/.test(segment.trim())) {
+          return segment;
+        }
+        return segment.charAt(0).toUpperCase() + segment.slice(1);
+      }
+      return segment;
+    })
+    .join('');
+};
+
+// Function to process markdown text for proper capitalization
+const processMarkdownText = (text) => {
+  if (!text) return text;
+  
+  // Process list items to ensure proper capitalization
+  const lines = text.split('\n');
+  const processedLines = lines.map((line) => {
+    const trimmed = line.trim();
+    const leadingWhitespace = line.match(/^(\s*)/)?.[1] || '';
+    
+    // Handle numbered list items (1., 2., etc.)
+    if (/^\d+\.\s/.test(trimmed)) {
+      const match = trimmed.match(/^(\d+\.\s+)(.+)/);
+      if (match) {
+        const prefix = match[1];
+        let content = match[2];
+        
+        // Handle bold text followed by colon (e.g., "**Historical Context**: The current...")
+        if (/^\*\*/.test(content)) {
+          const boldMatch = content.match(/^(\*\*)([^*:]+)(\*\*)(\s*:\s*)(.*)/);
+          if (boldMatch) {
+            const boldText = boldMatch[2];
+            const colon = boldMatch[4];
+            const afterColon = boldMatch[5];
+            
+            // Capitalize bold text if needed
+            let capitalizedBold = /^[a-z]/.test(boldText) 
+              ? boldText.charAt(0).toUpperCase() + boldText.slice(1)
+              : boldText;
+            
+            // Capitalize text after colon if it starts with lowercase
+            let capitalizedAfter = afterColon && /^[a-z]/.test(afterColon.trim())
+              ? afterColon.trim().charAt(0).toUpperCase() + afterColon.trim().slice(1)
+              : afterColon;
+            
+            content = `**${capitalizedBold}**${colon}${capitalizedAfter}`;
+          } else {
+            // Just bold text without colon
+            const boldMatch = content.match(/^(\*\*)([^*]+)(\*\*)(.*)/);
+            if (boldMatch) {
+              const boldText = boldMatch[2];
+              const afterBold = boldMatch[4];
+              if (/^[a-z]/.test(boldText)) {
+                content = `**${boldText.charAt(0).toUpperCase()}${boldText.slice(1)}**${afterBold}`;
+              }
+            }
+          }
+        } else if (content && /^[a-z]/.test(content)) {
+          // Regular content starting with lowercase
+          content = content.charAt(0).toUpperCase() + content.slice(1);
+        }
+        return leadingWhitespace + prefix + content;
+      }
+    }
+    
+    // Handle bullet list items (-, *, •)
+    if (/^[-*•]\s/.test(trimmed)) {
+      const match = trimmed.match(/^([-*•]\s+)(.+)/);
+      if (match) {
+        const prefix = match[1];
+        let content = match[2];
+        
+        // Handle bold text followed by colon
+        if (/^\*\*/.test(content)) {
+          const boldMatch = content.match(/^(\*\*)([^*:]+)(\*\*)(\s*:\s*)(.*)/);
+          if (boldMatch) {
+            const boldText = boldMatch[2];
+            const colon = boldMatch[4];
+            const afterColon = boldMatch[5];
+            
+            // Capitalize bold text if needed
+            let capitalizedBold = /^[a-z]/.test(boldText) 
+              ? boldText.charAt(0).toUpperCase() + boldText.slice(1)
+              : boldText;
+            
+            // Capitalize text after colon if it starts with lowercase
+            let capitalizedAfter = afterColon && /^[a-z]/.test(afterColon.trim())
+              ? afterColon.trim().charAt(0).toUpperCase() + afterColon.trim().slice(1)
+              : afterColon;
+            
+            content = `**${capitalizedBold}**${colon}${capitalizedAfter}`;
+          } else {
+            // Just bold text without colon
+            const boldMatch = content.match(/^(\*\*)([^*]+)(\*\*)(.*)/);
+            if (boldMatch) {
+              const boldText = boldMatch[2];
+              const afterBold = boldMatch[4];
+              if (/^[a-z]/.test(boldText)) {
+                content = `**${boldText.charAt(0).toUpperCase()}${boldText.slice(1)}**${afterBold}`;
+              }
+            }
+          }
+        } else if (content && /^[a-z]/.test(content)) {
+          // Regular content starting with lowercase
+          content = content.charAt(0).toUpperCase() + content.slice(1);
+        }
+        return leadingWhitespace + prefix + content;
+      }
+    }
+    
+    return line;
+  });
+  
+  return processedLines.join('\n');
+};
+
 const markdownComponents = {
   // Render headings as plain paragraphs with bold text (no colors/sizes)
-  h1: ({ node, children }) => <p><strong>{children}</strong></p>,
-  h2: ({ node, children }) => <p><strong>{children}</strong></p>,
-  h3: ({ node, children }) => <p><strong>{children}</strong></p>,
-  // Plain paragraph, no special styling for notes
-  p: ({ node, children, ...props }) => <p {...props}>{children}</p>,
+  h1: ({ node, children }) => <p style={{ margin: '8px 0', textAlign: 'left' }}><strong>{children}</strong></p>,
+  h2: ({ node, children }) => <p style={{ margin: '8px 0', textAlign: 'left' }}><strong>{children}</strong></p>,
+  h3: ({ node, children }) => <p style={{ margin: '8px 0', textAlign: 'left' }}><strong>{children}</strong></p>,
+  // Plain paragraph with proper alignment
+  p: ({ node, children, ...props }) => (
+    <p style={{ margin: '8px 0', textAlign: 'left', lineHeight: '1.6' }} {...props}>
+      {children}
+    </p>
+  ),
   // Render bold text properly
   strong: ({ node, children, ...props }) => <strong {...props}>{children}</strong>,
-  // Plain lists with default browser styling
-  ul: ({ node, ...props }) => <ul {...props} />,
-  ol: ({ node, ...props }) => <ol {...props} />,
-  li: ({ node, ...props }) => <li {...props} />,
+  // Lists with proper styling and alignment
+  ul: ({ node, ...props }) => (
+    <ul 
+      style={{ 
+        margin: '8px 0', 
+        paddingLeft: '24px', 
+        textAlign: 'left',
+        listStyleType: 'disc'
+      }} 
+      {...props} 
+    />
+  ),
+  ol: ({ node, ...props }) => (
+    <ol 
+      style={{ 
+        margin: '8px 0', 
+        paddingLeft: '24px', 
+        textAlign: 'left',
+        listStyleType: 'decimal'
+      }} 
+      {...props} 
+    />
+  ),
+  li: ({ node, children, ...props }) => {
+    return (
+      <li 
+        style={{ 
+          margin: '4px 0', 
+          textAlign: 'left',
+          lineHeight: '1.6',
+          paddingLeft: '4px'
+        }} 
+        {...props}
+      >
+        {children}
+      </li>
+    );
+  },
   // Keep links as-is (users like current source rendering)
   a: ({ node, ...props }) => (
     <a target="_blank" rel="noopener noreferrer" {...props} />
@@ -2279,9 +2447,9 @@ const Chat = () => {
                         sources={message.sources || []}
                       />
                     ) : (
-                      <div>
+                      <div style={{ textAlign: 'left', width: '100%' }}>
                       <ReactMarkdown components={markdownComponents}>
-                        {message.isUser ? message.text : message.text}
+                        {message.isUser ? message.text : processMarkdownText(message.text)}
                       </ReactMarkdown>
                         {/* CPA facts UI removed per request */}
                       </div>
