@@ -464,14 +464,16 @@ const VillyReportCard = ({
             {displaySources.map((src, i) => {
               // Check if source is an object (from API) or string (from parsed text)
               if (typeof src === 'object' && src.title) {
-                // Check if source has valid URLs
-                const hasValidUrl = src.sourceUrls && src.sourceUrls.length > 0;
-                const firstUrl = hasValidUrl ? src.sourceUrls[0] : null;
+                // Check if source has valid URLs - support both sourceUrls and source_urls (snake_case from API)
+                const sourceUrls = src.sourceUrls || src.source_urls || [];
+                const hasValidUrl = Array.isArray(sourceUrls) && sourceUrls.length > 0 && sourceUrls.some(url => url && typeof url === 'string' && url.trim().startsWith('http'));
+                const validUrls = hasValidUrl ? sourceUrls.filter(url => url && typeof url === 'string' && url.trim().startsWith('http')) : [];
+                const firstUrl = validUrls.length > 0 ? validUrls[0].trim() : null;
                 
                 return (
                   <li key={i} style={{ marginBottom: 8, wordBreak: "break-word", lineHeight: 1.6 }}>
                     {/* Title - clickable if URL available */}
-                    {hasValidUrl ? (
+                    {firstUrl ? (
                       <a
                         href={firstUrl}
                         target="_blank"
@@ -479,18 +481,27 @@ const VillyReportCard = ({
                         style={{
                           color: isDarkMode ? "#ffe066" : "#8c6500",
                           fontWeight: 700,
-                          textDecoration: "none",
+                          textDecoration: "underline",
+                          textDecorationColor: isDarkMode ? "rgba(255, 224, 102, 0.5)" : "rgba(140, 101, 0, 0.5)",
+                          textUnderlineOffset: "2px",
                           cursor: "pointer",
-                          borderBottom: `2px solid ${isDarkMode ? "rgba(255, 224, 102, 0.3)" : "rgba(140, 101, 0, 0.3)"}`,
                           transition: "all 0.2s ease",
+                          display: "inline-block",
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.borderBottomColor = isDarkMode ? "#ffe066" : "#8c6500";
+                          e.target.style.textDecorationColor = isDarkMode ? "#ffe066" : "#8c6500";
                           e.target.style.opacity = "0.8";
+                          e.target.style.transform = "translateY(-1px)";
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.borderBottomColor = isDarkMode ? "rgba(255, 224, 102, 0.3)" : "rgba(140, 101, 0, 0.3)";
+                          e.target.style.textDecorationColor = isDarkMode ? "rgba(255, 224, 102, 0.5)" : "rgba(140, 101, 0, 0.5)";
                           e.target.style.opacity = "1";
+                          e.target.style.transform = "translateY(0)";
+                        }}
+                        onClick={(e) => {
+                          // Ensure the link opens in a new tab
+                          e.preventDefault();
+                          window.open(firstUrl, '_blank', 'noopener,noreferrer');
                         }}
                       >
                         {src.title} 🔗
@@ -514,28 +525,37 @@ const VillyReportCard = ({
                     )}
                     
                     {/* Show additional URLs if available */}
-                    {hasValidUrl && src.sourceUrls.length > 1 && (
-                      <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
-                        {src.sourceUrls.slice(1).map((url, urlIdx) => (
+                    {validUrls.length > 1 && (
+                      <div style={{ fontSize: 12, marginTop: 6, opacity: 0.8 }}>
+                        <span style={{ fontSize: 11, marginRight: 6 }}>Additional sources:</span>
+                        {validUrls.slice(1).map((url, urlIdx) => (
                           <a
                             key={urlIdx}
-                            href={url}
+                            href={url.trim()}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
                               color: isDarkMode ? "#ffcc66" : "#996600",
-                              textDecoration: "none",
+                              textDecoration: "underline",
+                              textDecorationColor: isDarkMode ? "rgba(255, 204, 102, 0.5)" : "rgba(153, 102, 0, 0.5)",
                               marginRight: 8,
                               fontSize: 11,
+                              cursor: "pointer",
                             }}
                             onMouseEnter={(e) => {
-                              e.target.style.textDecoration = "underline";
+                              e.target.style.textDecorationColor = isDarkMode ? "#ffcc66" : "#996600";
+                              e.target.style.opacity = "0.8";
                             }}
                             onMouseLeave={(e) => {
-                              e.target.style.textDecoration = "none";
+                              e.target.style.textDecorationColor = isDarkMode ? "rgba(255, 204, 102, 0.5)" : "rgba(153, 102, 0, 0.5)";
+                              e.target.style.opacity = "1";
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              window.open(url.trim(), '_blank', 'noopener,noreferrer');
                             }}
                           >
-                            Additional Source {urlIdx + 1} 🔗
+                            Source {urlIdx + 2} 🔗
                           </a>
                         ))}
                       </div>
