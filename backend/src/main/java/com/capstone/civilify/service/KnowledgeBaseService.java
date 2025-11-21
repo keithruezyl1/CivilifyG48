@@ -472,6 +472,50 @@ public class KnowledgeBaseService {
     }
     
     /**
+     * Wake up the knowledge base API by making a health check request.
+     * This is useful for Render deployments where services go to sleep after inactivity.
+     * The method runs asynchronously to avoid blocking the login process.
+     * 
+     * @return true if the wake-up request was successful, false otherwise
+     */
+    public boolean wakeUpKnowledgeBase() {
+        if (!knowledgeBaseEnabled) {
+            logger.debug("Knowledge base is disabled, skipping wake-up");
+            return false;
+        }
+        
+        try {
+            String url = knowledgeBaseApiUrl + "/health";
+            logger.info("Waking up knowledge base API at: {}", url);
+            
+            HttpHeaders headers = buildAuthHeaders();
+            HttpEntity<String> request = new HttpEntity<>(headers);
+            
+            // Use a shorter timeout for wake-up calls to avoid blocking
+            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+            factory.setConnectTimeout(5000); // 5 seconds
+            factory.setReadTimeout(5000); // 5 seconds
+            RestTemplate wakeUpRestTemplate = new RestTemplate(factory);
+            
+            ResponseEntity<String> response = wakeUpRestTemplate.exchange(
+                url, HttpMethod.GET, request, String.class);
+            
+            boolean success = response.getStatusCode().is2xxSuccessful();
+            if (success) {
+                logger.info("Knowledge base API wake-up successful");
+            } else {
+                logger.warn("Knowledge base API wake-up returned status: {}", response.getStatusCode());
+            }
+            return success;
+            
+        } catch (Exception e) {
+            logger.warn("Knowledge base API wake-up failed (this is expected if service is sleeping): {}", e.getMessage());
+            // Don't log full stack trace for wake-up failures as they're expected
+            return false;
+        }
+    }
+    
+    /**
      * Convert raw API response to KnowledgeBaseEntry objects.
      */
     private List<KnowledgeBaseEntry> convertToKnowledgeBaseEntries(List<Map<String, Object>> rawResults) {
