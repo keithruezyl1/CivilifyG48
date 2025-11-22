@@ -680,18 +680,25 @@ public class KnowledgeBaseService {
                 entry.setSectionNo((String) result.get("section_no"));
                 entry.setRightsScope((String) result.get("rights_scope"));
                 
-                // Handle source URLs array - check multiple possible field names
+                // Handle source URLs array - check multiple possible field names from KB API
                 List<String> sourceUrls = new ArrayList<>();
                 
-                // Try source_urls (snake_case from API)
-                Object sourceUrlsObj = result.get("source_urls");
+                // Try all possible field names that KB API might use for URLs
+                Object sourceUrlsObj = result.get("source_urls");  // Primary: snake_case array
                 if (sourceUrlsObj == null) {
-                    // Try sourceUrls (camelCase)
-                    sourceUrlsObj = result.get("sourceUrls");
+                    sourceUrlsObj = result.get("sourceUrls");  // Alternative: camelCase array
                 }
                 if (sourceUrlsObj == null) {
-                    // Try source_url (singular)
-                    sourceUrlsObj = result.get("source_url");
+                    sourceUrlsObj = result.get("source_url");  // Alternative: singular snake_case
+                }
+                if (sourceUrlsObj == null) {
+                    sourceUrlsObj = result.get("sourceUrl");  // Alternative: singular camelCase
+                }
+                if (sourceUrlsObj == null) {
+                    sourceUrlsObj = result.get("url");  // Alternative: simple url field
+                }
+                if (sourceUrlsObj == null) {
+                    sourceUrlsObj = result.get("urls");  // Alternative: simple urls field
                 }
                 
                 if (sourceUrlsObj instanceof List<?>) {
@@ -708,24 +715,35 @@ public class KnowledgeBaseService {
                     }
                 }
                 
-                entry.setSourceUrls(sourceUrls);
-                
-                // If no sourceUrls from API, try to generate from canonicalCitation
-                if (sourceUrls.isEmpty() && entry.getCanonicalCitation() != null) {
+                // Prioritize KB API URLs - only generate if KB API didn't provide any
+                if (!sourceUrls.isEmpty()) {
+                    // URLs from KB API - use these directly
+                    entry.setSourceUrls(sourceUrls);
+                    logger.info("Using {} URLs from KB API for entry: {} - {}", 
+                        sourceUrls.size(), entry.getTitle(), sourceUrls);
+                } else if (entry.getCanonicalCitation() != null) {
+                    // No URLs from KB API - generate from citation as fallback
                     List<String> generatedUrls = generateUrlsFromCitation(entry.getCanonicalCitation(), entry.getType());
                     if (!generatedUrls.isEmpty()) {
                         entry.setSourceUrls(generatedUrls);
-                        logger.info("Generated {} URLs from citation for entry: {} - {}", 
+                        logger.info("KB API provided no URLs - Generated {} URLs from citation for entry: {} - {}", 
                             generatedUrls.size(), entry.getTitle(), generatedUrls);
+                    } else {
+                        entry.setSourceUrls(new ArrayList<>());
+                        logger.debug("No sourceUrls from KB API and could not generate from citation for entry: {} (available keys: {})", 
+                            entry.getTitle(), result.keySet());
                     }
+                } else {
+                    entry.setSourceUrls(new ArrayList<>());
+                    logger.debug("No sourceUrls from KB API and no citation available for entry: {} (available keys: {})", 
+                        entry.getTitle(), result.keySet());
                 }
                 
-                // Log for debugging
+                // Log final state
                 if (entry.getSourceUrls().isEmpty()) {
-                    logger.debug("No sourceUrls found for entry: {} (available keys: {})", 
-                        entry.getTitle(), result.keySet());
+                    logger.debug("Entry '{}' has no sourceUrls after all attempts", entry.getTitle());
                 } else {
-                    logger.debug("Found {} sourceUrls for entry: {}", entry.getSourceUrls().size(), entry.getTitle());
+                    logger.debug("Entry '{}' has {} sourceUrls: {}", entry.getTitle(), entry.getSourceUrls().size(), entry.getSourceUrls());
                 }
                 
                 entries.add(entry);
@@ -807,18 +825,25 @@ public class KnowledgeBaseService {
             entry.setSectionNo((String) result.get("section_no"));
             entry.setRightsScope((String) result.get("rights_scope"));
             
-            // Handle source URLs array - check multiple possible field names
+            // Handle source URLs array - check multiple possible field names from KB API
             List<String> sourceUrls = new ArrayList<>();
             
-            // Try source_urls (snake_case from API)
-            Object sourceUrlsObj = result.get("source_urls");
+            // Try all possible field names that KB API might use for URLs
+            Object sourceUrlsObj = result.get("source_urls");  // Primary: snake_case array
             if (sourceUrlsObj == null) {
-                // Try sourceUrls (camelCase)
-                sourceUrlsObj = result.get("sourceUrls");
+                sourceUrlsObj = result.get("sourceUrls");  // Alternative: camelCase array
             }
             if (sourceUrlsObj == null) {
-                // Try source_url (singular)
-                sourceUrlsObj = result.get("source_url");
+                sourceUrlsObj = result.get("source_url");  // Alternative: singular snake_case
+            }
+            if (sourceUrlsObj == null) {
+                sourceUrlsObj = result.get("sourceUrl");  // Alternative: singular camelCase
+            }
+            if (sourceUrlsObj == null) {
+                sourceUrlsObj = result.get("url");  // Alternative: simple url field
+            }
+            if (sourceUrlsObj == null) {
+                sourceUrlsObj = result.get("urls");  // Alternative: simple urls field
             }
             
             if (sourceUrlsObj instanceof List<?>) {
@@ -835,24 +860,35 @@ public class KnowledgeBaseService {
                 }
             }
             
-            entry.setSourceUrls(sourceUrls);
-            
-            // If no sourceUrls from API, try to generate from canonicalCitation
-            if (sourceUrls.isEmpty() && entry.getCanonicalCitation() != null) {
+            // Prioritize KB API URLs - only generate if KB API didn't provide any
+            if (!sourceUrls.isEmpty()) {
+                // URLs from KB API - use these directly
+                entry.setSourceUrls(sourceUrls);
+                logger.info("Using {} URLs from KB API for entry: {} - {}", 
+                    sourceUrls.size(), entry.getTitle(), sourceUrls);
+            } else if (entry.getCanonicalCitation() != null) {
+                // No URLs from KB API - generate from citation as fallback
                 List<String> generatedUrls = generateUrlsFromCitation(entry.getCanonicalCitation(), entry.getType());
                 if (!generatedUrls.isEmpty()) {
                     entry.setSourceUrls(generatedUrls);
-                    logger.info("Generated {} URLs from citation for entry: {} - {}", 
+                    logger.info("KB API provided no URLs - Generated {} URLs from citation for entry: {} - {}", 
                         generatedUrls.size(), entry.getTitle(), generatedUrls);
+                } else {
+                    entry.setSourceUrls(new ArrayList<>());
+                    logger.debug("No sourceUrls from KB API and could not generate from citation for entry: {} (available keys: {})", 
+                        entry.getTitle(), result.keySet());
                 }
+            } else {
+                entry.setSourceUrls(new ArrayList<>());
+                logger.debug("No sourceUrls from KB API and no citation available for entry: {} (available keys: {})", 
+                    entry.getTitle(), result.keySet());
             }
             
-            // Log for debugging
+            // Log final state
             if (entry.getSourceUrls().isEmpty()) {
-                logger.debug("No sourceUrls found for entry: {} (available keys: {})", 
-                    entry.getTitle(), result.keySet());
+                logger.debug("Entry '{}' has no sourceUrls after all attempts", entry.getTitle());
             } else {
-                logger.debug("Found {} sourceUrls for entry: {}", entry.getSourceUrls().size(), entry.getTitle());
+                logger.debug("Entry '{}' has {} sourceUrls: {}", entry.getTitle(), entry.getSourceUrls().size(), entry.getSourceUrls());
             }
             
             return entry;

@@ -606,6 +606,7 @@ public class OpenAIController {
                     }
                     
                     // Only include source URLs if they exist and are valid
+                    // These URLs come from KB API (if provided) or are generated from citations (as fallback)
                     if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
                         // Filter out any invalid or empty URLs
                         List<String> validUrls = entry.getSourceUrls().stream()
@@ -613,12 +614,14 @@ public class OpenAIController {
                             .collect(Collectors.toList());
                         if (!validUrls.isEmpty()) {
                             source.put("sourceUrls", validUrls);
-                            logger.debug("Added {} source URLs for entry: {}", validUrls.size(), entry.getTitle());
+                            logger.info("Added {} source URLs for entry: {} (entryId: {})", 
+                                validUrls.size(), entry.getTitle(), entry.getEntryId());
                         } else {
                             logger.debug("No valid URLs found for entry: {} (raw URLs: {})", entry.getTitle(), entry.getSourceUrls());
                         }
                     } else {
-                        logger.debug("No sourceUrls found for entry: {}", entry.getTitle());
+                        logger.warn("Entry '{}' (entryId: {}) has no sourceUrls - this should not happen for KB entries", 
+                            entry.getTitle(), entry.getEntryId());
                     }
                     sources.add(source);
                 }
