@@ -498,7 +498,12 @@ public class KnowledgeBaseService {
         }
         
         try {
-            String url = knowledgeBaseApiUrl + "/health";
+            // The knowledgeBaseApiUrl already includes /api, so we just need /health
+            // Remove trailing slash if present, then append /health
+            String baseUrl = knowledgeBaseApiUrl.endsWith("/") 
+                ? knowledgeBaseApiUrl.substring(0, knowledgeBaseApiUrl.length() - 1) 
+                : knowledgeBaseApiUrl;
+            String url = baseUrl + "/health";
             
             HttpHeaders headers = buildAuthHeaders();
             
@@ -546,11 +551,23 @@ public class KnowledgeBaseService {
         lastWakeUpAttemptMs = now;
         
         try {
-            String url = knowledgeBaseApiUrl + "/health";
+            // Use /search endpoint with minimal query for wake-up since /health might not exist
+            // The knowledgeBaseApiUrl already includes /api, so we just need /search
+            String baseUrl = knowledgeBaseApiUrl.endsWith("/") 
+                ? knowledgeBaseApiUrl.substring(0, knowledgeBaseApiUrl.length() - 1) 
+                : knowledgeBaseApiUrl;
+            String url = baseUrl + "/search";
             logger.info("Waking up knowledge base API at: {}", url);
             
             HttpHeaders headers = buildAuthHeaders();
-            HttpEntity<String> request = new HttpEntity<>(headers);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            // Minimal search query to wake up the service
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("query", "law");
+            requestBody.put("limit", 1);
+            
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
             
             // Use a shorter timeout for wake-up calls to avoid blocking
             SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -558,8 +575,8 @@ public class KnowledgeBaseService {
             factory.setReadTimeout(8000); // 8 seconds
             RestTemplate wakeUpRestTemplate = new RestTemplate(factory);
             
-            ResponseEntity<String> response = wakeUpRestTemplate.exchange(
-                url, HttpMethod.GET, request, String.class);
+            ResponseEntity<Map<String, Object>> response = wakeUpRestTemplate.exchange(
+                url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {});
             
             boolean success = response.getStatusCode().is2xxSuccessful();
             if (success) {
@@ -571,7 +588,8 @@ public class KnowledgeBaseService {
             return success;
             
         } catch (Exception e) {
-            logger.warn("Knowledge base API wake-up failed: {}", e.getMessage());
+            // Don't log full stack trace for wake-up failures as they're expected when service is sleeping
+            logger.debug("Knowledge base API wake-up failed (this is expected if service is sleeping): {}", e.getMessage());
             return false;
         }
     }

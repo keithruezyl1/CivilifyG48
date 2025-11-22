@@ -537,7 +537,12 @@ public class OpenAIController {
                             .collect(Collectors.toList());
                         if (!validUrls.isEmpty()) {
                             source.put("sourceUrls", validUrls);
+                            logger.debug("Added {} source URLs for entry: {}", validUrls.size(), entry.getTitle());
+                        } else {
+                            logger.debug("No valid URLs found for entry: {} (raw URLs: {})", entry.getTitle(), entry.getSourceUrls());
                         }
+                    } else {
+                        logger.debug("No sourceUrls found for entry: {}", entry.getTitle());
                     }
                     sources.add(source);
                 }
