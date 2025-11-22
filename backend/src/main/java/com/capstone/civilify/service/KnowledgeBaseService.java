@@ -710,12 +710,22 @@ public class KnowledgeBaseService {
                 
                 entry.setSourceUrls(sourceUrls);
                 
+                // If no sourceUrls from API, try to generate from canonicalCitation
+                if (sourceUrls.isEmpty() && entry.getCanonicalCitation() != null) {
+                    List<String> generatedUrls = generateUrlsFromCitation(entry.getCanonicalCitation(), entry.getType());
+                    if (!generatedUrls.isEmpty()) {
+                        entry.setSourceUrls(generatedUrls);
+                        logger.info("Generated {} URLs from citation for entry: {} - {}", 
+                            generatedUrls.size(), entry.getTitle(), generatedUrls);
+                    }
+                }
+                
                 // Log for debugging
-                if (sourceUrls.isEmpty()) {
+                if (entry.getSourceUrls().isEmpty()) {
                     logger.debug("No sourceUrls found for entry: {} (available keys: {})", 
                         entry.getTitle(), result.keySet());
                 } else {
-                    logger.debug("Found {} sourceUrls for entry: {}", sourceUrls.size(), entry.getTitle());
+                    logger.debug("Found {} sourceUrls for entry: {}", entry.getSourceUrls().size(), entry.getTitle());
                 }
                 
                 entries.add(entry);
@@ -827,12 +837,22 @@ public class KnowledgeBaseService {
             
             entry.setSourceUrls(sourceUrls);
             
+            // If no sourceUrls from API, try to generate from canonicalCitation
+            if (sourceUrls.isEmpty() && entry.getCanonicalCitation() != null) {
+                List<String> generatedUrls = generateUrlsFromCitation(entry.getCanonicalCitation(), entry.getType());
+                if (!generatedUrls.isEmpty()) {
+                    entry.setSourceUrls(generatedUrls);
+                    logger.info("Generated {} URLs from citation for entry: {} - {}", 
+                        generatedUrls.size(), entry.getTitle(), generatedUrls);
+                }
+            }
+            
             // Log for debugging
-            if (sourceUrls.isEmpty()) {
+            if (entry.getSourceUrls().isEmpty()) {
                 logger.debug("No sourceUrls found for entry: {} (available keys: {})", 
                     entry.getTitle(), result.keySet());
             } else {
-                logger.debug("Found {} sourceUrls for entry: {}", sourceUrls.size(), entry.getTitle());
+                logger.debug("Found {} sourceUrls for entry: {}", entry.getSourceUrls().size(), entry.getTitle());
             }
             
             return entry;
@@ -1083,5 +1103,88 @@ public class KnowledgeBaseService {
         }
         
         return statutes;
+    }
+    
+    /**
+     * Generate source URLs from canonical citation when sourceUrls are not provided by KB API.
+     * This is a fallback mechanism to ensure sources are clickable.
+     */
+    public List<String> generateUrlsFromCitation(String canonicalCitation, String type) {
+        List<String> urls = new ArrayList<>();
+        if (canonicalCitation == null || canonicalCitation.trim().isEmpty()) {
+            return urls;
+        }
+        
+        String citation = canonicalCitation.trim();
+        
+        // Check if citation already contains a URL
+        if (citation.matches(".*https?://.*")) {
+            java.util.regex.Pattern urlPattern = java.util.regex.Pattern.compile("https?://[^\\s]+");
+            java.util.regex.Matcher matcher = urlPattern.matcher(citation);
+            while (matcher.find()) {
+                urls.add(matcher.group());
+            }
+            return urls;
+        }
+        
+        // RPC (Revised Penal Code) Articles - e.g., "RPC Article 350"
+        java.util.regex.Pattern rpcPattern = java.util.regex.Pattern.compile("RPC\\s+Article\\s+(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher rpcMatcher = rpcPattern.matcher(citation);
+        if (rpcMatcher.find()) {
+            // RPC is Act 3815, general link to RPC
+            urls.add("https://lawphil.net/statutes/acts/ra_3815.html");
+            logger.debug("Generated RPC URL for citation: {}", citation);
+            return urls;
+        }
+        
+        // Republic Act (RA) numbers - e.g., "RA 6955 Section 1", "RA 10906 Section 4"
+        java.util.regex.Pattern raPattern = java.util.regex.Pattern.compile("R\\.?A\\.?\\s*(?:No\\.?)?\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher raMatcher = raPattern.matcher(citation);
+        if (raMatcher.find()) {
+            String raNumber = raMatcher.group(1);
+            int raNum = Integer.parseInt(raNumber);
+            
+            // Estimate year from RA number (RAs are numbered sequentially)
+            // Rough heuristic: RA numbers increase over time
+            int estimatedYear;
+            if (raNum < 1000) {
+                estimatedYear = 1946 + (raNum / 20); // Early RAs
+            } else if (raNum < 5000) {
+                estimatedYear = 1970 + ((raNum - 1000) / 100); // Mid-range RAs
+            } else if (raNum < 10000) {
+                estimatedYear = 1990 + ((raNum - 5000) / 100); // Recent RAs
+            } else {
+                estimatedYear = 2000 + ((raNum - 10000) / 200); // Very recent RAs
+            }
+            
+            // Clamp to reasonable range
+            if (estimatedYear < 1946) estimatedYear = 1946;
+            if (estimatedYear > 2025) estimatedYear = 2025;
+            
+            // Use year-based format (most accurate for lawphil.net)
+            urls.add(String.format("https://lawphil.net/statutes/repacts/ra%d/ra_%s_%d.html", estimatedYear, raNumber, estimatedYear));
+            logger.debug("Generated RA URL for citation: {} (RA {}) -> year {} -> {}", citation, raNumber, estimatedYear, urls.get(0));
+            return urls;
+        }
+        
+        // Constitution Articles
+        if (citation.matches(".*[Aa]rticle\\s+\\d+.*") && (citation.contains("Constitution") || citation.contains("1987"))) {
+            urls.add("https://www.officialgazette.gov.ph/constitutions/1987-constitution/");
+            logger.debug("Generated Constitution URL for citation: {}", citation);
+            return urls;
+        }
+        
+        // Rules of Court
+        java.util.regex.Pattern rocPattern = java.util.regex.Pattern.compile("Rule\\s+(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher rocMatcher = rocPattern.matcher(citation);
+        if (rocMatcher.find()) {
+            // Rules of Court are typically found on SC website
+            urls.add("https://sc.judiciary.gov.ph/rules-of-court/");
+            logger.debug("Generated Rules of Court URL for citation: {}", citation);
+            return urls;
+        }
+        
+        logger.debug("Could not generate URL from citation: {}", citation);
+        return urls;
     }
 }

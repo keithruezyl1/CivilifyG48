@@ -479,24 +479,35 @@ const VillyReportCard = ({
                 let validUrls = hasValidUrl ? sourceUrls.filter(url => url && typeof url === 'string' && url.trim().startsWith('http')) : [];
                 
                 // Fallback: Try to generate URL from canonicalCitation if no sourceUrls
+                // Note: Backend should handle this, but we keep frontend fallback as backup
                 if (validUrls.length === 0 && src.canonicalCitation) {
                   // Try to extract URL from citation (common patterns)
                   const citation = src.canonicalCitation;
-                  // Check if citation contains a URL
+                  // Check if citation already contains a URL
                   const urlMatch = citation.match(/https?:\/\/[^\s]+/);
                   if (urlMatch) {
                     validUrls = [urlMatch[0]];
                   } else {
-                    // Try to construct URL from common legal citation patterns
-                    // For example: "Republic Act No. 11053" -> search on lawphil.net
-                    if (citation.includes('Republic Act') || citation.includes('R.A.') || citation.includes('RA ')) {
-                      const raMatch = citation.match(/R\.?A\.?\s*No\.?\s*(\d+)/i) || citation.match(/Republic\s+Act\s+No\.?\s*(\d+)/i);
+                    // RPC (Revised Penal Code) Articles - e.g., "RPC Article 350"
+                    const rpcMatch = citation.match(/RPC\s+Article\s+(\d+)/i);
+                    if (rpcMatch) {
+                      validUrls = ['https://lawphil.net/statutes/acts/ra_3815.html'];
+                    }
+                    // Republic Act (RA) numbers - e.g., "RA 6955 Section 1", "RA 10906 Section 4"
+                    else if (citation.match(/R\.?A\.?\s*(?:No\.?)?\s*\d+/i)) {
+                      const raMatch = citation.match(/R\.?A\.?\s*(?:No\.?)?\s*(\d+)/i);
                       if (raMatch) {
-                        validUrls = [`https://lawphil.net/statutes/repacts/ra${raMatch[1]}/ra_${raMatch[1]}.html`];
+                        const raNumber = raMatch[1];
+                        validUrls = [`https://lawphil.net/statutes/repacts/ra${raNumber}/ra_${raNumber}.html`];
                       }
-                    } else if (citation.includes('Article') || citation.includes('Art.')) {
-                      // For Constitution articles
-                      validUrls = [`https://www.officialgazette.gov.ph/constitutions/1987-constitution/`];
+                    }
+                    // Constitution Articles
+                    else if (citation.match(/Article\s+\d+/i) && (citation.includes('Constitution') || citation.includes('1987'))) {
+                      validUrls = ['https://www.officialgazette.gov.ph/constitutions/1987-constitution/'];
+                    }
+                    // Rules of Court
+                    else if (citation.match(/Rule\s+\d+/i)) {
+                      validUrls = ['https://sc.judiciary.gov.ph/rules-of-court/'];
                     }
                   }
                 }
