@@ -475,8 +475,18 @@ public class OpenAIController {
                             logger.info("CPA: Using extracted legal issues for KB query (length: {})", kbQuery.length());
                         }
                         int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
+                        logger.info("CPA: Fetching KB sources with query length: {}, limit: {}", kbQuery.length(), desiredLimitForReport);
                         java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
                             openAIService.getKnowledgeBaseSources(kbQuery, desiredLimitForReport);
+                        logger.info("CPA: KB search completed, returned {} sources", reportSources != null ? reportSources.size() : 0);
+                        
+                        // If no sources found, try a simpler query using just the user's message
+                        if ((reportSources == null || reportSources.isEmpty()) && userMessage != null && !userMessage.trim().isEmpty()) {
+                            logger.info("CPA: No sources from extracted query, trying fallback search with user message");
+                            reportSources = openAIService.getKnowledgeBaseSources(userMessage, desiredLimitForReport);
+                            logger.info("CPA: Fallback KB search completed, returned {} sources", reportSources != null ? reportSources.size() : 0);
+                        }
+                        
                         if (reportSources != null && !reportSources.isEmpty()) {
                             // Validate that sources are from KB (must have entryId)
                             List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validReportSources = reportSources.stream()
@@ -535,8 +545,24 @@ public class OpenAIController {
             // Prepare sources list for response (after CPA report generation to include KB sources)
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
             
-            // Only provide sources for law-related queries
-            boolean shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
+            // Determine if we should provide sources
+            boolean shouldProvideSources;
+            boolean hasReportStructure = aiResponse != null && (
+                aiResponse.contains("Case Summary") || 
+                aiResponse.contains("Plausibility Score") ||
+                aiResponse.contains("Legal Issues")
+            );
+            
+            if ("B".equals(mode) && hasReportStructure) {
+                // CPA mode with report: Always try to provide sources if available
+                shouldProvideSources = true; // Always try for CPA reports
+                logger.info("CPA: Report detected, will attempt to provide sources ({} KB sources available)", 
+                    kbSources != null ? kbSources.size() : 0);
+            } else {
+                // GLI mode or no report: Only provide sources for law-related queries
+                shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
+                logger.debug("isLawRelatedQuery returned: {} for mode: {}", shouldProvideSources, mode);
+            }
             
             if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
                 // Filter and sort sources by relevance (similarity score)
