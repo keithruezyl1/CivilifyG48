@@ -1144,26 +1144,33 @@ public class KnowledgeBaseService {
             String raNumber = raMatcher.group(1);
             int raNum = Integer.parseInt(raNumber);
             
-            // Estimate year from RA number (RAs are numbered sequentially)
-            // Rough heuristic: RA numbers increase over time
+            // Improved year estimation based on actual RA number patterns
+            // RAs are generally numbered sequentially, but the relationship to years is not linear
             int estimatedYear;
-            if (raNum < 1000) {
-                estimatedYear = 1946 + (raNum / 20); // Early RAs
+            if (raNum < 100) {
+                estimatedYear = 1946 + (raNum / 5); // Very early RAs (1946-1965)
+            } else if (raNum < 1000) {
+                estimatedYear = 1965 + ((raNum - 100) / 15); // Early RAs (1965-1990)
             } else if (raNum < 5000) {
-                estimatedYear = 1970 + ((raNum - 1000) / 100); // Mid-range RAs
-            } else if (raNum < 10000) {
-                estimatedYear = 1990 + ((raNum - 5000) / 100); // Recent RAs
+                estimatedYear = 1990 + ((raNum - 1000) / 80); // Mid-range RAs (1990-2000)
+            } else if (raNum < 8000) {
+                estimatedYear = 2000 + ((raNum - 5000) / 100); // Recent RAs (2000-2010)
+            } else if (raNum < 11000) {
+                estimatedYear = 2010 + ((raNum - 8000) / 150); // Very recent RAs (2010-2020)
             } else {
-                estimatedYear = 2000 + ((raNum - 10000) / 200); // Very recent RAs
+                estimatedYear = 2020 + ((raNum - 11000) / 200); // Latest RAs (2020+)
             }
             
             // Clamp to reasonable range
             if (estimatedYear < 1946) estimatedYear = 1946;
             if (estimatedYear > 2025) estimatedYear = 2025;
             
-            // Use year-based format (most accurate for lawphil.net)
+            // Try multiple URL formats for better compatibility
+            // Format 1: Year-based (most common on lawphil.net)
             urls.add(String.format("https://lawphil.net/statutes/repacts/ra%d/ra_%s_%d.html", estimatedYear, raNumber, estimatedYear));
-            logger.debug("Generated RA URL for citation: {} (RA {}) -> year {} -> {}", citation, raNumber, estimatedYear, urls.get(0));
+            // Format 2: Without year (fallback)
+            urls.add(String.format("https://lawphil.net/statutes/repacts/ra%s/ra_%s.html", raNumber, raNumber));
+            logger.debug("Generated RA URLs for citation: {} (RA {}) -> estimated year {} -> {}", citation, raNumber, estimatedYear, urls);
             return urls;
         }
         

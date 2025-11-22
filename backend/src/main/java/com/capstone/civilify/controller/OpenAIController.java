@@ -477,18 +477,38 @@ public class OpenAIController {
                         int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
                         java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
                             openAIService.getKnowledgeBaseSources(kbQuery, desiredLimitForReport);
-                        if (reportSources != null) {
+                        if (reportSources != null && !reportSources.isEmpty()) {
+                            // Validate that sources are from KB (must have entryId)
+                            List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validReportSources = reportSources.stream()
+                                .filter(e -> e != null && e.getEntryId() != null && !e.getEntryId().trim().isEmpty())
+                                .collect(Collectors.toList());
+                            
+                            logger.info("CPA: KB search returned {} sources, {} have valid entryIds", 
+                                reportSources.size(), validReportSources.size());
+                            
+                            // Log source details for verification
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : validReportSources) {
+                                logger.debug("KB source: entryId={}, title={}, similarity={}", 
+                                    e.getEntryId(), e.getTitle(), e.getSimilarity());
+                            }
+                            
                             // Merge into kbSources without duplicates by entryId
                             java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
                             for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : kbSources) {
-                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
+                                if (e != null && e.getEntryId() != null && !e.getEntryId().trim().isEmpty()) {
+                                    uniq.put(e.getEntryId(), e);
+                                }
                             }
-                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : reportSources) {
-                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : validReportSources) {
+                                if (e.getEntryId() != null) {
+                                    uniq.put(e.getEntryId(), e);
+                                }
                             }
                             kbSources = new java.util.ArrayList<>(uniq.values());
+                            logger.info("CPA: KB sources fetched for report: {} unique sources (all with entryIds)", kbSources.size());
+                        } else {
+                            logger.warn("CPA: KB search returned null or empty sources");
                         }
-                        logger.info("CPA: KB sources fetched for report: {}", kbSources.size());
 
                         // Regenerate the report with KB context and strict source-citation instructions
                         String reportPrompt = buildEnhancedSystemPrompt(systemPrompt, null, kbSources, mode);
@@ -519,16 +539,46 @@ public class OpenAIController {
             boolean shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
             
             if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
-                // Limit to maximum 3 sources for relevance
-                int maxSources = Math.min(kbSources.size(), 3);
+                // Filter and sort sources by relevance (similarity score)
+                // Only include sources with valid entryId and title (ensures they're from KB)
+                List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validSources = kbSources.stream()
+                    .filter(entry -> entry != null 
+                        && entry.getEntryId() != null && !entry.getEntryId().trim().isEmpty()
+                        && entry.getTitle() != null && !entry.getTitle().trim().isEmpty())
+                    .sorted((e1, e2) -> {
+                        // Sort by similarity (higher is better), then by title for consistency
+                        Double sim1 = e1.getSimilarity();
+                        Double sim2 = e2.getSimilarity();
+                        if (sim1 != null && sim2 != null) {
+                            int compare = Double.compare(sim2, sim1); // Descending order
+                            if (compare != 0) return compare;
+                        } else if (sim1 != null) return -1;
+                        else if (sim2 != null) return 1;
+                        // If similarity is null or equal, sort by title
+                        String title1 = e1.getTitle() != null ? e1.getTitle() : "";
+                        String title2 = e2.getTitle() != null ? e2.getTitle() : "";
+                        return title1.compareTo(title2);
+                    })
+                    .collect(Collectors.toList());
+                
+                // Limit to maximum 3 most relevant sources
+                int maxSources = Math.min(validSources.size(), 3);
+                logger.info("Filtered {} KB sources to {} most relevant sources", kbSources.size(), maxSources);
+                
                 for (int i = 0; i < maxSources; i++) {
-                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = kbSources.get(i);
+                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = validSources.get(i);
                     Map<String, Object> source = new HashMap<>();
                     source.put("entryId", entry.getEntryId());
                     source.put("title", entry.getTitle());
                     source.put("type", entry.getType());
                     source.put("canonicalCitation", entry.getCanonicalCitation());
                     source.put("summary", entry.getSummary());
+                    
+                    // Log similarity score for debugging
+                    if (entry.getSimilarity() != null) {
+                        logger.debug("Including source: {} (similarity: {})", entry.getTitle(), entry.getSimilarity());
+                    }
+                    
                     // Only include source URLs if they exist and are valid
                     if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
                         // Filter out any invalid or empty URLs
