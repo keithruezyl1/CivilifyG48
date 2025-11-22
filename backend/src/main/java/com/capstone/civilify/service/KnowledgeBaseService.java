@@ -305,10 +305,24 @@ public class KnowledgeBaseService {
                                     @SuppressWarnings("unchecked")
                                     Map<String, Object> casted = (Map<String, Object>) item;
                                     results.add(casted);
+                                    // Log raw response structure for debugging sourceUrls
+                                    if (logger.isDebugEnabled()) {
+                                        logger.debug("KB search result keys: {}", casted.keySet());
+                                        logger.debug("KB search result source_urls: {}", casted.get("source_urls"));
+                                        logger.debug("KB search result sourceUrls: {}", casted.get("sourceUrls"));
+                                    }
                                 }
                             }
                         }
                         List<KnowledgeBaseEntry> entries = convertToKnowledgeBaseEntries(results);
+                        // Log final entries to verify sourceUrls are set
+                        for (KnowledgeBaseEntry entry : entries) {
+                            if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                                logger.info("Entry '{}' has {} sourceUrls: {}", entry.getTitle(), entry.getSourceUrls().size(), entry.getSourceUrls());
+                            } else {
+                                logger.debug("Entry '{}' has no sourceUrls", entry.getTitle());
+                            }
+                        }
                         resultCache.put(cacheKey, new CacheEntry<>(entries, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(knowledgeBaseCacheTtlSeconds)));
                         return entries;
                     }
@@ -666,16 +680,42 @@ public class KnowledgeBaseService {
                 entry.setSectionNo((String) result.get("section_no"));
                 entry.setRightsScope((String) result.get("rights_scope"));
                 
-                // Handle source URLs array
+                // Handle source URLs array - check multiple possible field names
+                List<String> sourceUrls = new ArrayList<>();
+                
+                // Try source_urls (snake_case from API)
                 Object sourceUrlsObj = result.get("source_urls");
+                if (sourceUrlsObj == null) {
+                    // Try sourceUrls (camelCase)
+                    sourceUrlsObj = result.get("sourceUrls");
+                }
+                if (sourceUrlsObj == null) {
+                    // Try source_url (singular)
+                    sourceUrlsObj = result.get("source_url");
+                }
+                
                 if (sourceUrlsObj instanceof List<?>) {
-                    List<String> sourceUrls = new ArrayList<>();
                     for (Object url : (List<?>) sourceUrlsObj) {
-                        if (url instanceof String) {
+                        if (url instanceof String && !((String) url).trim().isEmpty()) {
                             sourceUrls.add((String) url);
                         }
                     }
-                    entry.setSourceUrls(sourceUrls);
+                } else if (sourceUrlsObj instanceof String) {
+                    // Single URL as string
+                    String url = (String) sourceUrlsObj;
+                    if (!url.trim().isEmpty()) {
+                        sourceUrls.add(url);
+                    }
+                }
+                
+                entry.setSourceUrls(sourceUrls);
+                
+                // Log for debugging
+                if (sourceUrls.isEmpty()) {
+                    logger.debug("No sourceUrls found for entry: {} (available keys: {})", 
+                        entry.getTitle(), result.keySet());
+                } else {
+                    logger.debug("Found {} sourceUrls for entry: {}", sourceUrls.size(), entry.getTitle());
                 }
                 
                 entries.add(entry);
@@ -757,16 +797,42 @@ public class KnowledgeBaseService {
             entry.setSectionNo((String) result.get("section_no"));
             entry.setRightsScope((String) result.get("rights_scope"));
             
-            // Handle source URLs array
+            // Handle source URLs array - check multiple possible field names
+            List<String> sourceUrls = new ArrayList<>();
+            
+            // Try source_urls (snake_case from API)
             Object sourceUrlsObj = result.get("source_urls");
+            if (sourceUrlsObj == null) {
+                // Try sourceUrls (camelCase)
+                sourceUrlsObj = result.get("sourceUrls");
+            }
+            if (sourceUrlsObj == null) {
+                // Try source_url (singular)
+                sourceUrlsObj = result.get("source_url");
+            }
+            
             if (sourceUrlsObj instanceof List<?>) {
-                List<String> sourceUrls = new ArrayList<>();
                 for (Object url : (List<?>) sourceUrlsObj) {
-                    if (url instanceof String) {
+                    if (url instanceof String && !((String) url).trim().isEmpty()) {
                         sourceUrls.add((String) url);
                     }
                 }
-                entry.setSourceUrls(sourceUrls);
+            } else if (sourceUrlsObj instanceof String) {
+                // Single URL as string
+                String url = (String) sourceUrlsObj;
+                if (!url.trim().isEmpty()) {
+                    sourceUrls.add(url);
+                }
+            }
+            
+            entry.setSourceUrls(sourceUrls);
+            
+            // Log for debugging
+            if (sourceUrls.isEmpty()) {
+                logger.debug("No sourceUrls found for entry: {} (available keys: {})", 
+                    entry.getTitle(), result.keySet());
+            } else {
+                logger.debug("Found {} sourceUrls for entry: {}", sourceUrls.size(), entry.getTitle());
             }
             
             return entry;

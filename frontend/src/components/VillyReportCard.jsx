@@ -453,11 +453,20 @@ const VillyReportCard = ({
           }}
         >
           <div
-            style={{ display: "flex", alignItems: "center", marginBottom: 8, gap: 8 }}
+            style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 8 }}
           >
             <span style={{ fontSize: 18 }}>📚</span>
             <span style={{ fontWeight: 700, fontSize: 16, color: isDarkMode ? "#ffd96a" : "#b97a00" }}>
               Sources
+            </span>
+            <span style={{ 
+              fontSize: 12, 
+              color: isDarkMode ? "#ffd96a" : "#b97a00",
+              opacity: 0.8,
+              fontStyle: "italic",
+              marginLeft: "auto"
+            }}>
+              Click to explore
             </span>
           </div>
           <ul style={{ margin: 0, paddingLeft: 22 }}>
@@ -467,44 +476,87 @@ const VillyReportCard = ({
                 // Check if source has valid URLs - support both sourceUrls and source_urls (snake_case from API)
                 const sourceUrls = src.sourceUrls || src.source_urls || [];
                 const hasValidUrl = Array.isArray(sourceUrls) && sourceUrls.length > 0 && sourceUrls.some(url => url && typeof url === 'string' && url.trim().startsWith('http'));
-                const validUrls = hasValidUrl ? sourceUrls.filter(url => url && typeof url === 'string' && url.trim().startsWith('http')) : [];
+                let validUrls = hasValidUrl ? sourceUrls.filter(url => url && typeof url === 'string' && url.trim().startsWith('http')) : [];
+                
+                // Fallback: Try to generate URL from canonicalCitation if no sourceUrls
+                if (validUrls.length === 0 && src.canonicalCitation) {
+                  // Try to extract URL from citation (common patterns)
+                  const citation = src.canonicalCitation;
+                  // Check if citation contains a URL
+                  const urlMatch = citation.match(/https?:\/\/[^\s]+/);
+                  if (urlMatch) {
+                    validUrls = [urlMatch[0]];
+                  } else {
+                    // Try to construct URL from common legal citation patterns
+                    // For example: "Republic Act No. 11053" -> search on lawphil.net
+                    if (citation.includes('Republic Act') || citation.includes('R.A.') || citation.includes('RA ')) {
+                      const raMatch = citation.match(/R\.?A\.?\s*No\.?\s*(\d+)/i) || citation.match(/Republic\s+Act\s+No\.?\s*(\d+)/i);
+                      if (raMatch) {
+                        validUrls = [`https://lawphil.net/statutes/repacts/ra${raMatch[1]}/ra_${raMatch[1]}.html`];
+                      }
+                    } else if (citation.includes('Article') || citation.includes('Art.')) {
+                      // For Constitution articles
+                      validUrls = [`https://www.officialgazette.gov.ph/constitutions/1987-constitution/`];
+                    }
+                  }
+                }
+                
                 const firstUrl = validUrls.length > 0 ? validUrls[0].trim() : null;
+                
+                // Debug logging
+                if (!firstUrl) {
+                  console.debug('Source has no URL:', {
+                    title: src.title,
+                    sourceUrls: src.sourceUrls || src.source_urls,
+                    canonicalCitation: src.canonicalCitation
+                  });
+                }
                 
                 return (
                   <li key={i} style={{ marginBottom: 8, wordBreak: "break-word", lineHeight: 1.6 }}>
-                    {/* Title - clickable if URL available */}
+                    {/* Title - ALWAYS make it look clickable if URL is available */}
                     {firstUrl ? (
                       <a
                         href={firstUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                          color: isDarkMode ? "#ffe066" : "#8c6500",
+                          color: isDarkMode ? "#ffd700" : "#b8860b",
                           fontWeight: 700,
                           textDecoration: "underline",
-                          textDecorationColor: isDarkMode ? "rgba(255, 224, 102, 0.5)" : "rgba(140, 101, 0, 0.5)",
-                          textUnderlineOffset: "2px",
+                          textDecorationColor: isDarkMode ? "#ffd700" : "#b8860b",
+                          textUnderlineOffset: "3px",
+                          textDecorationThickness: "2px",
                           cursor: "pointer",
                           transition: "all 0.2s ease",
-                          display: "inline-block",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "2px 4px",
+                          borderRadius: "4px",
+                          backgroundColor: isDarkMode ? "rgba(255, 215, 0, 0.1)" : "rgba(184, 134, 11, 0.1)",
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.textDecorationColor = isDarkMode ? "#ffe066" : "#8c6500";
-                          e.target.style.opacity = "0.8";
-                          e.target.style.transform = "translateY(-1px)";
+                          e.target.style.textDecorationColor = isDarkMode ? "#ffd700" : "#b8860b";
+                          e.target.style.opacity = "0.9";
+                          e.target.style.transform = "translateY(-2px)";
+                          e.target.style.backgroundColor = isDarkMode ? "rgba(255, 215, 0, 0.2)" : "rgba(184, 134, 11, 0.2)";
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.textDecorationColor = isDarkMode ? "rgba(255, 224, 102, 0.5)" : "rgba(140, 101, 0, 0.5)";
+                          e.target.style.textDecorationColor = isDarkMode ? "#ffd700" : "#b8860b";
                           e.target.style.opacity = "1";
                           e.target.style.transform = "translateY(0)";
+                          e.target.style.backgroundColor = isDarkMode ? "rgba(255, 215, 0, 0.1)" : "rgba(184, 134, 11, 0.1)";
                         }}
                         onClick={(e) => {
                           // Ensure the link opens in a new tab
                           e.preventDefault();
                           window.open(firstUrl, '_blank', 'noopener,noreferrer');
                         }}
+                        title={`Click to view source: ${firstUrl}`}
                       >
-                        {src.title} 🔗
+                        <span>{src.title}</span>
+                        <span style={{ fontSize: "16px" }}>🔗</span>
                       </a>
                     ) : (
                       <strong style={{ color: isDarkMode ? "#ffe066" : "#8c6500" }}>{src.title}</strong>
