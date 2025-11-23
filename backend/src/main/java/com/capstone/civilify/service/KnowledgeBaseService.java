@@ -308,6 +308,8 @@ public class KnowledgeBaseService {
                                     // Log raw response structure for debugging sourceUrls
                                     if (logger.isDebugEnabled()) {
                                         logger.debug("KB search result keys: {}", casted.keySet());
+                                        logger.debug("KB search result primary_url: {}", casted.get("primary_url"));
+                                        logger.debug("KB search result urls: {}", casted.get("urls"));
                                         logger.debug("KB search result source_urls: {}", casted.get("source_urls"));
                                         logger.debug("KB search result sourceUrls: {}", casted.get("sourceUrls"));
                                     }
@@ -680,63 +682,89 @@ public class KnowledgeBaseService {
                 entry.setSectionNo((String) result.get("section_no"));
                 entry.setRightsScope((String) result.get("rights_scope"));
                 
-                // Handle source URLs array - check multiple possible field names from KB API
+                // Handle source URLs - prioritize KB API provided URLs
+                // KB API response structure: primary_url, urls[], source_urls[]
                 List<String> sourceUrls = new ArrayList<>();
                 
-                // Try all possible field names that KB API might use for URLs
-                Object sourceUrlsObj = result.get("source_urls");  // Primary: snake_case array
-                if (sourceUrlsObj == null) {
-                    sourceUrlsObj = result.get("sourceUrls");  // Alternative: camelCase array
-                }
-                if (sourceUrlsObj == null) {
-                    sourceUrlsObj = result.get("source_url");  // Alternative: singular snake_case
-                }
-                if (sourceUrlsObj == null) {
-                    sourceUrlsObj = result.get("sourceUrl");  // Alternative: singular camelCase
-                }
-                if (sourceUrlsObj == null) {
-                    sourceUrlsObj = result.get("url");  // Alternative: simple url field
-                }
-                if (sourceUrlsObj == null) {
-                    sourceUrlsObj = result.get("urls");  // Alternative: simple urls field
+                // 1. Try primary_url (single URL from KB API)
+                Object primaryUrlObj = result.get("primary_url");
+                if (primaryUrlObj instanceof String && !((String) primaryUrlObj).trim().isEmpty()) {
+                    sourceUrls.add((String) primaryUrlObj);
+                    logger.debug("Found primary_url from KB API: {}", primaryUrlObj);
                 }
                 
-                if (sourceUrlsObj instanceof List<?>) {
-                    for (Object url : (List<?>) sourceUrlsObj) {
-                        if (url instanceof String && !((String) url).trim().isEmpty()) {
-                            sourceUrls.add((String) url);
+                // 2. Try urls array (structured URL objects from KB API)
+                Object urlsObj = result.get("urls");
+                if (urlsObj instanceof List<?>) {
+                    for (Object urlItem : (List<?>) urlsObj) {
+                        if (urlItem instanceof Map<?, ?>) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> urlMap = (Map<String, Object>) urlItem;
+                            Object urlValue = urlMap.get("url");
+                            if (urlValue instanceof String && !((String) urlValue).trim().isEmpty()) {
+                                String url = (String) urlValue;
+                                if (!sourceUrls.contains(url)) { // Avoid duplicates
+                                    sourceUrls.add(url);
+                                }
+                            }
+                        } else if (urlItem instanceof String && !((String) urlItem).trim().isEmpty()) {
+                            // Fallback: if urls is array of strings
+                            String url = (String) urlItem;
+                            if (!sourceUrls.contains(url)) {
+                                sourceUrls.add(url);
+                            }
                         }
                     }
-                } else if (sourceUrlsObj instanceof String) {
-                    // Single URL as string
-                    String url = (String) sourceUrlsObj;
-                    if (!url.trim().isEmpty()) {
-                        sourceUrls.add(url);
+                    if (!sourceUrls.isEmpty()) {
+                        logger.debug("Found {} URLs from urls array", sourceUrls.size());
+                    }
+                }
+                
+                // 3. Try source_urls array (backward compatibility)
+                if (sourceUrls.isEmpty()) {
+                    Object sourceUrlsObj = result.get("source_urls");
+                    if (sourceUrlsObj == null) {
+                        sourceUrlsObj = result.get("sourceUrls");  // camelCase variant
+                    }
+                    if (sourceUrlsObj instanceof List<?>) {
+                        for (Object url : (List<?>) sourceUrlsObj) {
+                            if (url instanceof String && !((String) url).trim().isEmpty()) {
+                                sourceUrls.add((String) url);
+                            }
+                        }
+                        if (!sourceUrls.isEmpty()) {
+                            logger.debug("Found {} URLs from source_urls array", sourceUrls.size());
+                        }
+                    } else if (sourceUrlsObj instanceof String) {
+                        String url = (String) sourceUrlsObj;
+                        if (!url.trim().isEmpty()) {
+                            sourceUrls.add(url);
+                            logger.debug("Found URL from source_urls string: {}", url);
+                        }
+                    }
+                }
+                
+                // 4. Try other variants as last resort
+                if (sourceUrls.isEmpty()) {
+                    Object urlObj = result.get("url");
+                    if (urlObj instanceof String && !((String) urlObj).trim().isEmpty()) {
+                        sourceUrls.add((String) urlObj);
+                        logger.debug("Found URL from url field: {}", urlObj);
                     }
                 }
                 
                 // Prioritize KB API URLs - only generate if KB API didn't provide any
                 if (!sourceUrls.isEmpty()) {
-                    // URLs from KB API - use these directly
+                    // URLs from KB API - use these directly (ONLY use KB API provided URLs)
                     entry.setSourceUrls(sourceUrls);
-                    logger.info("Using {} URLs from KB API for entry: {} - {}", 
-                        sourceUrls.size(), entry.getTitle(), sourceUrls);
-                } else if (entry.getCanonicalCitation() != null) {
-                    // No URLs from KB API - generate from citation as fallback
-                    List<String> generatedUrls = generateUrlsFromCitation(entry.getCanonicalCitation(), entry.getType());
-                    if (!generatedUrls.isEmpty()) {
-                        entry.setSourceUrls(generatedUrls);
-                        logger.info("KB API provided no URLs - Generated {} URLs from citation for entry: {} - {}", 
-                            generatedUrls.size(), entry.getTitle(), generatedUrls);
-                    } else {
-                        entry.setSourceUrls(new ArrayList<>());
-                        logger.debug("No sourceUrls from KB API and could not generate from citation for entry: {} (available keys: {})", 
-                            entry.getTitle(), result.keySet());
-                    }
+                    logger.info("Using {} URLs from KB API for entry: {} (entryId: {}) - URLs: {}", 
+                        sourceUrls.size(), entry.getTitle(), entry.getEntryId(), sourceUrls);
                 } else {
+                    // KB API did not provide URLs - do NOT generate URLs, only use what KB API provides
                     entry.setSourceUrls(new ArrayList<>());
-                    logger.debug("No sourceUrls from KB API and no citation available for entry: {} (available keys: {})", 
-                        entry.getTitle(), result.keySet());
+                    logger.warn("KB API provided NO URLs for entry: {} (entryId: {}). Available response keys: {}. " +
+                        "This entry will be excluded from sources if URLs are required.", 
+                        entry.getTitle(), entry.getEntryId(), result.keySet());
                 }
                 
                 // Log final state
@@ -825,63 +853,89 @@ public class KnowledgeBaseService {
             entry.setSectionNo((String) result.get("section_no"));
             entry.setRightsScope((String) result.get("rights_scope"));
             
-            // Handle source URLs array - check multiple possible field names from KB API
+            // Handle source URLs - prioritize KB API provided URLs
+            // KB API response structure: primary_url, urls[], source_urls[]
             List<String> sourceUrls = new ArrayList<>();
             
-            // Try all possible field names that KB API might use for URLs
-            Object sourceUrlsObj = result.get("source_urls");  // Primary: snake_case array
-            if (sourceUrlsObj == null) {
-                sourceUrlsObj = result.get("sourceUrls");  // Alternative: camelCase array
-            }
-            if (sourceUrlsObj == null) {
-                sourceUrlsObj = result.get("source_url");  // Alternative: singular snake_case
-            }
-            if (sourceUrlsObj == null) {
-                sourceUrlsObj = result.get("sourceUrl");  // Alternative: singular camelCase
-            }
-            if (sourceUrlsObj == null) {
-                sourceUrlsObj = result.get("url");  // Alternative: simple url field
-            }
-            if (sourceUrlsObj == null) {
-                sourceUrlsObj = result.get("urls");  // Alternative: simple urls field
+            // 1. Try primary_url (single URL from KB API)
+            Object primaryUrlObj = result.get("primary_url");
+            if (primaryUrlObj instanceof String && !((String) primaryUrlObj).trim().isEmpty()) {
+                sourceUrls.add((String) primaryUrlObj);
+                logger.debug("Found primary_url from KB API: {}", primaryUrlObj);
             }
             
-            if (sourceUrlsObj instanceof List<?>) {
-                for (Object url : (List<?>) sourceUrlsObj) {
-                    if (url instanceof String && !((String) url).trim().isEmpty()) {
-                        sourceUrls.add((String) url);
+            // 2. Try urls array (structured URL objects from KB API)
+            Object urlsObj = result.get("urls");
+            if (urlsObj instanceof List<?>) {
+                for (Object urlItem : (List<?>) urlsObj) {
+                    if (urlItem instanceof Map<?, ?>) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> urlMap = (Map<String, Object>) urlItem;
+                        Object urlValue = urlMap.get("url");
+                        if (urlValue instanceof String && !((String) urlValue).trim().isEmpty()) {
+                            String url = (String) urlValue;
+                            if (!sourceUrls.contains(url)) { // Avoid duplicates
+                                sourceUrls.add(url);
+                            }
+                        }
+                    } else if (urlItem instanceof String && !((String) urlItem).trim().isEmpty()) {
+                        // Fallback: if urls is array of strings
+                        String url = (String) urlItem;
+                        if (!sourceUrls.contains(url)) {
+                            sourceUrls.add(url);
+                        }
                     }
                 }
-            } else if (sourceUrlsObj instanceof String) {
-                // Single URL as string
-                String url = (String) sourceUrlsObj;
-                if (!url.trim().isEmpty()) {
-                    sourceUrls.add(url);
+                if (!sourceUrls.isEmpty()) {
+                    logger.debug("Found {} URLs from urls array", sourceUrls.size());
                 }
             }
             
-            // Prioritize KB API URLs - only generate if KB API didn't provide any
-            if (!sourceUrls.isEmpty()) {
-                // URLs from KB API - use these directly
-                entry.setSourceUrls(sourceUrls);
-                logger.info("Using {} URLs from KB API for entry: {} - {}", 
-                    sourceUrls.size(), entry.getTitle(), sourceUrls);
-            } else if (entry.getCanonicalCitation() != null) {
-                // No URLs from KB API - generate from citation as fallback
-                List<String> generatedUrls = generateUrlsFromCitation(entry.getCanonicalCitation(), entry.getType());
-                if (!generatedUrls.isEmpty()) {
-                    entry.setSourceUrls(generatedUrls);
-                    logger.info("KB API provided no URLs - Generated {} URLs from citation for entry: {} - {}", 
-                        generatedUrls.size(), entry.getTitle(), generatedUrls);
-                } else {
-                    entry.setSourceUrls(new ArrayList<>());
-                    logger.debug("No sourceUrls from KB API and could not generate from citation for entry: {} (available keys: {})", 
-                        entry.getTitle(), result.keySet());
+            // 3. Try source_urls array (backward compatibility)
+            if (sourceUrls.isEmpty()) {
+                Object sourceUrlsObj = result.get("source_urls");
+                if (sourceUrlsObj == null) {
+                    sourceUrlsObj = result.get("sourceUrls");  // camelCase variant
                 }
+                if (sourceUrlsObj instanceof List<?>) {
+                    for (Object url : (List<?>) sourceUrlsObj) {
+                        if (url instanceof String && !((String) url).trim().isEmpty()) {
+                            sourceUrls.add((String) url);
+                        }
+                    }
+                    if (!sourceUrls.isEmpty()) {
+                        logger.debug("Found {} URLs from source_urls array", sourceUrls.size());
+                    }
+                } else if (sourceUrlsObj instanceof String) {
+                    String url = (String) sourceUrlsObj;
+                    if (!url.trim().isEmpty()) {
+                        sourceUrls.add(url);
+                        logger.debug("Found URL from source_urls string: {}", url);
+                    }
+                }
+            }
+            
+            // 4. Try other variants as last resort
+            if (sourceUrls.isEmpty()) {
+                Object urlObj = result.get("url");
+                if (urlObj instanceof String && !((String) urlObj).trim().isEmpty()) {
+                    sourceUrls.add((String) urlObj);
+                    logger.debug("Found URL from url field: {}", urlObj);
+                }
+            }
+            
+            // Prioritize KB API URLs - only use what KB API provides
+            if (!sourceUrls.isEmpty()) {
+                // URLs from KB API - use these directly (ONLY use KB API provided URLs)
+                entry.setSourceUrls(sourceUrls);
+                logger.info("Using {} URLs from KB API for entry: {} (entryId: {}) - URLs: {}", 
+                    sourceUrls.size(), entry.getTitle(), entry.getEntryId(), sourceUrls);
             } else {
+                // KB API did not provide URLs - do NOT generate URLs, only use what KB API provides
                 entry.setSourceUrls(new ArrayList<>());
-                logger.debug("No sourceUrls from KB API and no citation available for entry: {} (available keys: {})", 
-                    entry.getTitle(), result.keySet());
+                logger.warn("KB API provided NO URLs for entry: {} (entryId: {}). Available response keys: {}. " +
+                    "This entry will be excluded from sources if URLs are required.", 
+                    entry.getTitle(), entry.getEntryId(), result.keySet());
             }
             
             // Log final state

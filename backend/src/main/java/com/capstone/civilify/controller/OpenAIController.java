@@ -512,21 +512,22 @@ public class OpenAIController {
                             logger.info("CPA: KB search returned {} sources, {} have valid entryIds", 
                                 reportSources.size(), validReportSources.size());
                             
-                            // Ensure all sources have URLs (from KB API or generated)
-                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : validReportSources) {
-                                // If source has no URLs, try to generate from citation
-                                if ((e.getSourceUrls() == null || e.getSourceUrls().isEmpty()) && e.getCanonicalCitation() != null) {
-                                    List<String> generatedUrls = knowledgeBaseService.generateUrlsFromCitation(e.getCanonicalCitation(), e.getType());
-                                    if (!generatedUrls.isEmpty()) {
-                                        e.setSourceUrls(generatedUrls);
-                                        logger.info("Generated {} URLs for KB source: {} (entryId: {})", 
-                                            generatedUrls.size(), e.getTitle(), e.getEntryId());
-                                    }
-                                }
-                                logger.debug("KB source: entryId={}, title={}, similarity={}, hasUrls={}", 
-                                    e.getEntryId(), e.getTitle(), e.getSimilarity(), 
-                                    e.getSourceUrls() != null && !e.getSourceUrls().isEmpty());
+                            // Only use sources that have URLs from KB API (do NOT generate URLs)
+                            // Filter out sources without URLs from KB API
+                            List<com.capstone.civilify.DTO.KnowledgeBaseEntry> sourcesWithUrls = validReportSources.stream()
+                                .filter(e -> e.getSourceUrls() != null && !e.getSourceUrls().isEmpty())
+                                .collect(Collectors.toList());
+                            
+                            logger.info("CPA: Filtered {} sources to {} sources with URLs from KB API", 
+                                validReportSources.size(), sourcesWithUrls.size());
+                            
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : sourcesWithUrls) {
+                                logger.debug("KB source with URLs: entryId={}, title={}, similarity={}, urls={}", 
+                                    e.getEntryId(), e.getTitle(), e.getSimilarity(), e.getSourceUrls());
                             }
+                            
+                            // Use only sources with URLs from KB API
+                            validReportSources = sourcesWithUrls;
                             
                             // Merge into kbSources without duplicates by entryId
                             java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
