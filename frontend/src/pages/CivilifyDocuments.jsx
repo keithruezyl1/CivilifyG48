@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import LogoIcon from "../assets/images/logoicongradient.png";
 
 // Define all styles as JS objects
 const styles = {
@@ -61,7 +62,7 @@ const styles = {
   },
 
   logo: {
-    height: "2rem",
+    height: "1em !important",
     cursor: "pointer",
   },
 
@@ -428,6 +429,9 @@ const styles = {
     navLinkBg: "#292929", // Navigation link background
     overlay: "rgba(0,0,0,0.6)",
   },
+  logo: {
+    height: "64px",
+  },
 };
 
 // For media queries and other special CSS that can't be easily represented as inline styles
@@ -608,69 +612,17 @@ const sidebarItems = [
 ];
 
 const CivilifyDocuments = () => {
-  const PREF_KEY = "preferredTheme";
-
   const [selectedItem, setSelectedItem] = useState("getting-started");
-  const [fromSignup, setFromSignup] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    try {
-      const saved =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(PREF_KEY)
-          : null;
-      if (saved === "dark") return true;
-      if (saved === "light") return false;
-      return (
-        typeof window !== "undefined" &&
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
-    } catch (e) {
-      return false;
-    }
-  });
-  const navigate = window.reactRouterNavigate || null; // fallback if not in router context
-
-  // Listen for system theme changes (only if user hasn't set a preference)
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e) => {
-      try {
-        const saved = window.localStorage.getItem(PREF_KEY);
-        if (!saved) setIsDarkMode(e.matches);
-      } catch (err) {
-        setIsDarkMode(e.matches);
-      }
-    };
-    if (mq.addEventListener) mq.addEventListener("change", handler);
-    else if (mq.addListener) mq.addListener(handler);
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener("change", handler);
-      else if (mq.removeListener) mq.removeListener(handler);
-    };
-  }, []);
-
-  // Load selected section from localStorage
-  useEffect(() => {
-    try {
-      const savedSection = window.localStorage.getItem("selectedDocSection");
-      const fromSignupFlag = window.localStorage.getItem("docFromSignup");
-      if (savedSection) {
-        setSelectedItem(savedSection);
-        window.localStorage.removeItem("selectedDocSection");
-      }
-      if (fromSignupFlag) {
-        setFromSignup(true);
-        window.localStorage.removeItem("docFromSignup");
-      }
-    } catch (e) {
-      console.warn("Storage access error:", e);
-    }
-  }, []);
-
+    // Initial check for system preference
+    return (
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
+  }); // Removed unused state variables: fromSignup, navigate
   // Apply global styles
   useEffect(() => {
     document.body.style.overflow = "scroll";
@@ -713,6 +665,27 @@ const CivilifyDocuments = () => {
     document.title = "Civilify | Documents";
   }, []);
 
+  // Listen to website theme changes (data-theme or class on <html>) and apply when user has no explicit preference
+  useEffect(() => {
+    document.title = "Civilify | Documents";
+  }, []); // Listen to OS system theme changes
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleThemeChange = (e) => {
+      setIsDarkMode(e.matches);
+    }; // Setup event listener
+
+    mediaQuery.addEventListener("change", handleThemeChange); // Cleanup listener
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleThemeChange);
+    };
+  }, []);
+
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -721,16 +694,6 @@ const CivilifyDocuments = () => {
     setSelectedItem(itemId);
     if (isMobile) {
       setIsCollapsed(true);
-    }
-  };
-
-  const toggleDarkMode = () => {
-    try {
-      const next = !isDarkMode;
-      setIsDarkMode(next);
-      window.localStorage.setItem(PREF_KEY, next ? "dark" : "light");
-    } catch (e) {
-      setIsDarkMode(!isDarkMode);
     }
   };
 
@@ -796,6 +759,11 @@ const CivilifyDocuments = () => {
         }}
       >
         <div style={styles.logoContainer}>
+          <img
+            src={LogoIcon}
+            alt="Civilify Logo"
+            style={{ ...styles.logo, height: "30px", marginRight: "12px" }}
+          />
           <div
             style={{
               fontSize: "1.5rem",
@@ -835,69 +803,6 @@ const CivilifyDocuments = () => {
               />
             </svg>
           </button>
-
-          {/* Dark mode toggle button */}
-          {/* <button
-            onClick={toggleDarkMode}
-            aria-label="Toggle color scheme"
-            style={{
-              background: "none",
-              border: "1px solid transparent",
-              padding: "0.5rem",
-              borderRadius: "0.375rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              outline: "none",
-              transition: "background-color 0.15s ease",
-              color: theme.primary,
-            }}
-            title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {isDarkMode ? (
-              // Sun icon (light)
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5 5L3.5 3.5M20.5 20.5L19 19M5 19L3.5 20.5M20.5 3.5L19 5"
-                  stroke={theme.primary}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                  stroke={theme.primary}
-                  strokeWidth="1.5"
-                />
-              </svg>
-            ) : (
-              // Moon icon (dark)
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                  stroke={theme.primary}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            )}
-          </button> */}
         </div>
       </nav>
 
