@@ -132,12 +132,6 @@ public class KnowledgeBaseService {
     private volatile String cachedServiceToken;
     private volatile long cachedServiceTokenExpiryMs = 0L;
     
-    // Keep-alive tracking for KB service
-    private volatile long lastWakeUpAttemptMs = 0L;
-    private volatile long lastSuccessfulWakeUpMs = 0L;
-    private static final long WAKE_UP_COOLDOWN_MS = 60_000L; // Don't wake up more than once per minute
-    private static final long WAKE_UP_VALIDITY_MS = 300_000L; // Consider service awake for 5 minutes after successful wake-up
-    
     // Simple in-memory cache and in-flight de-duplication
     private static class CacheEntry<T> {
         final T value; final long expiryMs;
@@ -218,10 +212,6 @@ public class KnowledgeBaseService {
         if (query == null || query.trim().length() < knowledgeBaseMinQueryLength) {
             return new ArrayList<>();
         }
-        
-        // Ensure KB service is awake before making requests
-        ensureKnowledgeBaseAwake();
-        
         String normalizedQuery = sanitizeUserText(query).toLowerCase(Locale.ROOT).trim();
         int effectiveLimit = Math.min(Math.max(1, limit), Math.max(1, maxResults));
         String cacheKey = normalizedQuery + "::" + effectiveLimit;
@@ -252,22 +242,10 @@ public class KnowledgeBaseService {
             try {
                 return doSearch(query, limit, cacheKey);
             } catch (HttpClientErrorException.TooManyRequests e429) {
-                // If we get 429, try to wake up the service and wait longer
-                if (attempt == 1) {
-                    logger.warn("KB 429 Too Many Requests. Attempting to wake up service...");
-                    wakeUpKnowledgeBase(true); // Force wake-up
-                    sleepQuietly(5000); // Wait 5 seconds for service to wake up
-                }
                 long delayMs = parseRetryAfterMs(e429.getResponseHeaders(), baseDelay, attempt);
                 logger.warn("KB 429 Too Many Requests. Attempt {}/{}. Backing off for {} ms", attempt, attempts, delayMs);
                 sleepQuietly(delayMs);
             } catch (org.springframework.web.client.ResourceAccessException e) {
-                // Connection refused usually means service is sleeping - wake it up
-                if (attempt == 1) {
-                    logger.warn("KB connection refused. Attempting to wake up service...");
-                    wakeUpKnowledgeBase(true); // Force wake-up
-                    sleepQuietly(5000); // Wait 5 seconds for service to wake up
-                }
                 if (attempt < attempts) {
                     long delayMs = jitteredDelay(baseDelay, attempt);
                     logger.warn("KB connection issue. Attempt {}/{}. Backing off for {} ms", attempt, attempts, delayMs);
@@ -405,9 +383,6 @@ public class KnowledgeBaseService {
             return new KnowledgeBaseChatResponse("", new ArrayList<>(), "Knowledge base is disabled");
         }
         
-        // Ensure KB service is awake before making requests
-        ensureKnowledgeBaseAwake();
-        
         try {
             logger.info("Chatting with knowledge base for question: {}", question);
             
@@ -449,25 +424,10 @@ public class KnowledgeBaseService {
             }
             
         } catch (org.springframework.web.client.ResourceAccessException e) {
-            // Connection refused usually means service is sleeping - try to wake it up
-            logger.warn("Knowledge base service connection refused. Attempting to wake up service...");
-            wakeUpKnowledgeBase(true); // Force wake-up
-            try {
-                Thread.sleep(3000); // Wait 3 seconds for service to wake up
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
             logger.warn("Knowledge base service is not available (connection refused). This is expected if the Villy service is not running. Falling back to empty response.");
             return new KnowledgeBaseChatResponse("", new ArrayList<>(), "Knowledge base service is not available");
         } catch (HttpClientErrorException.TooManyRequests e429) {
-            // 429 means service might be rate-limited or sleeping - try to wake it up
-            logger.warn("KB 429 Too Many Requests. Attempting to wake up service...");
-            wakeUpKnowledgeBase(true); // Force wake-up
-            try {
-                Thread.sleep(3000); // Wait 3 seconds for service to wake up
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
+            logger.warn("KB 429 Too Many Requests while chatting with knowledge base. Render free tier may be waking the service.");
             logger.error("Client error when chatting with knowledge base: {}", e429.getMessage());
             return new KnowledgeBaseChatResponse("", new ArrayList<>(), "Client error: " + e429.getMessage());
         } catch (HttpClientErrorException e) {
@@ -532,110 +492,6 @@ public class KnowledgeBaseService {
         } catch (Exception e) {
             logger.warn("Knowledge base health check failed: {}", e.getMessage());
             return false;
-        }
-    }
-    
-    /**
-     * Wake up the knowledge base API by making a health check request.
-     * This is useful for Render deployments where services go to sleep after inactivity.
-     * Includes cooldown logic to prevent excessive wake-up calls.
-     * 
-     * @param force If true, bypasses cooldown check
-     * @return true if the wake-up request was successful, false otherwise
-     */
-    public boolean wakeUpKnowledgeBase(boolean force) {
-        if (!knowledgeBaseEnabled) {
-            logger.debug("Knowledge base is disabled, skipping wake-up");
-            return false;
-        }
-        
-        long now = System.currentTimeMillis();
-        
-        // Check if we recently attempted a wake-up (cooldown)
-        if (!force && (now - lastWakeUpAttemptMs) < WAKE_UP_COOLDOWN_MS) {
-            logger.debug("KB wake-up skipped: too soon after last attempt (cooldown: {}ms)", WAKE_UP_COOLDOWN_MS);
-            return lastSuccessfulWakeUpMs > 0 && (now - lastSuccessfulWakeUpMs) < WAKE_UP_VALIDITY_MS;
-        }
-        
-        // Check if service is still considered "awake" from recent successful wake-up
-        if (!force && lastSuccessfulWakeUpMs > 0 && (now - lastSuccessfulWakeUpMs) < WAKE_UP_VALIDITY_MS) {
-            logger.debug("KB service is still considered awake (last successful wake-up: {}ms ago)", now - lastSuccessfulWakeUpMs);
-            return true;
-        }
-        
-        lastWakeUpAttemptMs = now;
-        
-        try {
-            // Use /search endpoint with minimal query for wake-up since /health might not exist
-            // The knowledgeBaseApiUrl already includes /api, so we just need /search
-            String baseUrl = knowledgeBaseApiUrl.endsWith("/") 
-                ? knowledgeBaseApiUrl.substring(0, knowledgeBaseApiUrl.length() - 1) 
-                : knowledgeBaseApiUrl;
-            String url = baseUrl + "/search";
-            logger.info("Waking up knowledge base API at: {}", url);
-            
-            HttpHeaders headers = buildAuthHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            // Minimal search query to wake up the service
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("query", "law");
-            requestBody.put("limit", 1);
-            
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-            
-            // Use a shorter timeout for wake-up calls to avoid blocking
-            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-            factory.setConnectTimeout(8000); // 8 seconds - give it more time to wake up
-            factory.setReadTimeout(8000); // 8 seconds
-            RestTemplate wakeUpRestTemplate = new RestTemplate(factory);
-            
-            ResponseEntity<Map<String, Object>> response = wakeUpRestTemplate.exchange(
-                url, HttpMethod.POST, request, new ParameterizedTypeReference<Map<String, Object>>() {});
-            
-            boolean success = response.getStatusCode().is2xxSuccessful();
-            if (success) {
-                lastSuccessfulWakeUpMs = now;
-                logger.info("Knowledge base API wake-up successful");
-            } else {
-                logger.warn("Knowledge base API wake-up returned status: {}", response.getStatusCode());
-            }
-            return success;
-            
-        } catch (Exception e) {
-            // Don't log full stack trace for wake-up failures as they're expected when service is sleeping
-            logger.debug("Knowledge base API wake-up failed (this is expected if service is sleeping): {}", e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Convenience method that calls wakeUpKnowledgeBase(false)
-     */
-    public boolean wakeUpKnowledgeBase() {
-        return wakeUpKnowledgeBase(false);
-    }
-    
-    /**
-     * Check if KB service needs to be woken up before making a request.
-     * This is called before KB operations to ensure service is ready.
-     * Uses synchronous wake-up for critical paths to ensure service is ready.
-     */
-    private void ensureKnowledgeBaseAwake() {
-        long now = System.currentTimeMillis();
-        // Only wake up if we haven't successfully woken it up recently
-        if (lastSuccessfulWakeUpMs == 0 || (now - lastSuccessfulWakeUpMs) >= WAKE_UP_VALIDITY_MS) {
-            logger.debug("KB service may be sleeping, attempting wake-up before request");
-            // Wake up synchronously to ensure service is ready before making the actual request
-            boolean wokeUp = wakeUpKnowledgeBase(false);
-            if (wokeUp) {
-                // Give the service a moment to fully wake up
-                try {
-                    Thread.sleep(1000); // 1 second should be enough
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
         }
     }
     
@@ -897,10 +753,6 @@ public class KnowledgeBaseService {
             logger.warn("Query too short: {}", question);
             return new KnowledgeBaseChatResponse(null, null, "Query too short for meaningful search");
         }
-        
-        // Ensure KB service is awake before making requests
-        ensureKnowledgeBaseAwake();
-        
         try {
             if (performanceLogging) {
                 logger.info("Enhanced KB chat request for mode: {}, question: {}", mode, question);

@@ -24,7 +24,6 @@ import com.capstone.civilify.DTO.ErrorResponse;
 import com.capstone.civilify.DTO.LoginRequest;
 import com.capstone.civilify.service.FirebaseAuthService;
 import com.capstone.civilify.service.FirestoreService;
-import com.capstone.civilify.service.KnowledgeBaseService;
 import com.capstone.civilify.util.JwtUtil;
 
 @RestController
@@ -36,14 +35,12 @@ public class AuthController {
     private final FirebaseAuthService firebaseAuthService;
     private final FirestoreService firestoreService;
     private final JwtUtil jwtUtil;
-    private final KnowledgeBaseService knowledgeBaseService;
 
     public AuthController(FirebaseAuthService firebaseAuthService, FirestoreService firestoreService, 
-                         JwtUtil jwtUtil, KnowledgeBaseService knowledgeBaseService) {
+                         JwtUtil jwtUtil) {
         this.firebaseAuthService = firebaseAuthService;
         this.firestoreService = firestoreService;
         this.jwtUtil = jwtUtil;
-        this.knowledgeBaseService = knowledgeBaseService;
     }
 
     @PostMapping("/signin")
@@ -128,20 +125,6 @@ public class AuthController {
             if (userDetails.containsKey("password")) {
                 userDetails.remove("password");
                 logger.info("Password removed from user details for security");
-            }
-            
-            // Wake up the knowledge base API (non-blocking, runs in background)
-            // This ensures the KB service is ready when the user starts using the app
-            try {
-                new Thread(() -> {
-                    try {
-                        knowledgeBaseService.wakeUpKnowledgeBase();
-                    } catch (Exception e) {
-                        logger.debug("Background KB wake-up failed (non-critical): {}", e.getMessage());
-                    }
-                }).start();
-            } catch (Exception e) {
-                logger.debug("Failed to initiate KB wake-up (non-critical): {}", e.getMessage());
             }
             
             // Create response with JWT token, user details, and expiration date
@@ -289,20 +272,6 @@ public class AuthController {
             if (userProfile.containsKey("password")) {
                 userProfile.remove("password");
                 logger.info("Password removed from user profile for security");
-            }
-            
-            // Wake up the knowledge base API (non-blocking, runs in background)
-            // This ensures the KB service is ready when the user starts using the app
-            try {
-                new Thread(() -> {
-                    try {
-                        knowledgeBaseService.wakeUpKnowledgeBase();
-                    } catch (Exception e) {
-                        logger.debug("Background KB wake-up failed (non-critical): {}", e.getMessage());
-                    }
-                }).start();
-            } catch (Exception e) {
-                logger.debug("Failed to initiate KB wake-up (non-critical): {}", e.getMessage());
             }
             
             // Create response with JWT token, user details, and expiration date
