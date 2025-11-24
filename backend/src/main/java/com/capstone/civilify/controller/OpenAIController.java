@@ -31,9 +31,6 @@ public class OpenAIController {
     @Autowired
     private KnowledgeBaseSkipClassifier kbSkipClassifier;
     
-    @Autowired
-    private com.capstone.civilify.service.KnowledgeBaseService knowledgeBaseService;
-    
     // CPA structured facts feature removed
     
     // Endpoint to delete all previous conversations for a user
@@ -506,28 +503,18 @@ public class OpenAIController {
                             // Validate that sources are from KB (must have entryId) and are relevant to the report
                             List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validReportSources = reportSources.stream()
                                 .filter(e -> e != null && e.getEntryId() != null && !e.getEntryId().trim().isEmpty())
+                                .filter(e -> e.getSourceUrls() != null && !e.getSourceUrls().isEmpty())
                                 .filter(e -> isSourceRelevantToReport(e, finalAiResponse)) // Filter to only include relevant sources
                                 .collect(Collectors.toList());
                             
                             logger.info("CPA: KB search returned {} sources, {} have valid entryIds", 
                                 reportSources.size(), validReportSources.size());
                             
-                            // Only use sources that have URLs from KB API (do NOT generate URLs)
-                            // Filter out sources without URLs from KB API
-                            List<com.capstone.civilify.DTO.KnowledgeBaseEntry> sourcesWithUrls = validReportSources.stream()
-                                .filter(e -> e.getSourceUrls() != null && !e.getSourceUrls().isEmpty())
-                                .collect(Collectors.toList());
-                            
-                            logger.info("CPA: Filtered {} sources to {} sources with URLs from KB API", 
-                                validReportSources.size(), sourcesWithUrls.size());
-                            
-                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : sourcesWithUrls) {
-                                logger.debug("KB source with URLs: entryId={}, title={}, similarity={}, urls={}", 
-                                    e.getEntryId(), e.getTitle(), e.getSimilarity(), e.getSourceUrls());
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : validReportSources) {
+                                logger.debug("KB source: entryId={}, title={}, similarity={}, hasUrls={}", 
+                                    e.getEntryId(), e.getTitle(), e.getSimilarity(), 
+                                    e.getSourceUrls() != null && !e.getSourceUrls().isEmpty());
                             }
-                            
-                            // Use only sources with URLs from KB API
-                            validReportSources = sourcesWithUrls;
                             
                             // Merge into kbSources without duplicates by entryId
                             java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
@@ -592,20 +579,6 @@ public class OpenAIController {
             }
             
             if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
-                // Ensure all sources have URLs before filtering
-                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbSources) {
-                    if (entry != null && (entry.getSourceUrls() == null || entry.getSourceUrls().isEmpty())) {
-                        if (entry.getCanonicalCitation() != null) {
-                            List<String> generatedUrls = knowledgeBaseService.generateUrlsFromCitation(entry.getCanonicalCitation(), entry.getType());
-                            if (!generatedUrls.isEmpty()) {
-                                entry.setSourceUrls(generatedUrls);
-                                logger.info("Generated {} URLs for KB source: {} (entryId: {})", 
-                                    generatedUrls.size(), entry.getTitle(), entry.getEntryId());
-                            }
-                        }
-                    }
-                }
-                
                 // Filter and sort sources by relevance (similarity score)
                 // Only include sources with valid entryId, title, and URLs (ensures they're from KB and have clickable links)
                 List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validSources = kbSources.stream()
@@ -886,107 +859,6 @@ public class OpenAIController {
     }
     
     /**
-     * Extract key legal issues and case summary from a CPA report to use as KB query.
-     * This creates a targeted query that focuses on the core legal concepts,
-     * resulting in better knowledge base source matches.
-     */
-    private String extractLegalIssuesFromReport(String reportText) {
-        if (reportText == null || reportText.trim().isEmpty()) {
-            return null;
-        }
-        
-        StringBuilder kbQuery = new StringBuilder();
-        
-        try {
-            // Extract Case Summary
-            java.util.regex.Pattern summaryPattern = java.util.regex.Pattern.compile(
-                "Case Summary:\\s*([\\s\\S]*?)(?=\\n\\n|Legal Issues|$)",
-                java.util.regex.Pattern.CASE_INSENSITIVE
-            );
-            java.util.regex.Matcher summaryMatcher = summaryPattern.matcher(reportText);
-            if (summaryMatcher.find()) {
-                String summary = summaryMatcher.group(1).trim();
-                // Clean up markdown and formatting
-                summary = summary.replaceAll("\\*\\*", "").replaceAll("\\n+", " ").trim();
-                if (!summary.isEmpty() && summary.length() > 20) {
-                    kbQuery.append("Case: ").append(summary).append(" ");
-                }
-            }
-            
-            // Extract Legal Issues or Concerns
-            java.util.regex.Pattern issuesPattern = java.util.regex.Pattern.compile(
-                "Legal Issues(?: or Concerns)?:\\s*([\\s\\S]*?)(?=\\n\\n|Plausibility Score|Suggested Next Steps|$)",
-                java.util.regex.Pattern.CASE_INSENSITIVE
-            );
-            java.util.regex.Matcher issuesMatcher = issuesPattern.matcher(reportText);
-            if (issuesMatcher.find()) {
-                String issues = issuesMatcher.group(1).trim();
-                // Clean up markdown and bullet points
-                issues = issues.replaceAll("\\*\\*", "")
-                              .replaceAll("^-\\s*", "")
-                              .replaceAll("\\n-\\s*", ". ")
-                              .replaceAll("\\n+", " ")
-                              .trim();
-                if (!issues.isEmpty()) {
-                    kbQuery.append("Legal issues: ").append(issues);
-                }
-            }
-            
-            String result = kbQuery.toString().trim();
-            
-            // Only return if we have meaningful content (more than just labels)
-            if (result.length() > 30) {
-                return result;
-            }
-            
-        } catch (Exception e) {
-            logger.warn("Error extracting legal issues from report: {}", e.getMessage());
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Extract key legal keywords from a text string for KB search.
-     */
-    private String[] extractLegalKeywords(String text) {
-        if (text == null || text.trim().isEmpty()) {
-            return new String[0];
-        }
-        
-        // Common legal terms to look for
-        String[] legalTerms = {
-            "contract", "agreement", "breach", "verbal", "written", "witness", "testimony",
-            "obligation", "damages", "misrepresentation", "consumer protection", "civil code",
-            "obligations", "rights", "remedy", "liability", "enforce", "binding"
-        };
-        
-        String lowerText = text.toLowerCase();
-        List<String> foundKeywords = new ArrayList<>();
-        
-        for (String term : legalTerms) {
-            if (lowerText.contains(term)) {
-                foundKeywords.add(term);
-            }
-        }
-        
-        // Also extract any RA, RPC, Article references
-        java.util.regex.Pattern raPattern = java.util.regex.Pattern.compile("\\b(?:R\\.?A\\.?|Republic Act|RA)\\s*(?:No\\.?)?\\s*(\\d+)\\b", java.util.regex.Pattern.CASE_INSENSITIVE);
-        java.util.regex.Matcher raMatcher = raPattern.matcher(text);
-        while (raMatcher.find()) {
-            foundKeywords.add("RA " + raMatcher.group(1));
-        }
-        
-        java.util.regex.Pattern rpcPattern = java.util.regex.Pattern.compile("\\b(?:RPC|Revised Penal Code|Article)\\s*(\\d+)\\b", java.util.regex.Pattern.CASE_INSENSITIVE);
-        java.util.regex.Matcher rpcMatcher = rpcPattern.matcher(text);
-        while (rpcMatcher.find()) {
-            foundKeywords.add("RPC Article " + rpcMatcher.group(1));
-        }
-        
-        return foundKeywords.toArray(new String[0]);
-    }
-    
-    /**
      * Extract citations and legal references mentioned in the report response.
      * This ensures we query KB API for sources that are actually mentioned in the report.
      */
@@ -1191,42 +1063,6 @@ public class OpenAIController {
         
         // Default: include if we can't determine relevance (to avoid being too restrictive)
         return true;
-    }
-    
-    /**
-     * Extract broader legal terms from report for KB search.
-     */
-    private String extractBroaderLegalTerms(String reportText) {
-        if (reportText == null || reportText.trim().isEmpty()) {
-            return null;
-        }
-        
-        StringBuilder broaderTerms = new StringBuilder();
-        
-        // Look for common legal concepts
-        String lowerText = reportText.toLowerCase();
-        
-        if (lowerText.contains("contract") || lowerText.contains("agreement")) {
-            broaderTerms.append("contract agreement obligations ");
-        }
-        if (lowerText.contains("breach")) {
-            broaderTerms.append("breach of contract ");
-        }
-        if (lowerText.contains("verbal")) {
-            broaderTerms.append("verbal agreement ");
-        }
-        if (lowerText.contains("witness")) {
-            broaderTerms.append("witness testimony ");
-        }
-        if (lowerText.contains("damages") || lowerText.contains("damage")) {
-            broaderTerms.append("damages compensation ");
-        }
-        if (lowerText.contains("consumer")) {
-            broaderTerms.append("consumer protection ");
-        }
-        
-        String result = broaderTerms.toString().trim();
-        return result.isEmpty() ? null : result;
     }
     
     /**
