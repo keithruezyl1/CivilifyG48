@@ -538,12 +538,12 @@ public class KnowledgeBaseService {
                 entry.setRightsScope((String) result.get("rights_scope"));
                 
                 List<String> sourceUrls = extractSourceUrls(result);
-                entry.setSourceUrls(sourceUrls);
+                    entry.setSourceUrls(sourceUrls);
                 if (!sourceUrls.isEmpty()) {
                     entry.setPrimaryUrl(sourceUrls.get(0));
                     logger.info("Using {} URLs from KB API for entry: {} - {}", 
                         sourceUrls.size(), entry.getTitle(), sourceUrls);
-                } else {
+                } else if (!backfillEntryDetails(entry)) {
                     logger.debug("No KB-provided source URLs for entry: {} (available keys: {})",
                         entry.getTitle(), result.keySet());
                 }
@@ -606,7 +606,15 @@ public class KnowledgeBaseService {
         try {
             KnowledgeBaseEntry entry = new KnowledgeBaseEntry();
             
-            entry.setEntryId((String) result.get("entry_id"));
+            String entryId = firstNonBlank(
+                asString(result.get("entry_id")),
+                asString(result.get("entryId")),
+                asString(result.get("id"))
+            );
+            entry.setEntryId(entryId);
+            if (entryId == null || entryId.isBlank()) {
+                logger.warn("KB entry missing entry_id. Available keys: {}", result.keySet());
+            }
             entry.setType((String) result.get("type"));
             entry.setTitle((String) result.get("title"));
             entry.setCanonicalCitation((String) result.get("canonical_citation"));
@@ -640,7 +648,7 @@ public class KnowledgeBaseService {
                 entry.setPrimaryUrl(sourceUrls.get(0));
                 logger.info("Using {} URLs from KB API for entry: {} - {}", 
                     sourceUrls.size(), entry.getTitle(), sourceUrls);
-            } else {
+            } else if (!backfillEntryDetails(entry)) {
                 logger.debug("No KB-provided source URLs for entry: {} (available keys: {})",
                     entry.getTitle(), result.keySet());
             }
@@ -691,6 +699,48 @@ public class KnowledgeBaseService {
         return new ArrayList<>(collector);
     }
     
+    /**
+     * If a KB search result doesn't include URL metadata, fetch the full entry
+     * to populate source URLs and summaries from the authoritative record.
+     */
+    private boolean backfillEntryDetails(KnowledgeBaseEntry entry) {
+        if (entry == null || entry.getEntryId() == null || entry.getEntryId().trim().isEmpty()) {
+            return false;
+        }
+        try {
+            KnowledgeBaseEntry detailed = getKnowledgeBaseEntry(entry.getEntryId());
+            if (detailed == null) {
+                return false;
+            }
+            if ((entry.getSourceUrls() == null || entry.getSourceUrls().isEmpty())
+                && detailed.getSourceUrls() != null && !detailed.getSourceUrls().isEmpty()) {
+                entry.setSourceUrls(detailed.getSourceUrls());
+                entry.setPrimaryUrl(detailed.getPrimaryUrl());
+            }
+            if ((entry.getSummary() == null || entry.getSummary().isBlank()) && detailed.getSummary() != null) {
+                entry.setSummary(detailed.getSummary());
+            }
+            if ((entry.getText() == null || entry.getText().isBlank()) && detailed.getText() != null) {
+                entry.setText(detailed.getText());
+            }
+            boolean hydrated = entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty();
+            if (!hydrated) {
+                logger.debug("KB entry {} still lacks source URLs after hydration", entry.getEntryId());
+            }
+            return hydrated;
+        } catch (Exception e) {
+            logger.warn("Failed to backfill KB entry {}: {}", entry.getEntryId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Public helper so higher layers (e.g., CPA controller) can hydrate entries on demand.
+     */
+    public boolean hydrateEntryDetails(com.capstone.civilify.DTO.KnowledgeBaseEntry entry) {
+        return backfillEntryDetails(entry);
+    }
+    
     private void addUrlsFromObject(LinkedHashSet<String> collector, Object value) {
         if (value instanceof List<?>) {
             for (Object url : (List<?>) value) {
@@ -708,6 +758,20 @@ public class KnowledgeBaseService {
                 collector.add(url);
             }
         }
+    }
+
+    private String asString(Object value) {
+        return value instanceof String ? ((String) value).trim() : null;
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
     
     private String sanitizeUserText(String text) {

@@ -4,6 +4,7 @@ import com.capstone.civilify.model.ChatConversation;
 import com.capstone.civilify.model.ChatMessage;
 import com.capstone.civilify.service.ChatService;
 import com.capstone.civilify.service.OpenAIService;
+import com.capstone.civilify.service.KnowledgeBaseService;
 import com.capstone.civilify.util.KnowledgeBaseSkipClassifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -487,7 +488,7 @@ public class OpenAIController {
                             String reportQuery = extractLegalConceptsFromReport(aiResponse);
                             if (reportQuery == null || reportQuery.isBlank()) {
                                 reportQuery = userMessage;
-                            }
+                                }
                             if (reportQuery != null && !reportQuery.isBlank()) {
                                 reportSources = openAIService.getKnowledgeBaseSources(reportQuery, desiredLimitForReport);
                                 logger.info("CPA: Report-based KB search completed, returned {} sources", reportSources != null ? reportSources.size() : 0);
@@ -495,6 +496,38 @@ public class OpenAIController {
                         }
                         
                         logger.info("CPA: Total KB sources found: {}", reportSources != null ? reportSources.size() : 0);
+
+                        if (reportSources != null && !reportSources.isEmpty()) {
+                            KnowledgeBaseService kbService = openAIService.getKnowledgeBaseService();
+                            if (kbService != null) {
+                                Map<String, Boolean> hydrationCache = new HashMap<>();
+                                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : reportSources) {
+                                    if (entry == null) continue;
+                                    String entryId = entry.getEntryId();
+                                    if (entryId == null || entryId.trim().isEmpty()) {
+                                        logger.debug("CPA: KB entry missing entryId, skipping hydration. Title={}", entry.getTitle());
+                                        continue;
+                                    }
+                                    if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                                        continue;
+                                    }
+                                    Boolean attempted = hydrationCache.get(entryId);
+                                    if (attempted != null && !attempted) {
+                                        continue;
+                                    }
+                                    boolean hydrated = kbService.hydrateEntryDetails(entry);
+                                    hydrationCache.put(entryId, hydrated);
+                                    if (hydrated) {
+                                        int urlCount = entry.getSourceUrls() != null ? entry.getSourceUrls().size() : 0;
+                                        logger.info("CPA: Hydrated entry {} with {} URLs from KB detail endpoint", entryId, urlCount);
+                                    } else {
+                                        logger.debug("CPA: Hydration attempt failed for entry {}", entryId);
+                                    }
+                                }
+                            } else {
+                                logger.warn("CPA: KnowledgeBaseService unavailable for hydration");
+                            }
+                        }
                         
                         if (reportSources != null && !reportSources.isEmpty()) {
                             // Make aiResponse effectively final for lambda
@@ -534,6 +567,7 @@ public class OpenAIController {
                             logger.warn("CPA: KB search returned null or empty sources");
                         }
 
+                        if (kbSources != null && !kbSources.isEmpty()) {
                         // Regenerate the report with KB context and strict source-citation instructions
                         String reportPrompt = buildEnhancedSystemPrompt(systemPrompt, null, kbSources, mode);
                         String regenerated = openAIService.generateResponse(
@@ -545,6 +579,9 @@ public class OpenAIController {
                         if (regenerated != null && !regenerated.isBlank()) {
                             aiResponse = regenerated;
                             logger.info("CPA: Regenerated report with KB context and citations.");
+                            }
+                        } else {
+                            logger.info("CPA: Skipping report regeneration - no KB sources available");
                         }
                     } catch (Exception ex) {
                         logger.warn("CPA: Failed fetching KB sources for report: {}", ex.getMessage());
@@ -956,33 +993,33 @@ public class OpenAIController {
         StringBuilder concepts = new StringBuilder();
         
         // Extract from Case Summary
-        java.util.regex.Pattern summaryPattern = java.util.regex.Pattern.compile(
+            java.util.regex.Pattern summaryPattern = java.util.regex.Pattern.compile(
             "Case Summary:\\s*([\\s\\S]*?)(?=\\n\\n|Legal Issues|Plausibility Score|$)",
-            java.util.regex.Pattern.CASE_INSENSITIVE
-        );
-        java.util.regex.Matcher summaryMatcher = summaryPattern.matcher(reportText);
-        if (summaryMatcher.find()) {
-            String summary = summaryMatcher.group(1).trim();
-            summary = summary.replaceAll("\\*\\*", "").replaceAll("\\n+", " ").trim();
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher summaryMatcher = summaryPattern.matcher(reportText);
+            if (summaryMatcher.find()) {
+                String summary = summaryMatcher.group(1).trim();
+                summary = summary.replaceAll("\\*\\*", "").replaceAll("\\n+", " ").trim();
             if (!summary.isEmpty()) {
                 concepts.append(summary).append(" ");
+                }
             }
-        }
-        
+            
         // Extract from Legal Issues section
-        java.util.regex.Pattern issuesPattern = java.util.regex.Pattern.compile(
-            "Legal Issues(?: or Concerns)?:\\s*([\\s\\S]*?)(?=\\n\\n|Plausibility Score|Suggested Next Steps|$)",
-            java.util.regex.Pattern.CASE_INSENSITIVE
-        );
-        java.util.regex.Matcher issuesMatcher = issuesPattern.matcher(reportText);
-        if (issuesMatcher.find()) {
-            String issues = issuesMatcher.group(1).trim();
-            issues = issues.replaceAll("\\*\\*", "")
-                          .replaceAll("^-\\s*", "")
-                          .replaceAll("\\n-\\s*", ". ")
-                          .replaceAll("\\n+", " ")
-                          .trim();
-            if (!issues.isEmpty()) {
+            java.util.regex.Pattern issuesPattern = java.util.regex.Pattern.compile(
+                "Legal Issues(?: or Concerns)?:\\s*([\\s\\S]*?)(?=\\n\\n|Plausibility Score|Suggested Next Steps|$)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher issuesMatcher = issuesPattern.matcher(reportText);
+            if (issuesMatcher.find()) {
+                String issues = issuesMatcher.group(1).trim();
+                issues = issues.replaceAll("\\*\\*", "")
+                              .replaceAll("^-\\s*", "")
+                              .replaceAll("\\n-\\s*", ". ")
+                              .replaceAll("\\n+", " ")
+                              .trim();
+                if (!issues.isEmpty()) {
                 concepts.append(issues);
             }
         }
@@ -998,13 +1035,13 @@ public class OpenAIController {
     private boolean isSourceRelevantToReport(com.capstone.civilify.DTO.KnowledgeBaseEntry source, String reportText) {
         if (source == null || reportText == null || reportText.trim().isEmpty()) {
             return false;
-        }
-        
+            }
+            
         String lowerReport = reportText.toLowerCase();
         String lowerTitle = source.getTitle() != null ? source.getTitle().toLowerCase() : "";
         String lowerCitation = source.getCanonicalCitation() != null ? source.getCanonicalCitation().toLowerCase() : "";
         String lowerSummary = source.getSummary() != null ? source.getSummary().toLowerCase() : "";
-        
+            
         // Extract key terms from the report
         List<String> reportTerms = new ArrayList<>();
         
