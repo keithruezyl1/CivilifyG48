@@ -589,7 +589,18 @@ public class KnowledgeBaseService {
             );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return mapToKnowledgeBaseEntry(response.getBody());
+                Map<String, Object> body = response.getBody();
+                // KB API returns { success: true, entry: {...} } - unwrap the entry field
+                Object entryObj = body.get("entry");
+                if (entryObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> entryMap = (Map<String, Object>) entryObj;
+                    return mapToKnowledgeBaseEntry(entryMap);
+                } else {
+                    // Fallback: if response structure is different, try direct mapping
+                    logger.debug("KB entry response missing 'entry' field, attempting direct mapping. Keys: {}", body.keySet());
+                    return mapToKnowledgeBaseEntry(body);
+                }
             }
             
         } catch (Exception e) {
