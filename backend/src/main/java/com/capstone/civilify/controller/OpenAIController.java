@@ -616,6 +616,36 @@ public class OpenAIController {
             }
             
             if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
+                if ("B".equals(mode)) {
+                    KnowledgeBaseService kbService = openAIService.getKnowledgeBaseService();
+                    if (kbService != null) {
+                        Map<String, Boolean> hydrationCache = new HashMap<>();
+                        for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbSources) {
+                            if (entry == null) continue;
+                            String entryId = entry.getEntryId();
+                            if (entryId == null || entryId.trim().isEmpty()) {
+                                continue;
+                            }
+                            if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                                continue;
+                            }
+                            Boolean attempted = hydrationCache.get(entryId);
+                            if (attempted != null && !attempted) {
+                                continue;
+                            }
+                            boolean hydrated = kbService.hydrateEntryDetails(entry);
+                            hydrationCache.put(entryId, hydrated);
+                            if (hydrated) {
+                                int urlCount = entry.getSourceUrls() != null ? entry.getSourceUrls().size() : 0;
+                                logger.info("CPA: Hydrated final KB source {} with {} URLs", entryId, urlCount);
+                            } else {
+                                logger.debug("CPA: Unable to hydrate final KB source {}", entryId);
+                            }
+                        }
+                    } else {
+                        logger.warn("CPA: KnowledgeBaseService unavailable during final source hydration");
+                    }
+                }
                 // Filter and sort sources by relevance (similarity score)
                 // Only include sources with valid entryId, title, and URLs (ensures they're from KB and have clickable links)
                 List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validSources = kbSources.stream()
