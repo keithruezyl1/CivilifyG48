@@ -408,33 +408,12 @@ public class OpenAIController {
                 logger.info("GLI: Skipping source enrichment for conversational query");
             }
 
-            // Prepare initial response body (will be populated with sources later)
+            // Prepare initial response body (will be populated with sources and final response later)
             Map<String, Object> responseBody = new HashMap<>();
-            responseBody.put("response", aiResponse);
             responseBody.put("conversationId", conversationId);
             responseBody.put("success", true);
-
-            // Extract plausibility score label and summary from the AI response (for mode B)
-            String plausibilityLabel = null;
-            String plausibilitySummary = null;
-            if ("B".equals(mode) && aiResponse != null) {
-                // Regex to match: Plausibility Score: 60% - Moderate There is a moderate chance...
-                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                    "Plausibility Score:\\s*\\d{1,3}%\\s*-\\s*([\\w\\s]+?)(?=\\.|\\n|$)(?:[\\.:\\-\\s]*)([^\n]*)",
-                    java.util.regex.Pattern.CASE_INSENSITIVE
-                );
-                java.util.regex.Matcher matcher = pattern.matcher(aiResponse);
-                if (matcher.find()) {
-                    plausibilityLabel = matcher.group(1).trim();
-                    plausibilitySummary = matcher.group(2).trim();
-                    // Clean up: if summary is empty or just "Suggested Next Steps", set to null
-                    if (plausibilitySummary.isEmpty() || plausibilitySummary.toLowerCase().contains("suggested next steps")) {
-                        plausibilitySummary = null;
-                    }
-                }
-            }
-            if (plausibilityLabel != null) responseBody.put("plausibilityLabel", plausibilityLabel);
-            if (plausibilitySummary != null) responseBody.put("plausibilitySummary", plausibilitySummary);
+            
+            // Note: response and plausibility score will be set AFTER CPA report regeneration (if any)
             
             // Add isReport flag for CPA mode if the response looks like a report
             if (mode.equals("B")) {
@@ -592,6 +571,32 @@ public class OpenAIController {
                     }
                 }
             }
+            
+            // Set the final response (original or regenerated) in responseBody
+            responseBody.put("response", aiResponse);
+            
+            // Extract plausibility score label and summary from the FINAL AI response (for mode B)
+            // This must be done AFTER regeneration to get the correct score
+            String plausibilityLabel = null;
+            String plausibilitySummary = null;
+            if ("B".equals(mode) && aiResponse != null) {
+                // Regex to match: Plausibility Score: 60% - Moderate There is a moderate chance...
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                    "Plausibility Score:\\s*\\d{1,3}%\\s*-\\s*([\\w\\s]+?)(?=\\.|\\n|$)(?:[\\.:\\-\\s]*)([^\n]*)",
+                    java.util.regex.Pattern.CASE_INSENSITIVE
+                );
+                java.util.regex.Matcher matcher = pattern.matcher(aiResponse);
+                if (matcher.find()) {
+                    plausibilityLabel = matcher.group(1).trim();
+                    plausibilitySummary = matcher.group(2).trim();
+                    // Clean up: if summary is empty or just "Suggested Next Steps", set to null
+                    if (plausibilitySummary.isEmpty() || plausibilitySummary.toLowerCase().contains("suggested next steps")) {
+                        plausibilitySummary = null;
+                    }
+                }
+            }
+            if (plausibilityLabel != null) responseBody.put("plausibilityLabel", plausibilityLabel);
+            if (plausibilitySummary != null) responseBody.put("plausibilitySummary", plausibilitySummary);
             
             // Prepare sources list for response (after CPA report generation to include KB sources)
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
