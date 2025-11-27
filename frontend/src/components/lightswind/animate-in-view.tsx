@@ -32,6 +32,10 @@ const ANIMATION_CLASSES = {
     initial: "opacity-0 translate-x-10",
     visible: "opacity-100 translate-x-0",
   },
+  "slide-right-fast": {
+    initial: "opacity-0 translate-x-10",
+    visible: "opacity-100 translate-x-0",
+  },
   // Fade In + Zoom In (Starts small)
   "zoom-in": {
     initial: "opacity-0 scale-95",

@@ -23,6 +23,7 @@ import ParticlesBackground from "../components/lightswind/particles-background";
 import PatchNotes from "../components/lightswind/patch-notes";
 import AnimateInView from "../components/lightswind/animate-in-view";
 import { TrustedUsers } from "../components/lightswind/trusted-users";
+import { getAuthToken } from "../utils/auth";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -47,6 +48,21 @@ const Landing = () => {
   });
 
   useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      // Found a session token, redirect to /signin (which should then lead to /chat)
+      setLoading(true);
+      console.log("Session found on landing page, redirecting to /signin.");
+      // Use a slight delay to ensure loading screen flashes
+      const redirectTimer = setTimeout(() => {
+        setLoading(false);
+        // Redirect to signin; the signin component will handle validation and subsequent redirect to /chat
+        navigate("/signin", { replace: true });
+      }, 500);
+
+      return () => clearTimeout(redirectTimer);
+    }
+
     const container = containerRef.current;
     if (!container) return;
 
@@ -259,15 +275,42 @@ const Landing = () => {
   };
 
   const handleSignIn = () => {
+    const token = getAuthToken(); // Get the token locally for this decision
+
+    if (token) {
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        // If logged in, go straight to chat
+        navigate("/chat", { replace: true });
+      }, 500); // Use a shorter, consistent timeout
+      setIsMenuOpen(false);
+      return;
+    }
+
+    // Original logic for logged-out users
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
       navigate("/signin");
-    }, 1500);
+    }, 1500); // Keep original, longer timeout for actual navigation
     setIsMenuOpen(false);
   };
 
   const handleSignup = () => {
+    const token = getAuthToken(); // Get the token locally for this decision
+
+    if (token) {
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        // If logged in, go straight to chat
+        navigate("/chat", { replace: true });
+      }, 500);
+      return;
+    }
+
+    // Original logic for logged-out users
     setLoading(true);
     setTimeout(() => {
       setLoading(false);

@@ -12,6 +12,22 @@ import {
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LoadingScreen from "./LoadingScreen";
+import AnimateInView from "../components/lightswind/animate-in-view";
+
+const handleBackClick = (navigate) => {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  if (user.role !== "ROLE_ADMIN") {
+    navigate("/chat");
+    return;
+  } else if (user.role === "ROLE_ADMIN") {
+    navigate("/admin");
+    return;
+  } else if (user.role === "ROLE_SYSTEM_ADMIN") {
+    navigate("/system");
+    return;
+  }
+};
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -95,125 +111,137 @@ const Profile = () => {
       />
 
       <div className="header">
-        <div className="back-button">
-          <button onClick={() => navigate("/chat")} className="back-btn">
-            <svg
-              style={{ width: "20px", height: "20px", marginRight: "8px" }}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <AnimateInView asChild={true} animationType="slide-left" delay={0}>
+          <div className="back-button">
+            <button
+              onClick={() => {
+                handleBackClick(navigate);
+              }}
+              className="back-btn"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="full-text">Back to Chat</span>
-            <span className="short-text">Chat</span>
-          </button>
-        </div>
-        <div>
-          <img
-            src={logoIconOrange}
-            alt="Civilify"
-            style={{ height: "30px", marginRight: "12px", marginTop: "6px" }}
-          />
-        </div>
+              <svg
+                style={{ width: "20px", height: "20px", marginRight: "8px" }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              <span className="full-text">Back</span>
+              <span className="short-text">Back</span>
+            </button>
+          </div>
+        </AnimateInView>
+        <AnimateInView asChild={true} animationType="slide-right" delay={0}>
+          <div>
+            <img
+              src={logoIconOrange}
+              alt="Civilify"
+              style={{ height: "30px", marginRight: "12px", marginTop: "6px" }}
+            />
+          </div>
+        </AnimateInView>
       </div>
 
       <div className="content">
-        <div className="avatar-section">
-          <div className="avatar">
-            {profile.profile_picture_url ? (
-              <img
-                src={profile.profile_picture_url || "/placeholder.svg"}
-                alt={profile.username}
-                className="avatar-img"
-              />
-            ) : (
-              <div className="avatar-placeholder">
-                {profile.username.substring(0, 2).toUpperCase()}
-              </div>
-            )}
-          </div>
-          <h1>{profile.username || "User Name"}</h1>
-          <p>{profile.email}</p>
-          <div className="action-buttons">
-            <button
-              onClick={() =>
-                navigate("/edit-profile", {
-                  state: { ...profile, mode: "edit" },
-                })
-              }
-              className="action-btn edit-btn"
-            >
-              Edit Profile
-            </button>
-            <button
-              onClick={() =>
-                navigate("/edit-profile", {
-                  state: { ...profile, mode: "change-password" },
-                })
-              }
-              className="action-btn change-password-btn"
-            >
-              Change Password
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-section">
-          <h2>Account Settings</h2>
-          <div className="settings">
-            <div className="setting">
-              <div>
-                <h3>Language</h3>
-                <p>English (US)</p>
-              </div>
+        <AnimateInView asChild={true} animationType="slide-up" delay={0}>
+          <div className="avatar-section">
+            <div className="avatar">
+              {profile.profile_picture_url ? (
+                <img
+                  src={profile.profile_picture_url || "/placeholder.svg"}
+                  alt={profile.username}
+                  className="avatar-img"
+                />
+              ) : (
+                <div className="avatar-placeholder">
+                  {profile.username.substring(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <h1>{profile.username || "User Name"}</h1>
+            <p>{profile.email}</p>
+            <div className="action-buttons">
               <button
-                className="change-btn"
-                onClick={() => toast.info("Language settings coming soon")}
+                onClick={() =>
+                  navigate("/edit-profile", {
+                    state: { ...profile, mode: "edit" },
+                  })
+                }
+                className="action-btn edit-btn"
               >
-                Change
+                Edit Profile
+              </button>
+              <button
+                onClick={() =>
+                  navigate("/edit-profile", {
+                    state: { ...profile, mode: "change-password" },
+                  })
+                }
+                className="action-btn change-password-btn"
+              >
+                Change Password
               </button>
             </div>
-            <div className="setting">
-              <div>
-                <h3>Theme</h3>
-                <p>{isDarkMode ? "Dark Mode" : "Light Mode"}</p>
-              </div>
-              <div className="theme-toggle">
-                <div
-                  className="toggle-switch"
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                >
-                  <div
-                    className="toggle-slider"
-                    style={{ left: isDarkMode ? "22px" : "2px" }}
-                  />
+          </div>
+        </AnimateInView>
+        <AnimateInView asChild={true} animationType="slide-up" delay={200}>
+          <div className="settings-section">
+            <h2>Account Settings</h2>
+            <div className="settings">
+              <div className="setting">
+                <div>
+                  <h3>Language</h3>
+                  <p>English (US)</p>
                 </div>
-                <span
-                  className="toggle-label"
-                  onClick={() => setIsDarkMode(!isDarkMode)}
+                <button
+                  className="change-btn"
+                  onClick={() => toast.info("Language settings coming soon")}
                 >
-                  {isDarkMode ? "Dark" : "Light"}
-                </span>
+                  Change
+                </button>
               </div>
-            </div>
-            <div
-              className="delete-section"
-              onClick={() => toast.info("Delete functionality coming soon")}
-            >
-              <div>
-                <h3>Delete Account</h3>
-                <p>Permanently delete your account and all data.</p>
+              <div className="setting">
+                <div>
+                  <h3>Theme</h3>
+                  <p>{isDarkMode ? "Dark Mode" : "Light Mode"}</p>
+                </div>
+                <div className="theme-toggle">
+                  <div
+                    className="toggle-switch"
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                  >
+                    <div
+                      className="toggle-slider"
+                      style={{ left: isDarkMode ? "22px" : "2px" }}
+                    />
+                  </div>
+                  <span
+                    className="toggle-label"
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                  >
+                    {isDarkMode ? "Dark" : "Light"}
+                  </span>
+                </div>
               </div>
-              <button className="delete-btn">Delete</button>
+              <div
+                className="delete-section"
+                onClick={() => toast.info("Delete functionality coming soon")}
+              >
+                <div>
+                  <h3>Delete Account</h3>
+                  <p>Permanently delete your account and all data.</p>
+                </div>
+                <button className="delete-btn">Delete</button>
+              </div>
             </div>
           </div>
-        </div>
+        </AnimateInView>
       </div>
       <style>{`
   .profile-container {
@@ -275,7 +303,7 @@ const Profile = () => {
 
   .content { max-width: 600px; margin: 0 auto; padding: 0px 30px 30px 30px; }
   .avatar-section { text-align: center; margin-bottom: 24px; }
-  .avatar { position: relative; display: inline-block }
+  .avatar { position: relative; display: inline-block; margin-bottom: 16px }
   .avatar-img, .avatar-placeholder {
     width: 120px;
     height: 120px;
@@ -298,7 +326,7 @@ const Profile = () => {
     color: #ffffff;
   }
 
-  .action-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .action-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
   .action-btn {
     padding: 12px 24px;
     border: none;
