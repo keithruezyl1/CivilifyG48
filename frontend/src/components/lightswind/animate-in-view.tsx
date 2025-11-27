@@ -22,6 +22,10 @@ const ANIMATION_CLASSES = {
     initial: "opacity-0 translate-y-10",
     visible: "opacity-100 translate-y-0",
   },
+  "slide-up-fast": {
+    initial: "opacity-0 translate-y-5",
+    visible: "opacity-100 translate-y-0",
+  },
   // Fade In + Slide from Left
   "slide-left": {
     initial: "opacity-0 -translate-x-10",
