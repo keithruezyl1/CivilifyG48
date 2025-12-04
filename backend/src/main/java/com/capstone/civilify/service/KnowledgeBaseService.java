@@ -654,7 +654,7 @@ public class KnowledgeBaseService {
             entry.setRightsScope((String) result.get("rights_scope"));
             
             List<String> sourceUrls = extractSourceUrls(result);
-            entry.setSourceUrls(sourceUrls);
+                entry.setSourceUrls(sourceUrls);
             if (!sourceUrls.isEmpty()) {
                 entry.setPrimaryUrl(sourceUrls.get(0));
                 logger.info("Using {} URLs from KB API for entry: {} - {}", 
@@ -847,22 +847,26 @@ public class KnowledgeBaseService {
                 return kbResponse;
             }
             
-            // Step 2: Get additional sources for context enrichment
-            long searchStartTime = System.currentTimeMillis();
-            List<KnowledgeBaseEntry> additionalSources = searchKnowledgeBase(question, maxResults);
-            long searchDuration = System.currentTimeMillis() - searchStartTime;
-            
-            if (performanceLogging) {
-                logger.info("KB search completed in {}ms, found {} sources", searchDuration, additionalSources.size());
-            }
-            
-            // Step 3: Combine primary answer with additional sources
+            // Step 2: For GLI mode, skip additional search to improve response speed
+            // The chat endpoint already returns relevant sources, so we don't need a second search
             List<KnowledgeBaseEntry> allSources = new ArrayList<>();
             if (kbResponse.getSources() != null) {
                 allSources.addAll(kbResponse.getSources());
             }
-            if (additionalSources != null) {
-                allSources.addAll(additionalSources);
+            
+            // Only do additional search for CPA mode if needed
+            if (!"A".equals(mode) && allSources.size() < 2) {
+                long searchStartTime = System.currentTimeMillis();
+                List<KnowledgeBaseEntry> additionalSources = searchKnowledgeBase(question, maxResults);
+                long searchDuration = System.currentTimeMillis() - searchStartTime;
+                
+                if (performanceLogging) {
+                    logger.info("KB search completed in {}ms, found {} sources", searchDuration, additionalSources.size());
+                }
+                
+                if (additionalSources != null) {
+                    allSources.addAll(additionalSources);
+                }
             }
             
             // Remove duplicates based on entryId

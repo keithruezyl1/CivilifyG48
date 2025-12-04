@@ -374,36 +374,9 @@ public class OpenAIController {
             // CPA structured facts/report generation removed
             
             // Step 3: Source enrichment rules per mode
-            if ("A".equals(mode) && !canSkipKB) {
-                // GLI: Only attempt additional source enrichment if query requires KB
-                if (kbSources.isEmpty()) {
-                    logger.info("GLI: No sources from initial KB response, attempting additional search");
-                    int desiredLimit = computeDesiredSourceLimit(userMessage);
-                    java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> additionalKbEntries =
-                        openAIService.getKnowledgeBaseSources(userMessage, desiredLimit);
-                    if (additionalKbEntries != null) {
-                        kbSources.addAll(additionalKbEntries);
-                    }
-                    logger.info("GLI: Additional KB sources obtained: {}", kbSources.size());
-                }
-                
-                // If still no sources, try a broader search with keywords
-                if (kbSources.isEmpty()) {
-                    logger.info("GLI: Still no sources, attempting broader keyword search");
-                    String[] keywords = userMessage.toLowerCase().split("\\s+");
-                    for (String keyword : keywords) {
-                        if (keyword.length() > 3) { // Only search meaningful keywords
-                            int desiredLimit = computeDesiredSourceLimit(userMessage);
-                            java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> keywordResults =
-                                openAIService.getKnowledgeBaseSources(keyword, desiredLimit);
-                            if (keywordResults != null && !keywordResults.isEmpty()) {
-                                kbSources.addAll(keywordResults);
-                                logger.info("GLI: Found sources for keyword '{}': {}", keyword, keywordResults.size());
-                                break; // Stop at first successful keyword search
-                            }
-                        }
-                    }
-                }
+            // GLI: Skip additional fallback searches for faster response - use only initial KB results
+            if ("A".equals(mode) && !canSkipKB && kbSources.isEmpty()) {
+                logger.info("GLI: No sources from initial KB response - skipping fallback searches for faster response");
             } else if ("A".equals(mode) && canSkipKB) {
                 logger.info("GLI: Skipping source enrichment for conversational query");
             }
@@ -412,7 +385,7 @@ public class OpenAIController {
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("conversationId", conversationId);
             responseBody.put("success", true);
-            
+
             // Note: response and plausibility score will be set AFTER CPA report regeneration (if any)
             
             // Add isReport flag for CPA mode if the response looks like a report
@@ -499,11 +472,11 @@ public class OpenAIController {
                                     if (hydrated) {
                                         int urlCount = entry.getSourceUrls() != null ? entry.getSourceUrls().size() : 0;
                                         logger.info("CPA: Hydrated entry {} with {} URLs from KB detail endpoint", entryId, urlCount);
-                                    } else {
-                                        logger.debug("CPA: Hydration attempt failed for entry {}", entryId);
-                                    }
-                                }
                             } else {
+                                        logger.debug("CPA: Hydration attempt failed for entry {}", entryId);
+                            }
+                                }
+                        } else {
                                 logger.warn("CPA: KnowledgeBaseService unavailable for hydration");
                             }
                         }
