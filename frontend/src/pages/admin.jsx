@@ -26,13 +26,24 @@ const Admin = () => {
 
   // === THEME STATE ===
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("adminTheme") || "system";
+    const stored = localStorage.getItem("darkMode");
+
+    // Admin saves "dark"/"light", but Chat saves "true"/"false".
+    // We must ensure the local state reflects the actual theme:
+    if (stored === "dark" || stored === "true") return "dark";
+    if (stored === "light" || stored === "false") return "light";
+
+    return "system";
   });
 
+  // Since the theme state now handles the string conversion, we can simplify
+  // the isDarkMode state initialization:
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem("adminTheme");
-    if (saved === "dark") return true;
-    if (saved === "light") return false;
+    // True if theme is explicitly set to dark, false if light.
+    if (theme === "dark") return true;
+    if (theme === "light") return false;
+
+    // Fallback to system preference
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
@@ -60,10 +71,12 @@ const Admin = () => {
 
   const toggleTheme = () => {
     setTheme((prev) => {
-      const next =
-        prev === "light" ? "dark" : prev === "dark" ? "light" : "light";
-      localStorage.setItem("adminTheme", next);
-      return next;
+      const nextInternalTheme =
+        prev === "light" || prev === "system" ? "dark" : "light";
+      const nextLocalStorageValue =
+        nextInternalTheme === "dark" ? "true" : "false";
+      localStorage.setItem("darkMode", nextLocalStorageValue);
+      return nextInternalTheme;
     });
   };
 
@@ -276,10 +289,6 @@ const Admin = () => {
       document.body.classList.remove("dark-mode");
       document.body.classList.add("light-mode");
     }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    localStorage.setItem("darkMode", isDarkMode);
   }, [isDarkMode]);
 
   return (
