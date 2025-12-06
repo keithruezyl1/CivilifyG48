@@ -17,6 +17,7 @@ import {
   FaLaptop,
   FaBars,
   FaTimes,
+  FaComment,
 } from "react-icons/fa";
 import logoIconOrange from "../assets/images/logoiconorange.png";
 
@@ -341,6 +342,14 @@ const Admin = () => {
             </div>
           </div>
         </div>
+        <button
+          onClick={() => navigate("/chat")}
+          style={currentStyles.patchButton}
+          className="patch-button-hover"
+        >
+          <FaComment style={{ marginRight: "8px", color: "#F34D01" }} />
+          Talk to Villy
+        </button>
 
         <div style={currentStyles.sidebarFooter}>
           <div
@@ -1243,6 +1252,22 @@ const styles = (isDarkMode) => ({
     cursor: "pointer",
     transition: "all 0.2s ease",
   },
+  patchButton: {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: "10px",
+    border: "none",
+    backgroundColor: isDarkMode ? "#2a2a2a" : "#f3f4f6",
+    color: isDarkMode ? "#ffffff" : "#1f2937",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "all 0.2s ease",
+    marginTop: "12px",
+  },
 });
 
 const styleSheet = document.createElement("style");
@@ -1426,6 +1451,12 @@ if (!document.getElementById("admin-no-horizontal-scroll-style")) {
     ::-webkit-scrollbar-thumb:hover {
       background: #555;
     }
+      patch-button-hover:hover {
+  background-color: #8b5cf6 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
+}
   `;
   document.head.appendChild(style);
 }
