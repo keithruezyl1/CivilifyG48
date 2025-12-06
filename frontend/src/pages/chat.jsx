@@ -8,6 +8,9 @@ import {
   FaQuestionCircle,
   FaSignOutAlt,
   FaClipboardList,
+  FaUserShield,
+  FaLock,
+  FaShieldAlt,
 } from "react-icons/fa";
 import villyAvatar from "../assets/images/villypfporange.jpg";
 import LoadingScreen from "./LoadingScreen";
@@ -711,7 +714,6 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
 
 const Chat = () => {
   const navigate = useNavigate();
-  // const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true);
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -749,10 +751,12 @@ const Chat = () => {
   const [showNewConversationForm, setShowNewConversationForm] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
-  const [showReportThanksPopup, setShowReportThanksPopup] = useState(false); // controls the 'Villy is glad' popup
+  const [showReportThanksPopup, setShowReportThanksPopup] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(() => {
     return sessionStorage.getItem("disclaimerDismissed") !== "true";
   });
+
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     sessionStorage.setItem("disclaimerDismissed", (!showDisclaimer).toString());
@@ -1559,6 +1563,11 @@ const Chat = () => {
     getUserProfile();
   }, []);
 
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    setUserRole(user.role || "user");
+  }, []);
+
   // We're not fetching conversations as per requirements
   /*
   useEffect(() => {
@@ -1728,77 +1737,6 @@ const Chat = () => {
       }
     `;
     document.head.appendChild(modeHoverStyle);
-
-    // Custom scrollbar styling for chat container
-    const scrollbarStyle = document.createElement("style");
-    scrollbarStyle.textContent = `
-      /* Scrollbar styling for chat messages container */
-      .chatMessages {
-        scrollbar-width: thin;
-        scrollbar-color: ${
-          isDarkMode
-            ? "rgba(150, 150, 150, 0.5) rgba(50, 50, 50, 0.3)"
-            : "rgba(180, 180, 180, 0.6) rgba(240, 240, 240, 0.4)"
-        };
-      }
-
-      /* Webkit browsers (Chrome, Safari, Edge) */
-      .chatMessages::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-      }
-
-      .chatMessages::-webkit-scrollbar-track {
-        background: ${
-          isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"
-        };
-        border-radius: 10px;
-        margin: 4px 0;
-      }
-
-      .chatMessages::-webkit-scrollbar-thumb {
-        background: ${
-          isDarkMode ? "rgba(150, 150, 150, 0.5)" : "rgba(180, 180, 180, 0.6)"
-        };
-        border-radius: 10px;
-        border: 2px solid ${
-          isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"
-        };
-        transition: background 0.2s ease;
-      }
-
-      .chatMessages::-webkit-scrollbar-thumb:hover {
-        background: ${
-          isDarkMode ? "rgba(200, 200, 200, 0.7)" : "rgba(150, 150, 150, 0.8)"
-        };
-      }
-
-      .chatMessages::-webkit-scrollbar-thumb:active {
-        background: ${
-          isDarkMode ? "rgba(220, 220, 220, 0.8)" : "rgba(130, 130, 130, 0.9)"
-        };
-      }
-
-      /* Scrollbar corner (when both scrollbars are present) */
-      .chatMessages::-webkit-scrollbar-corner {
-        background: ${
-          isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"
-        };
-      }
-    `;
-    document.head.appendChild(scrollbarStyle);
-
-    return () => {
-      document.head.removeChild(style); // Clean up injected style
-      document.head.removeChild(hoverStyle); // Clean up hover styles
-      document.head.removeChild(modeHoverStyle); // Clean up mode hover styles
-      document.head.removeChild(scrollbarStyle); // Clean up scrollbar styles
-      document.body.style.overflow = "";
-      document.body.style.height = "";
-      document.body.style.position = "";
-      document.body.style.width = "";
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
   }, [isDarkMode]); // Add isDarkMode dependency for dynamic styles
 
   // Track if initial mount is done
@@ -2197,6 +2135,7 @@ const Chat = () => {
                     </span>
                   </div>
                 </div>
+                {/* how it works dropdown button */}
                 <button
                   style={{
                     ...styles.dropdownItem,
@@ -2208,6 +2147,7 @@ const Chat = () => {
                   <FaQuestionCircle style={styles.dropdownIcon} />
                   <span style={{ fontSize: "15px" }}>How it works</span>
                 </button>
+                {/* profile dropdown button */}
                 <button
                   style={{
                     ...styles.dropdownItem,
@@ -2219,6 +2159,34 @@ const Chat = () => {
                   <FaUser style={styles.dropdownIcon} />
                   <span style={{ fontSize: "15px" }}>My Profile</span>
                 </button>
+                {/* admin navigation button */}
+                {userRole === "ROLE_ADMIN" && (
+                  <button
+                    style={{
+                      ...styles.dropdownItem,
+                      color: isDarkMode ? "#fff" : "#232323",
+                    }}
+                    onClick={() => navigate("/admin")}
+                    className="dropdown-item-hover"
+                  >
+                    <FaShieldAlt style={styles.dropdownIcon} />
+                    <span style={{ fontSize: "15px" }}>Admin Panel</span>
+                  </button>
+                )}
+                {userRole === "ROLE_SYSTEM_ADMIN" && (
+                  <button
+                    style={{
+                      ...styles.dropdownItem,
+                      color: isDarkMode ? "#fff" : "#232323",
+                    }}
+                    onClick={() => navigate("/system")}
+                    className="dropdown-item-hover"
+                  >
+                    <FaLock style={styles.dropdownIcon} />
+                    <span style={{ fontSize: "15px" }}>System Admin Panel</span>
+                  </button>
+                )}
+                {/* theme dropdown button */}
                 <div
                   style={{
                     ...styles.dropdownToggleRow,
@@ -2249,6 +2217,7 @@ const Chat = () => {
                     Dark Mode
                   </span>
                 </div>
+                {/* separator for dropdown */}
                 <div
                   style={{
                     ...styles.dropdownSeparatorBase,
@@ -2258,6 +2227,7 @@ const Chat = () => {
                     margin: "6px 0",
                   }}
                 ></div>
+                {/* logout dropdown button */}
                 <button
                   style={{
                     ...styles.dropdownItem,
@@ -2559,6 +2529,7 @@ const Chat = () => {
                     ...styles.messageWrapper,
                     flexDirection: "row",
                     justifyContent: "flex-start",
+                    marginBottom: 64,
                   }}
                 >
                   <img
@@ -3142,50 +3113,6 @@ const Chat = () => {
         </div>
       ) : null}
 
-      {/* Footer */}
-      {/* <footer
-        style={{
-          ...styles.footer,
-          backgroundColor: "transparent",
-        }}
-        className="footer-left"
-      >
-        <div
-          style={{
-            ...styles.footerLeft,
-            color: "#b0b0b0",
-            fontSize: "13px",
-            marginLeft: "-8px",
-            flex: 1,
-            minWidth: 0,
-            wordBreak: "break-word",
-          }}
-        >
-          <span>The Civilify Company, Cebu City 2025</span>
-        </div>
-        <div
-          style={{
-            ...styles.footerRight,
-            color: "#b0b0b0",
-            fontSize: "13px",
-            marginRight: "-8px",
-            flex: 1,
-            minWidth: 0,
-            justifyContent: "flex-end",
-            wordBreak: "break-word",
-          }}
-        >
-          {selectedMode && messages.length > 0 && (
-            <span>
-              You are in:{" "}
-              {selectedMode === "A"
-                ? "General Legal Information"
-                : "Case Plausibility Assessment"}{" "}
-              Mode
-            </span>
-          )}
-        </div>
-      </footer> */}
       {/* Report Thanks Popup */}
       {showReportThanksPopup && (
         <div
@@ -3897,40 +3824,7 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
   const style = document.createElement("style");
   style.id = "chat-input-no-scrollbar-style";
   style.textContent = `
-    /* Hide Scrollbars for Textarea and General Elements */
-    .chat-input-no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .hide-scrollbar {
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none; /* IE and Edge */
-    }
-    .hide-scrollbar::-webkit-scrollbar {
-      display: none; /* Chrome, Safari, and Opera */
-    }
-
-    /* Custom Scrollbar for Chat Messages */
-    .chatMessages::-webkit-scrollbar {
-      width: 8px;
-      background: transparent;
-    }
-    .chatMessages::-webkit-scrollbar-thumb {
-      background: #ffffff;
-      border-radius: 4px;
-    }
-    .chatMessages::-webkit-scrollbar-thumb:hover {
-      background: #e04000;
-    }
-    .chatMessages::-webkit-scrollbar-button {
-      display: none;
-    }
-    .chatMessages::-webkit-scrollbar-corner {
-      display: none;
-    }
-    .chatMessages {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(243, 77, 1, 0) transparent;
-    }
+    
 
     .new-chat-btn[disabled] {
     /* Keep these overrides to prevent animation/hover effects */
@@ -3940,33 +3834,33 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
     box-shadow: none !important;
     transition: opacity 0.3s ease, background-color 0.3s ease, color 0.3s ease; 
     opacity: 0.6; /* Add opacity here if you want it to dim */
-}
+    }
 
-/* --- LIGHT MODE DISABLED COLORS (UPDATED) --- */
-body.light-mode .new-chat-btn.primary-button-hover[disabled] {
-    /* Set disabled color to be dark text on a pale background */
-    background-color: #f0f0f0 !important; /* Pale background */
-    color: #1a1a1a !important; /* Near-black text */
-}
+    /* --- LIGHT MODE DISABLED COLORS (UPDATED) --- */
+    body.light-mode .new-chat-btn.primary-button-hover[disabled] {
+        /* Set disabled color to be dark text on a pale background */
+        background-color: #f0f0f0 !important; /* Pale background */
+        color: #1a1a1a !important; /* Near-black text */
+    }
 
-/* --- DARK MODE DISABLED COLORS (UNCHANGED) --- */
-body.dark-mode .new-chat-btn.primary-button-hover[disabled] {
-    background-color: #444444 !important; 
-    color: #bbbbbb !important;
-}
+    /* --- DARK MODE DISABLED COLORS (UNCHANGED) --- */
+    body.dark-mode .new-chat-btn.primary-button-hover[disabled] {
+        background-color: #444444 !important; 
+        color: #bbbbbb !important;
+    }
 
-/* Existing primary-button-hover remains untouched to ensure normal enabled hover works */
-/* Your existing :hover rules should correctly take over when [disabled] is removed */
-.primary-button-hover:hover {
-    /* This rule ensures the standard hover effect works when NOT disabled */
-    background-color: #e04000; /* Darker orange */
-    transform: translateY(-1px);
-}
+    /* Existing primary-button-hover remains untouched to ensure normal enabled hover works */
+    /* Your existing :hover rules should correctly take over when [disabled] is removed */
+    .primary-button-hover:hover {
+        /* This rule ensures the standard hover effect works when NOT disabled */
+        background-color: #e04000; /* Darker orange */
+        transform: translateY(-1px);
+    }
 
-    /* Mobile Header Visibility */
-  .mobile-to-header {
-    display: none !important;
-  }
+      /* Mobile Header Visibility */
+    .mobile-to-header {
+      display: none !important;
+    }
 
     /* New rule for input wrapper glow */
     .inputSection:has(textarea:focus) {
