@@ -343,7 +343,11 @@ const Admin = () => {
         </div>
 
         <div style={currentStyles.sidebarFooter}>
-          <div style={currentStyles.sidebarUser}>
+          <div
+            style={currentStyles.sidebarUser}
+            onClick={() => navigate("/profile")}
+            title="Profile"
+          >
             {userData.avatar}
             <div style={currentStyles.sidebarUserInfo}>
               <div style={currentStyles.sidebarUserName}>{userData.name}</div>
@@ -808,6 +812,7 @@ const styles = (isDarkMode) => ({
     alignItems: "center",
     gap: "12px",
     marginBottom: "16px",
+    cursor: "pointer",
   },
   sidebarUserInfo: {
     flex: 1,

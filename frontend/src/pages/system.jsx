@@ -20,6 +20,7 @@ import {
   FaCrown,
   FaUserCog,
   FaTools,
+  FaUser,
 } from "react-icons/fa";
 import logoIconOrange from "../assets/images/logoiconorange.png";
 import { ToastContainer, toast } from "react-toastify";
@@ -448,7 +449,11 @@ const SystemAdminPage = () => {
           Add New Patch
         </button>
         <div style={currentStyles.sidebarFooter}>
-          <div style={currentStyles.sidebarUser}>
+          <div
+            style={currentStyles.sidebarUser}
+            onClick={() => navigate("/profile")}
+            title="Profile"
+          >
             {userData.avatar}
             <div style={currentStyles.sidebarUserInfo}>
               <div style={currentStyles.sidebarUserName}>{userData.name}</div>
@@ -1031,6 +1036,7 @@ const styles = (isDarkMode) => ({
     alignItems: "center",
     gap: "12px",
     marginBottom: "16px",
+    cursor: "pointer",
   },
   sidebarUserInfo: {
     flex: 1,
