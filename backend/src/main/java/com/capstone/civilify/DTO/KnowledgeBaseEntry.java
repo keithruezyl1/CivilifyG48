@@ -20,6 +20,7 @@ public class KnowledgeBaseEntry {
     private String sectionNo;
     private String rightsScope;
     private List<String> sourceUrls;
+    private String primaryUrl;
     
     // Constructors
     public KnowledgeBaseEntry() {}
@@ -125,6 +126,14 @@ public class KnowledgeBaseEntry {
     
     public void setSourceUrls(List<String> sourceUrls) {
         this.sourceUrls = sourceUrls;
+    }
+    
+    public String getPrimaryUrl() {
+        return primaryUrl;
+    }
+    
+    public void setPrimaryUrl(String primaryUrl) {
+        this.primaryUrl = primaryUrl;
     }
     
     @Override

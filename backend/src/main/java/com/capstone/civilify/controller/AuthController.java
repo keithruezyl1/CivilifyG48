@@ -6,7 +6,6 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -37,8 +36,8 @@ public class AuthController {
     private final FirestoreService firestoreService;
     private final JwtUtil jwtUtil;
 
-    @Autowired
-    public AuthController(FirebaseAuthService firebaseAuthService, FirestoreService firestoreService, JwtUtil jwtUtil) {
+    public AuthController(FirebaseAuthService firebaseAuthService, FirestoreService firestoreService, 
+                         JwtUtil jwtUtil) {
         this.firebaseAuthService = firebaseAuthService;
         this.firestoreService = firestoreService;
         this.jwtUtil = jwtUtil;

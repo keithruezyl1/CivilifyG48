@@ -4,6 +4,7 @@ import com.capstone.civilify.model.ChatConversation;
 import com.capstone.civilify.model.ChatMessage;
 import com.capstone.civilify.service.ChatService;
 import com.capstone.civilify.service.OpenAIService;
+import com.capstone.civilify.service.KnowledgeBaseService;
 import com.capstone.civilify.util.KnowledgeBaseSkipClassifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,7 +110,25 @@ public class OpenAIController {
                     "- DO NOT answer general knowledge questions (math, science, history, geography, etc.)\n" +
                     "- DO NOT answer personal advice, medical, financial, or non-legal questions\n" +
                     "- For non-legal questions: Politely redirect to legal topics ONLY\n" +
-                    "- Example redirect: \"I specialize in Philippine legal information. Please ask me about laws, legal processes, or legal rights instead.\"\n\n" +
+                    "- Example redirect: \"I specialize in Philippine legal information. Please ask me about laws, legal processes, or legal rights instead.\"\n" +
+                    "- CRITICAL: When a user asks a non-legal question (like math, general knowledge, etc.), DO NOT answer it. Instead, redirect them to legal topics.\n" +
+                    "- If a user message contains both legal and non-legal questions, address ONLY the legal part and redirect the non-legal part.\n\n" +
+                    "BEHAVIOR FOR NON-LEGAL QUESTIONS:\n" +
+                    "- When you detect a non-legal question (math, science, history, general knowledge, etc.):\n" +
+                    "  1. DO NOT provide the answer to the non-legal question\n" +
+                    "  2. Politely redirect the user to legal topics\n" +
+                    "  3. Example: \"I specialize in Philippine legal information. I can't answer math or general knowledge questions, but I'm here to help with legal matters. Please ask me about laws, legal processes, or legal rights instead.\"\n" +
+                    "- If a message contains both legal and non-legal questions:\n" +
+                    "  1. Address ONLY the legal question\n" +
+                    "  2. Politely redirect the non-legal question without answering it\n" +
+                    "  3. Example: \"Regarding your legal question [address legal part]... As for your math question, I specialize in legal matters. Please ask me about laws or legal processes instead.\"\n\n" +
+                    "FORMATTING AND STYLE REQUIREMENTS:\n" +
+                    "- ALWAYS capitalize the first letter of sentences, including list items\n" +
+                    "- Ensure proper text alignment: all text should be left-aligned\n" +
+                    "- List items must start with a capital letter (e.g., \"**Historical Context**: The current...\" not \"**historical context**: the current...\")\n" +
+                    "- Maintain consistent formatting throughout your response\n" +
+                    "- Use proper paragraph spacing and list indentation\n" +
+                    "- Ensure all sentences, including those in lists, begin with uppercase letters\n\n" +
                     "ABOUT CIVILIFY MODES (when asked):\n" +
                     "Civilify offers TWO modes to assist users with Philippine legal matters:\n\n" +
                     "1. **General Legal Information (GLI) Mode** - This mode (the current mode you're in):\n" +
@@ -151,6 +170,14 @@ public class OpenAIController {
                 // Case Plausibility Assessment Mode
                 systemPrompt = "You are Villy, Civilify's AI-powered legal assistant.\n\n" +
                     "ROLE: Help users assess the plausibility of their legal cases under Philippine law.\n\n" +
+                    "STRICT SCOPE:\n" +
+                    "- ONLY help with legal cases, legal situations, and legal questions under Philippine law\n" +
+                    "- DO NOT answer general knowledge questions (math, science, history, geography, etc.)\n" +
+                    "- DO NOT answer personal advice, medical, financial, or non-legal questions\n" +
+                    "- For non-legal questions: Politely redirect to legal topics ONLY\n" +
+                    "- Example redirect: \"I specialize in helping assess legal cases under Philippine law. Please share details about your legal situation, or ask me about legal matters related to your case instead.\"\n" +
+                    "- CRITICAL: When a user asks a non-legal question (like math, general knowledge, etc.), DO NOT answer it. Instead, redirect them to legal topics.\n" +
+                    "- If a user message contains both legal and non-legal questions, address ONLY the legal part and redirect the non-legal part.\n\n" +
                     "ABOUT CIVILIFY MODES (when asked):\n" +
                     "Civilify offers TWO modes to assist users with Philippine legal matters:\n\n" +
                     "1. **General Legal Information (GLI) Mode**:\n" +
@@ -169,6 +196,7 @@ public class OpenAIController {
                     "- Questions about how to use the system: Answer conversationally, DO NOT generate a report\n" +
                     "- Greetings or general chitchat: Respond conversationally, DO NOT generate a report\n" +
                     "- Questions about what you can do: Answer conversationally, DO NOT generate a report\n" +
+                    "- Non-legal questions (math, science, general knowledge): Redirect to legal topics, DO NOT answer them\n" +
                     "- ONLY generate structured assessment reports when analyzing ACTUAL LEGAL CASES with specific facts\n\n" +
                     "CONVERSATION FLOW:\n" +
                     "- Always respond with helpful, relevant questions or information\n" +
@@ -176,7 +204,17 @@ public class OpenAIController {
                     "- Be empathetic and supportive, especially for serious legal matters\n" +
                     "- NEVER leave responses blank or empty\n" +
                     "- If uncertain, ask clarifying questions rather than staying silent\n" +
-                    "- For mode explanation questions: Use the information provided above in a conversational manner\n\n" +
+                    "- For mode explanation questions: Use the information provided above in a conversational manner\n" +
+                    "- For non-legal questions: Politely redirect without answering the question\n\n" +
+                    "BEHAVIOR FOR NON-LEGAL QUESTIONS:\n" +
+                    "- When you detect a non-legal question (math, science, history, general knowledge, etc.):\n" +
+                    "  1. DO NOT provide the answer to the non-legal question\n" +
+                    "  2. Politely redirect the user to legal topics\n" +
+                    "  3. Example: \"I specialize in helping assess legal cases under Philippine law. I can't answer math or general knowledge questions, but I'm here to help with your legal situation. Please share details about your legal case, or ask me about legal matters instead.\"\n" +
+                    "- If a message contains both legal and non-legal questions:\n" +
+                    "  1. Address ONLY the legal question\n" +
+                    "  2. Politely redirect the non-legal question without answering it\n" +
+                    "  3. Example: \"Regarding your legal situation [address legal part]... As for your math question, I specialize in legal matters. Please focus on your legal case instead.\"\n\n" +
                     "ASSESSMENT PROCESS (ONLY for actual legal cases with specific facts):\n" +
                     "- Gather key facts: what happened, where, when, who was involved\n" +
                     "- Understand the user's goal: file a case, defend against charges, etc.\n" +
@@ -370,13 +408,175 @@ public class OpenAIController {
                 logger.info("GLI: Skipping source enrichment for conversational query");
             }
 
-            // Prepare initial response body (will be populated with sources later)
+            // Prepare initial response body (will be populated with sources and final response later)
             Map<String, Object> responseBody = new HashMap<>();
-            responseBody.put("response", aiResponse);
             responseBody.put("conversationId", conversationId);
             responseBody.put("success", true);
 
-            // Extract plausibility score label and summary from the AI response (for mode B)
+            // Note: response and plausibility score will be set AFTER CPA report regeneration (if any)
+            
+            // Add isReport flag for CPA mode if the response looks like a report
+            if (mode.equals("B")) {
+                // Check if this is a meta question - if so, never mark as report
+                if (isMetaQuestion) {
+                    responseBody.put("isReport", false);
+                    logger.info("CPA: Meta question detected - marking as non-report (conversational response)");
+                } else {
+                    // Check if response contains actual report structure
+                    boolean hasReportStructure = aiResponse != null && (
+                        aiResponse.contains("Case Summary:") || 
+                        aiResponse.contains("Plausibility Score:") ||
+                        aiResponse.contains("Legal Issues or Concerns:")
+                    );
+                    
+                    if (hasReportStructure) {
+                        responseBody.put("isReport", true);
+                    // CPA: Fetch KB sources based on what's actually mentioned in the report
+                    try {
+                        // NEW APPROACH: Extract citations/sources mentioned in the report response
+                        List<String> citationsFromReport = extractCitationsFromReport(aiResponse);
+                        logger.info("CPA: Extracted {} citations from report: {}", citationsFromReport.size(), citationsFromReport);
+                        
+                        java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources = new java.util.ArrayList<>();
+                        int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
+                        
+                        // Query KB API for each citation found in the report
+                        if (!citationsFromReport.isEmpty()) {
+                            for (String citation : citationsFromReport) {
+                                logger.info("CPA: Querying KB API for citation: {}", citation);
+                                java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> citationSources =
+                                    openAIService.getKnowledgeBaseSources(citation, Math.max(2, desiredLimitForReport / citationsFromReport.size()));
+                                if (citationSources != null && !citationSources.isEmpty()) {
+                                    // Filter to only include sources that match the citation
+                                    for (com.capstone.civilify.DTO.KnowledgeBaseEntry source : citationSources) {
+                                        if (source != null && source.getEntryId() != null && 
+                                            (source.getCanonicalCitation() != null && source.getCanonicalCitation().contains(citation) ||
+                                             source.getTitle() != null && source.getTitle().toLowerCase().contains(citation.toLowerCase()))) {
+                                            reportSources.add(source);
+                                        }
+                                    }
+                                    logger.info("CPA: Found {} matching sources for citation: {}", citationSources.size(), citation);
+                                }
+                            }
+                        }
+                        
+                        // If no sources found from citations, query based on legal concepts mentioned in the report
+                        if (reportSources.isEmpty()) {
+                            logger.info("CPA: No sources from citations, querying based on report content");
+                            // Extract key legal terms from the actual report text (not just legal issues section)
+                            String reportQuery = extractLegalConceptsFromReport(aiResponse);
+                            if (reportQuery == null || reportQuery.isBlank()) {
+                                reportQuery = userMessage;
+                                }
+                            if (reportQuery != null && !reportQuery.isBlank()) {
+                                reportSources = openAIService.getKnowledgeBaseSources(reportQuery, desiredLimitForReport);
+                                logger.info("CPA: Report-based KB search completed, returned {} sources", reportSources != null ? reportSources.size() : 0);
+                            }
+                        }
+                        
+                        logger.info("CPA: Total KB sources found: {}", reportSources != null ? reportSources.size() : 0);
+
+                        if (reportSources != null && !reportSources.isEmpty()) {
+                            KnowledgeBaseService kbService = openAIService.getKnowledgeBaseService();
+                            if (kbService != null) {
+                                Map<String, Boolean> hydrationCache = new HashMap<>();
+                                for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : reportSources) {
+                                    if (entry == null) continue;
+                                    String entryId = entry.getEntryId();
+                                    if (entryId == null || entryId.trim().isEmpty()) {
+                                        logger.debug("CPA: KB entry missing entryId, skipping hydration. Title={}", entry.getTitle());
+                                        continue;
+                                    }
+                                    if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                                        continue;
+                                    }
+                                    Boolean attempted = hydrationCache.get(entryId);
+                                    if (attempted != null && !attempted) {
+                                        continue;
+                                    }
+                                    boolean hydrated = kbService.hydrateEntryDetails(entry);
+                                    hydrationCache.put(entryId, hydrated);
+                                    if (hydrated) {
+                                        int urlCount = entry.getSourceUrls() != null ? entry.getSourceUrls().size() : 0;
+                                        logger.info("CPA: Hydrated entry {} with {} URLs from KB detail endpoint", entryId, urlCount);
+                            } else {
+                                        logger.debug("CPA: Hydration attempt failed for entry {}", entryId);
+                            }
+                                }
+                        } else {
+                                logger.warn("CPA: KnowledgeBaseService unavailable for hydration");
+                            }
+                        }
+                        
+                        if (reportSources != null && !reportSources.isEmpty()) {
+                            // Make aiResponse effectively final for lambda
+                            final String finalAiResponse = aiResponse;
+                            
+                            // Validate that sources are from KB (must have entryId) and are relevant to the report
+                            List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validReportSources = reportSources.stream()
+                                .filter(e -> e != null && e.getEntryId() != null && !e.getEntryId().trim().isEmpty())
+                                .filter(e -> e.getSourceUrls() != null && !e.getSourceUrls().isEmpty())
+                                .filter(e -> isSourceRelevantToReport(e, finalAiResponse)) // Filter to only include relevant sources
+                                .collect(Collectors.toList());
+                            
+                            logger.info("CPA: KB search returned {} sources, {} have valid entryIds", 
+                                reportSources.size(), validReportSources.size());
+                            
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : validReportSources) {
+                                logger.debug("KB source: entryId={}, title={}, similarity={}, hasUrls={}", 
+                                    e.getEntryId(), e.getTitle(), e.getSimilarity(), 
+                                    e.getSourceUrls() != null && !e.getSourceUrls().isEmpty());
+                            }
+                            
+                            // Merge into kbSources without duplicates by entryId
+                            java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : kbSources) {
+                                if (e != null && e.getEntryId() != null && !e.getEntryId().trim().isEmpty()) {
+                                    uniq.put(e.getEntryId(), e);
+                                }
+                            }
+                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : validReportSources) {
+                                if (e.getEntryId() != null) {
+                                    uniq.put(e.getEntryId(), e);
+                                }
+                            }
+                            kbSources = new java.util.ArrayList<>(uniq.values());
+                            logger.info("CPA: KB sources fetched for report: {} unique sources (all with entryIds)", kbSources.size());
+                        } else {
+                            logger.warn("CPA: KB search returned null or empty sources");
+                        }
+
+                        if (kbSources != null && !kbSources.isEmpty()) {
+                        // Regenerate the report with KB context and strict source-citation instructions
+                        String reportPrompt = buildEnhancedSystemPrompt(systemPrompt, null, kbSources, mode);
+                        String regenerated = openAIService.generateResponse(
+                            userMessage,
+                            reportPrompt,
+                            conversationHistoryForAI,
+                            mode
+                        );
+                        if (regenerated != null && !regenerated.isBlank()) {
+                            aiResponse = regenerated;
+                            logger.info("CPA: Regenerated report with KB context and citations.");
+                            }
+                        } else {
+                            logger.info("CPA: Skipping report regeneration - no KB sources available");
+                        }
+                    } catch (Exception ex) {
+                        logger.warn("CPA: Failed fetching KB sources for report: {}", ex.getMessage());
+                    }
+                    } else {
+                        responseBody.put("isReport", false);
+                        logger.info("CPA: No report structure detected - conversational response");
+                    }
+                }
+            }
+            
+            // Set the final response (original or regenerated) in responseBody
+            responseBody.put("response", aiResponse);
+            
+            // Extract plausibility score label and summary from the FINAL AI response (for mode B)
+            // This must be done AFTER regeneration to get the correct score
             String plausibilityLabel = null;
             String plausibilitySummary = null;
             if ("B".equals(mode) && aiResponse != null) {
@@ -398,101 +598,102 @@ public class OpenAIController {
             if (plausibilityLabel != null) responseBody.put("plausibilityLabel", plausibilityLabel);
             if (plausibilitySummary != null) responseBody.put("plausibilitySummary", plausibilitySummary);
             
-            // Add isReport flag for CPA mode if the response looks like a report
-            if (mode.equals("B")) {
-                // Check if this is a meta question - if so, never mark as report
-                if (isMetaQuestion) {
-                    responseBody.put("isReport", false);
-                    logger.info("CPA: Meta question detected - marking as non-report (conversational response)");
-                } else {
-                    // Check if response contains actual report structure
-                    boolean hasReportStructure = aiResponse != null && (
-                        aiResponse.contains("Case Summary:") || 
-                        aiResponse.contains("Plausibility Score:") ||
-                        aiResponse.contains("Legal Issues or Concerns:")
-                    );
-                    
-                    if (hasReportStructure) {
-                        responseBody.put("isReport", true);
-                    // CPA: Only now fetch KB sources to support the report
-                    try {
-                        // Extract key legal issues from the generated report for targeted KB search
-                        String kbQuery = extractLegalIssuesFromReport(aiResponse);
-                        if (kbQuery == null || kbQuery.isBlank()) {
-                            // Fallback: Use summarized conversation if extraction fails
-                            String kbSummary = openAIService.summarizeConversationForKb(userMessage, conversationHistoryForAI);
-                            if (kbSummary == null || kbSummary.isBlank()) {
-                                StringBuilder fullContext = new StringBuilder();
-                                fullContext.append("User's current message: ").append(userMessage).append("\n\n");
-                                fullContext.append("Conversation history:\n");
-                                for (Map<String, String> msg : conversationHistoryForAI) {
-                                    String role = msg.get("isUserMessage").equals("true") ? "User" : "Assistant";
-                                    fullContext.append(role).append(": ").append(msg.get("content")).append("\n");
-                                }
-                                kbQuery = fullContext.toString();
-                            } else {
-                                kbQuery = kbSummary;
-                            }
-                            logger.info("CPA: Using fallback KB query (length: {})", kbQuery.length());
-                        } else {
-                            logger.info("CPA: Using extracted legal issues for KB query (length: {})", kbQuery.length());
-                        }
-                        int desiredLimitForReport = computeDesiredSourceLimit(userMessage);
-                        java.util.List<com.capstone.civilify.DTO.KnowledgeBaseEntry> reportSources =
-                            openAIService.getKnowledgeBaseSources(kbQuery, desiredLimitForReport);
-                        if (reportSources != null) {
-                            // Merge into kbSources without duplicates by entryId
-                            java.util.Map<String, com.capstone.civilify.DTO.KnowledgeBaseEntry> uniq = new java.util.LinkedHashMap<>();
-                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : kbSources) {
-                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
-                            }
-                            for (com.capstone.civilify.DTO.KnowledgeBaseEntry e : reportSources) {
-                                if (e.getEntryId() != null) uniq.put(e.getEntryId(), e);
-                            }
-                            kbSources = new java.util.ArrayList<>(uniq.values());
-                        }
-                        logger.info("CPA: KB sources fetched for report: {}", kbSources.size());
-
-                        // Regenerate the report with KB context and strict source-citation instructions
-                        String reportPrompt = buildEnhancedSystemPrompt(systemPrompt, null, kbSources, mode);
-                        String regenerated = openAIService.generateResponse(
-                            userMessage,
-                            reportPrompt,
-                            conversationHistoryForAI,
-                            mode
-                        );
-                        if (regenerated != null && !regenerated.isBlank()) {
-                            aiResponse = regenerated;
-                            logger.info("CPA: Regenerated report with KB context and citations.");
-                        }
-                    } catch (Exception ex) {
-                        logger.warn("CPA: Failed fetching KB sources for report: {}", ex.getMessage());
-                    }
-                    } else {
-                        responseBody.put("isReport", false);
-                        logger.info("CPA: No report structure detected - conversational response");
-                    }
-                }
-            }
-            
             // Prepare sources list for response (after CPA report generation to include KB sources)
             java.util.List<java.util.Map<String, Object>> sources = new java.util.ArrayList<>();
             
-            // Only provide sources for law-related queries
-            boolean shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
+            // Determine if we should provide sources
+            boolean shouldProvideSources;
+            boolean hasReportStructure = aiResponse != null && (
+                aiResponse.contains("Case Summary") || 
+                aiResponse.contains("Plausibility Score") ||
+                aiResponse.contains("Legal Issues")
+            );
+            
+            if ("B".equals(mode) && hasReportStructure) {
+                // CPA mode with report: Always try to provide sources if available
+                shouldProvideSources = true; // Always try for CPA reports
+                logger.info("CPA: Report detected, will attempt to provide sources ({} KB sources available)", 
+                    kbSources != null ? kbSources.size() : 0);
+            } else {
+                // GLI mode or no report: Only provide sources for law-related queries
+                shouldProvideSources = isLawRelatedQuery(userMessage, aiResponse);
+                logger.debug("isLawRelatedQuery returned: {} for mode: {}", shouldProvideSources, mode);
+            }
             
             if (shouldProvideSources && kbSources != null && !kbSources.isEmpty()) {
-                // Limit to maximum 3 sources for relevance
-                int maxSources = Math.min(kbSources.size(), 3);
+                if ("B".equals(mode)) {
+                    KnowledgeBaseService kbService = openAIService.getKnowledgeBaseService();
+                    if (kbService != null) {
+                        Map<String, Boolean> hydrationCache = new HashMap<>();
+                        for (com.capstone.civilify.DTO.KnowledgeBaseEntry entry : kbSources) {
+                            if (entry == null) continue;
+                            String entryId = entry.getEntryId();
+                            if (entryId == null || entryId.trim().isEmpty()) {
+                                continue;
+                            }
+                            if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                                continue;
+                            }
+                            Boolean attempted = hydrationCache.get(entryId);
+                            if (attempted != null && !attempted) {
+                                continue;
+                            }
+                            boolean hydrated = kbService.hydrateEntryDetails(entry);
+                            hydrationCache.put(entryId, hydrated);
+                            if (hydrated) {
+                                int urlCount = entry.getSourceUrls() != null ? entry.getSourceUrls().size() : 0;
+                                logger.info("CPA: Hydrated final KB source {} with {} URLs", entryId, urlCount);
+                            } else {
+                                logger.debug("CPA: Unable to hydrate final KB source {}", entryId);
+                            }
+                        }
+                    } else {
+                        logger.warn("CPA: KnowledgeBaseService unavailable during final source hydration");
+                    }
+                }
+                // Filter and sort sources by relevance (similarity score)
+                // Only include sources with valid entryId, title, and URLs (ensures they're from KB and have clickable links)
+                List<com.capstone.civilify.DTO.KnowledgeBaseEntry> validSources = kbSources.stream()
+                    .filter(entry -> entry != null 
+                        && entry.getEntryId() != null && !entry.getEntryId().trim().isEmpty()
+                        && entry.getTitle() != null && !entry.getTitle().trim().isEmpty()
+                        && entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) // Must have URLs
+                    .sorted((e1, e2) -> {
+                        // Sort by similarity (higher is better), then by title for consistency
+                        Double sim1 = e1.getSimilarity();
+                        Double sim2 = e2.getSimilarity();
+                        if (sim1 != null && sim2 != null) {
+                            int compare = Double.compare(sim2, sim1); // Descending order
+                            if (compare != 0) return compare;
+                        } else if (sim1 != null) return -1;
+                        else if (sim2 != null) return 1;
+                        // If similarity is null or equal, sort by title
+                        String title1 = e1.getTitle() != null ? e1.getTitle() : "";
+                        String title2 = e2.getTitle() != null ? e2.getTitle() : "";
+                        return title1.compareTo(title2);
+                    })
+                    .collect(Collectors.toList());
+                
+                // Limit to maximum 3 most relevant sources
+                int maxSources = Math.min(validSources.size(), 3);
+                logger.info("Filtered {} KB sources to {} most relevant sources with URLs", kbSources.size(), maxSources);
+                
                 for (int i = 0; i < maxSources; i++) {
-                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = kbSources.get(i);
+                    com.capstone.civilify.DTO.KnowledgeBaseEntry entry = validSources.get(i);
                     Map<String, Object> source = new HashMap<>();
                     source.put("entryId", entry.getEntryId());
                     source.put("title", entry.getTitle());
                     source.put("type", entry.getType());
                     source.put("canonicalCitation", entry.getCanonicalCitation());
                     source.put("summary", entry.getSummary());
+                    
+                    // Log similarity score for debugging
+                    if (entry.getSimilarity() != null) {
+                        logger.debug("Including source: {} (similarity: {})", entry.getTitle(), entry.getSimilarity());
+                    }
+                    
                     // Only include source URLs if they exist and are valid
+                    // These URLs come from KB API (if provided) or are generated from citations (as fallback)
                     if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
                         // Filter out any invalid or empty URLs
                         List<String> validUrls = entry.getSourceUrls().stream()
@@ -500,7 +701,14 @@ public class OpenAIController {
                             .collect(Collectors.toList());
                         if (!validUrls.isEmpty()) {
                             source.put("sourceUrls", validUrls);
+                            logger.info("Added {} source URLs for entry: {} (entryId: {})", 
+                                validUrls.size(), entry.getTitle(), entry.getEntryId());
+                        } else {
+                            logger.debug("No valid URLs found for entry: {} (raw URLs: {})", entry.getTitle(), entry.getSourceUrls());
                         }
+                    } else {
+                        logger.warn("Entry '{}' (entryId: {}) has no sourceUrls - this should not happen for KB entries", 
+                            entry.getTitle(), entry.getEntryId());
                     }
                     sources.add(source);
                 }
@@ -676,6 +884,9 @@ public class OpenAIController {
             enhancedPrompt.append("\nIMPORTANT: Base your response primarily on the knowledge base context provided above. ");
             enhancedPrompt.append("Use the specific legal provisions, citations, and information from the knowledge base. ");
             enhancedPrompt.append("Only cite sources that are explicitly mentioned in the knowledge base context above.");
+            enhancedPrompt.append("\n\nACCURACY REQUIREMENT: Your analysis must accurately reflect the legal sources provided. ");
+            enhancedPrompt.append("Do not make up legal provisions or citations. Only reference laws, articles, or acts that are ");
+            enhancedPrompt.append("explicitly listed in the SUPPORTING LEGAL SOURCES section above.");
             
             if ("B".equals(mode)) {
                 // CPA mode: Reinforce strict formatting requirements
@@ -688,6 +899,8 @@ public class OpenAIController {
                 enhancedPrompt.append("- DISCLAIMER must be plain text with colon (no markdown bold)\n");
                 enhancedPrompt.append("- DO NOT use ** for section headings - only use ** for step labels within Suggested Next Steps\n");
                 enhancedPrompt.append("- Integrate KB sources naturally into your analysis, but maintain the strict formatting structure above.");
+                enhancedPrompt.append("\n\nSOURCE ACCURACY: The sources listed in SUPPORTING LEGAL SOURCES above are the ONLY sources you should reference. ");
+                enhancedPrompt.append("Your legal analysis must be based on these specific sources. Do not reference laws or provisions that are not listed above.");
             } else {
                 enhancedPrompt.append("\n\nSOURCE INSTRUCTIONS: Include relevant sources in your response using Markdown format: ");
                 enhancedPrompt.append("- [Source Title](URL) ");
@@ -718,34 +931,117 @@ public class OpenAIController {
     }
     
     /**
-     * Extract key legal issues and case summary from a CPA report to use as KB query.
-     * This creates a targeted query that focuses on the core legal concepts,
-     * resulting in better knowledge base source matches.
+     * Extract citations and legal references mentioned in the report response.
+     * This ensures we query KB API for sources that are actually mentioned in the report.
      */
-    private String extractLegalIssuesFromReport(String reportText) {
+    private List<String> extractCitationsFromReport(String reportText) {
+        List<String> citations = new ArrayList<>();
+        if (reportText == null || reportText.trim().isEmpty()) {
+            return citations;
+        }
+        
+        try {
+            // Pattern 1: Rules of Court citations (e.g., "Rule 114 Sec. 21", "Rule 35, Section 6")
+            java.util.regex.Pattern rocPattern = java.util.regex.Pattern.compile(
+                "Rule\\s+(\\d+)(?:\\s*,\\s*)?(?:Section|Sec\\.?|Sec)\\s*(\\d+)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher rocMatcher = rocPattern.matcher(reportText);
+            while (rocMatcher.find()) {
+                String citation = "Rules of Court, Rule " + rocMatcher.group(1) + 
+                    (rocMatcher.group(2) != null ? " Sec. " + rocMatcher.group(2) : "");
+                if (!citations.contains(citation)) {
+                    citations.add(citation);
+                }
+            }
+            
+            // Pattern 2: Republic Act citations (e.g., "RA 9003", "Republic Act No. 11053")
+            java.util.regex.Pattern raPattern = java.util.regex.Pattern.compile(
+                "(?:R\\.?A\\.?|Republic Act)\\s*(?:No\\.?)?\\s*(\\d+)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher raMatcher = raPattern.matcher(reportText);
+            while (raMatcher.find()) {
+                String citation = "RA " + raMatcher.group(1);
+                if (!citations.contains(citation)) {
+                    citations.add(citation);
+                }
+            }
+            
+            // Pattern 3: RPC Articles (e.g., "RPC Article 350", "Article 266-A")
+            java.util.regex.Pattern rpcPattern = java.util.regex.Pattern.compile(
+                "(?:RPC\\s+)?Article\\s+(\\d+[A-Z]?|\\d+-[A-Z])",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher rpcMatcher = rpcPattern.matcher(reportText);
+            while (rpcMatcher.find()) {
+                String citation = "RPC Article " + rpcMatcher.group(1);
+                if (!citations.contains(citation)) {
+                    citations.add(citation);
+                }
+            }
+            
+            // Pattern 4: Constitution Articles (e.g., "Article III, Section 1", "1987 Constitution Article 3")
+            java.util.regex.Pattern constPattern = java.util.regex.Pattern.compile(
+                "(?:1987\\s+)?Constitution.*?Article\\s+(\\d+)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher constMatcher = constPattern.matcher(reportText);
+            while (constMatcher.find()) {
+                String citation = "1987 Constitution Article " + constMatcher.group(1);
+                if (!citations.contains(citation)) {
+                    citations.add(citation);
+                }
+            }
+            
+            // Pattern 5: Civil Code Articles (e.g., "Civil Code Article 1156", "Article 1156 of the Civil Code")
+            java.util.regex.Pattern civilCodePattern = java.util.regex.Pattern.compile(
+                "(?:Civil Code|New Civil Code).*?Article\\s+(\\d+)",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher civilCodeMatcher = civilCodePattern.matcher(reportText);
+            while (civilCodeMatcher.find()) {
+                String citation = "Civil Code Article " + civilCodeMatcher.group(1);
+                if (!citations.contains(citation)) {
+                    citations.add(citation);
+                }
+            }
+            
+            logger.info("CPA: Extracted {} citations from report: {}", citations.size(), citations);
+            
+        } catch (Exception e) {
+            logger.warn("Error extracting citations from report: {}", e.getMessage());
+        }
+        
+        return citations;
+    }
+    
+    /**
+     * Extract legal concepts from the report text to use as KB query.
+     * This focuses on what's actually mentioned in the report, not just the legal issues section.
+     */
+    private String extractLegalConceptsFromReport(String reportText) {
         if (reportText == null || reportText.trim().isEmpty()) {
             return null;
         }
         
-        StringBuilder kbQuery = new StringBuilder();
+        StringBuilder concepts = new StringBuilder();
         
-        try {
-            // Extract Case Summary
+        // Extract from Case Summary
             java.util.regex.Pattern summaryPattern = java.util.regex.Pattern.compile(
-                "Case Summary:\\s*([\\s\\S]*?)(?=\\n\\n|Legal Issues|$)",
+            "Case Summary:\\s*([\\s\\S]*?)(?=\\n\\n|Legal Issues|Plausibility Score|$)",
                 java.util.regex.Pattern.CASE_INSENSITIVE
             );
             java.util.regex.Matcher summaryMatcher = summaryPattern.matcher(reportText);
             if (summaryMatcher.find()) {
                 String summary = summaryMatcher.group(1).trim();
-                // Clean up markdown and formatting
                 summary = summary.replaceAll("\\*\\*", "").replaceAll("\\n+", " ").trim();
-                if (!summary.isEmpty() && summary.length() > 20) {
-                    kbQuery.append("Case: ").append(summary).append(" ");
+            if (!summary.isEmpty()) {
+                concepts.append(summary).append(" ");
                 }
             }
             
-            // Extract Legal Issues or Concerns
+        // Extract from Legal Issues section
             java.util.regex.Pattern issuesPattern = java.util.regex.Pattern.compile(
                 "Legal Issues(?: or Concerns)?:\\s*([\\s\\S]*?)(?=\\n\\n|Plausibility Score|Suggested Next Steps|$)",
                 java.util.regex.Pattern.CASE_INSENSITIVE
@@ -753,29 +1049,92 @@ public class OpenAIController {
             java.util.regex.Matcher issuesMatcher = issuesPattern.matcher(reportText);
             if (issuesMatcher.find()) {
                 String issues = issuesMatcher.group(1).trim();
-                // Clean up markdown and bullet points
                 issues = issues.replaceAll("\\*\\*", "")
                               .replaceAll("^-\\s*", "")
                               .replaceAll("\\n-\\s*", ". ")
                               .replaceAll("\\n+", " ")
                               .trim();
                 if (!issues.isEmpty()) {
-                    kbQuery.append("Legal issues: ").append(issues);
-                }
+                concepts.append(issues);
             }
-            
-            String result = kbQuery.toString().trim();
-            
-            // Only return if we have meaningful content (more than just labels)
-            if (result.length() > 30) {
-                return result;
-            }
-            
-        } catch (Exception e) {
-            logger.warn("Error extracting legal issues from report: {}", e.getMessage());
         }
         
-        return null;
+        String result = concepts.toString().trim();
+        return result.isEmpty() ? null : result;
+    }
+    
+    /**
+     * Check if a KB source is relevant to what's mentioned in the report.
+     * This ensures we only show sources that match the report content.
+     */
+    private boolean isSourceRelevantToReport(com.capstone.civilify.DTO.KnowledgeBaseEntry source, String reportText) {
+        if (source == null || reportText == null || reportText.trim().isEmpty()) {
+            return false;
+            }
+            
+        String lowerReport = reportText.toLowerCase();
+        String lowerTitle = source.getTitle() != null ? source.getTitle().toLowerCase() : "";
+        String lowerCitation = source.getCanonicalCitation() != null ? source.getCanonicalCitation().toLowerCase() : "";
+        String lowerSummary = source.getSummary() != null ? source.getSummary().toLowerCase() : "";
+            
+        // Extract key terms from the report
+        List<String> reportTerms = new ArrayList<>();
+        
+        // Check for contract-related terms
+        if (lowerReport.contains("contract") || lowerReport.contains("agreement") || 
+            lowerReport.contains("verbal") || lowerReport.contains("breach")) {
+            reportTerms.add("contract");
+            reportTerms.add("agreement");
+            reportTerms.add("breach");
+        }
+        
+        // Check for consumer protection terms
+        if (lowerReport.contains("consumer") || lowerReport.contains("protection") || 
+            lowerReport.contains("wedding") || lowerReport.contains("organizer")) {
+            reportTerms.add("consumer");
+        }
+        
+        // Check if source title/citation/summary contains any of the report terms
+        for (String term : reportTerms) {
+            if (lowerTitle.contains(term) || lowerCitation.contains(term) || lowerSummary.contains(term)) {
+                return true;
+            }
+        }
+        
+        // If no specific terms match, check if citation is mentioned in report
+        if (source.getCanonicalCitation() != null) {
+            String citation = source.getCanonicalCitation();
+            if (lowerReport.contains(citation.toLowerCase())) {
+                return true;
+            }
+        }
+        
+        // If source is about Rules of Court but report doesn't mention Rules of Court, exclude it
+        if (lowerTitle.contains("rule") && lowerTitle.contains("court") && 
+            !lowerReport.contains("rule") && !lowerReport.contains("court")) {
+            return false;
+        }
+        
+        // If source is about bail/forfeiture but report doesn't mention these, exclude it
+        if ((lowerTitle.contains("bail") || lowerTitle.contains("forfeiture") || 
+             lowerTitle.contains("bond")) && 
+            !lowerReport.contains("bail") && !lowerReport.contains("forfeiture") && 
+            !lowerReport.contains("bond")) {
+            return false;
+        }
+        
+        // If source is about summary judgment but report doesn't mention it, exclude it
+        if (lowerTitle.contains("summary judgment") && !lowerReport.contains("summary judgment")) {
+            return false;
+        }
+        
+        // If source is about sanctions but report doesn't mention sanctions, exclude it
+        if (lowerTitle.contains("sanction") && !lowerReport.contains("sanction")) {
+            return false;
+        }
+        
+        // Default: include if we can't determine relevance (to avoid being too restrictive)
+        return true;
     }
     
     /**

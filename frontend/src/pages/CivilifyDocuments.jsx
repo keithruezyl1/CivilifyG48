@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import LogoIcon from "../assets/images/logoicongradient.png";
 
 // Define all styles as JS objects
 const styles = {
@@ -61,7 +62,7 @@ const styles = {
   },
 
   logo: {
-    height: "2rem",
+    height: "1em !important",
     cursor: "pointer",
   },
 
@@ -162,7 +163,7 @@ const styles = {
     overflowY: "auto",
     minHeight: "calc(100vh - 4rem)",
     backgroundColor: "white",
-    margin: "1rem",
+    // margin: "1rem",
     borderRadius: "0.5rem",
     boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   },
@@ -385,6 +386,52 @@ const styles = {
     position: "relative",
     zIndex: "5",
   },
+
+  // Theme variants (light / dark)
+  light: {
+    primary: "#F34D01",
+    background: "#f9fafb",
+    pageBg: "#f9fafb",
+    appbarBg: "#ffffff",
+    sidebarBg: "#ffffff",
+    contentBg: "#ffffff",
+    text: "#111827",
+    subtle: "#4B5563",
+    muted: "#6b7280",
+    border: "#e5e7eb",
+    cardBg: "#fff8f5",
+    cardBorder: "#feeae1",
+    codeBg: "#1e293b",
+    disclaimerBg: "#fff8f5",
+    disclaimerBorder: "#feeae1",
+    link: "#3b82f6",
+    navLinkBg: "#FFF8F5",
+    overlay: "rgba(0,0,0,0.5)",
+  },
+
+  dark: {
+    primary: "#FF8A4B", // This orange seems to be from the original design
+    background: "#1c1c1c", // Dark background from your image
+    pageBg: "#1c1c1c", // Dark background from your image
+    appbarBg: "#1c1c1c", // Dark background from your image
+    sidebarBg: "#1c1c1c", // Dark background from your image
+    contentBg: "#1c1c1c", // Dark background from your image
+    text: "#e0e0e0", // Lighter text color to contrast with the dark background
+    subtle: "#b0b0b0", // Slightly darker subtle text
+    muted: "#8a8a8a", // Muted text
+    border: "#424242", // Border color
+    cardBg: "#292929", // Card background, slightly lighter than main background
+    cardBorder: "#424242", // Card border
+    codeBg: "#292929", // Code block background
+    disclaimerBg: "#292929", // Disclaimer background
+    disclaimerBorder: "#424242", // Disclaimer border
+    link: "#FF8A4B", // Keeping the primary orange for links
+    navLinkBg: "#292929", // Navigation link background
+    overlay: "rgba(0,0,0,0.6)",
+  },
+  logo: {
+    height: "64px",
+  },
 };
 
 // For media queries and other special CSS that can't be easily represented as inline styles
@@ -403,8 +450,8 @@ const createGlobalStyles = () => {
     .navigation-link {
       margin-top: 2rem !important;
       padding: 0.75rem 1rem !important;
-      background-color: #fff8f5 !important;
-      border: 1px solid #feeae1 !important;
+      background-color: #fff8f5 ;
+      border: 1px solid #feeae1;
       border-radius: 0.375rem !important;
       text-align: right !important;
       font-weight: 500 !important;
@@ -416,10 +463,14 @@ const createGlobalStyles = () => {
       pointer-events: auto !important;
       clear: both !important;
     }
-    
-    .navigation-link:hover {
-      background-color: #fff2ea !important;
+  .navigation-link:hover {
+      background-color: #fff2ea !important; 
       cursor: pointer !important;
+    }
+
+    /* Dark Mode Hover (Conditional via [data-theme]) */
+    [data-theme="dark"] .navigation-link:hover {
+      background-color: #363636 !important; /* Lighter dark-gray for hover effect */
     }
     
     /* Ensure collapsible sections don't hide anything outside of them */
@@ -445,39 +496,71 @@ const createGlobalStyles = () => {
 };
 
 // CollapsibleSection component
-const CollapsibleSection = ({ title, children, icon, isLast }) => {
+const CollapsibleSection = ({ title, children, icon, isLast, theme }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const effectiveTheme =
+    theme ||
+    (typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? styles.dark
+      : styles.light);
 
   const toggleSection = () => {
     setIsOpen(!isOpen);
+  };
+
+  // Derived styles using theme
+  const headerStyle = {
+    ...styles.collapsibleHeader,
+    backgroundColor: effectiveTheme.cardBg,
+    borderBottom: `1px solid ${effectiveTheme.border}`,
+    cursor: "pointer",
+  };
+
+  const titleStyle = {
+    ...styles.collapsibleTitle,
+    color: effectiveTheme.text,
+  };
+
+  const iconStyle = {
+    ...styles.collapsibleIcon,
+    color: effectiveTheme.primary,
+    fill: effectiveTheme.primary,
+    ...(isOpen ? styles.collapsibleIconOpen : {}),
+  };
+
+  const sectionStyle = {
+    ...styles.collapsibleSection,
+    border: `1px solid ${effectiveTheme.border}`,
+    backgroundColor: effectiveTheme.contentBg,
+  };
+
+  const bodyStyle = {
+    ...styles.collapsibleBody,
+    backgroundColor: effectiveTheme.contentBg,
+    color: effectiveTheme.subtle,
   };
 
   return (
     <div
       className="collapsibleSection"
       style={{
-        ...styles.collapsibleSection,
+        ...sectionStyle,
         marginBottom: isLast ? "0" : "1rem", // No margin if it's the last section
       }}
     >
       <div
         style={{
-          ...styles.collapsibleHeader,
-          ...(isOpen
-            ? styles.collapsibleHeaderOpen
-            : styles.collapsibleHeaderClosed),
+          ...(isOpen ? headerStyle : { ...headerStyle, borderBottom: "none" }),
         }}
         onClick={toggleSection}
       >
-        <h3 style={styles.collapsibleTitle}>{title}</h3>
+        <h3 style={titleStyle}>{title}</h3>
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          style={{
-            ...styles.collapsibleIcon,
-            ...(isOpen ? styles.collapsibleIconOpen : {}),
-          }}
+          style={iconStyle}
           viewBox="0 0 20 20"
-          fill="currentColor"
         >
           <path
             fillRule="evenodd"
@@ -487,7 +570,7 @@ const CollapsibleSection = ({ title, children, icon, isLast }) => {
         </svg>
       </div>
       {isOpen && (
-        <div className="collapsible-body" style={styles.collapsibleBody}>
+        <div className="collapsible-body" style={bodyStyle}>
           {children}
         </div>
       )}
@@ -530,29 +613,16 @@ const sidebarItems = [
 
 const CivilifyDocuments = () => {
   const [selectedItem, setSelectedItem] = useState("getting-started");
-  const [fromSignup, setFromSignup] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const navigate = window.reactRouterNavigate || null; // fallback if not in router context
-
-  // Load selected section from localStorage
-  useEffect(() => {
-    try {
-      const savedSection = window.localStorage.getItem("selectedDocSection");
-      const fromSignupFlag = window.localStorage.getItem("docFromSignup");
-      if (savedSection) {
-        setSelectedItem(savedSection);
-        window.localStorage.removeItem("selectedDocSection");
-      }
-      if (fromSignupFlag) {
-        setFromSignup(true);
-        window.localStorage.removeItem("docFromSignup");
-      }
-    } catch (e) {
-      console.warn("Storage access error:", e);
-    }
-  }, []);
-
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Initial check for system preference
+    return (
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
+  }); // Removed unused state variables: fromSignup, navigate
   // Apply global styles
   useEffect(() => {
     document.body.style.overflow = "scroll";
@@ -595,6 +665,27 @@ const CivilifyDocuments = () => {
     document.title = "Civilify | Documents";
   }, []);
 
+  // Listen to website theme changes (data-theme or class on <html>) and apply when user has no explicit preference
+  useEffect(() => {
+    document.title = "Civilify | Documents";
+  }, []); // Listen to OS system theme changes
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleThemeChange = (e) => {
+      setIsDarkMode(e.matches);
+    }; // Setup event listener
+
+    mediaQuery.addEventListener("change", handleThemeChange); // Cleanup listener
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleThemeChange);
+    };
+  }, []);
+
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -608,6 +699,7 @@ const CivilifyDocuments = () => {
 
   // Navigation link component to ensure consistent visibility
   const NavigationLink = ({ targetId, title }) => {
+    const theme = isDarkMode ? styles.dark : styles.light;
     return (
       <button
         className="navigation-link"
@@ -616,11 +708,11 @@ const CivilifyDocuments = () => {
           width: "100%",
           margin: "1rem 0", // Add space above and below
           padding: "0.5rem 1rem",
-          backgroundColor: "#FFF8F5",
-          color: "#F34D01",
+          backgroundColor: theme.cardBg, // #292929 (Lighter than background #1c1c1c)
+          color: theme.primary, // #FF8A4B (The bright accent color)
           textAlign: "right",
           borderRadius: "0.375rem",
-          border: "1px solid #FEEAE1",
+          border: `1px solid ${theme.border}`, // #424242 (Visible border)
           fontSize: "0.875rem",
           fontWeight: "500",
           cursor: "pointer",
@@ -644,59 +736,85 @@ const CivilifyDocuments = () => {
     flexDirection: "column",
   };
 
+  // theme to merge with styles where needed
+  const theme = isDarkMode ? styles.dark : styles.light;
+
+  // helper to merge sidebar function result with theme
+  const sidebarStyleMerged = {
+    ...styles.sidebar(isCollapsed, isMobile),
+    backgroundColor: theme.sidebarBg,
+    borderColor: theme.border,
+  };
+
   return (
-    <div style={styles.docsPage}>
-      <nav style={styles.appbar}>
+    <div
+      style={{ ...styles.docsPage, backgroundColor: theme.pageBg }}
+      data-theme={isDarkMode ? "dark" : "light"}
+    >
+      <nav
+        style={{
+          ...styles.appbar,
+          backgroundColor: theme.appbarBg,
+          borderBottom: `1px solid ${theme.border}`,
+        }}
+      >
         <div style={styles.logoContainer}>
+          <img
+            src={LogoIcon}
+            alt="Civilify Logo"
+            style={{ ...styles.logo, height: "30px", marginRight: "12px" }}
+          />
           <div
             style={{
               fontSize: "1.5rem",
               fontWeight: "bold",
-              color: "#F34D01",
+              color: theme.primary,
             }}
           >
             Civilify Docs
           </div>
         </div>
-        <button
-          style={{
-            ...styles.hamburgerButton,
-            display: "flex !important", // Force display on all screen sizes
-            visibility: "visible !important", // Ensure visibility
-            opacity: "1 !important", // Ensure opacity
-          }}
-          onClick={toggleSidebar}
-          className="hamburger-button"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <button
+            style={{
+              ...styles.hamburgerButton,
+              display: "flex !important", // Force display on all screen sizes
+              visibility: "visible !important", // Ensure visibility
+              opacity: "1 !important", // Ensure opacity
+              color: theme.primary,
+            }}
+            onClick={toggleSidebar}
+            className="hamburger-button"
+            aria-label="Open navigation"
           >
-            <path
-              d="M3 6H21M3 12H21M3 18H21"
-              stroke="#F34D01"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 6H21M3 12H21M3 18H21"
+                stroke={theme.primary}
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
       </nav>
 
       {!isCollapsed && (
         <div
-          style={styles.sidebarOverlay}
+          style={{ ...styles.sidebarOverlay, backgroundColor: theme.overlay }}
           className="sidebar-overlay"
           onClick={(e) => e.target === e.currentTarget && toggleSidebar()}
         >
-          <aside
-            style={styles.sidebar(isCollapsed, isMobile)}
-            className="sidebar"
-          >
+          <aside style={sidebarStyleMerged} className="sidebar">
             <button
-              style={styles.closeButton}
+              style={{ ...styles.closeButton, color: theme.muted }}
               onClick={toggleSidebar}
               className="close-button"
             >
@@ -711,8 +829,14 @@ const CivilifyDocuments = () => {
                     ...styles.navItem,
                     fontSize: isMobile ? "0.9rem" : "1rem",
                     ...(selectedItem === item.id
-                      ? styles.navItemSelected
-                      : styles.navItemUnselected),
+                      ? {
+                          ...styles.navItemSelected,
+                          backgroundColor: theme.primary,
+                          color: theme.text,
+                        }
+                      : { ...styles.navItemUnselected, color: theme.subtle }),
+                    backgroundColor:
+                      selectedItem === item.id ? theme.primary : "transparent",
                   }}
                   onClick={() => handleItemSelect(item.id)}
                 >
@@ -721,12 +845,18 @@ const CivilifyDocuments = () => {
               ))}
             </div>
 
-            <div style={styles.backLink} className="bottom-nav">
+            <div
+              style={{
+                ...styles.backLink,
+                borderTop: `1px solid ${theme.border}`,
+              }}
+              className="bottom-nav"
+            >
               <button
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#F34D01",
+                  color: theme.primary,
                   cursor: "pointer",
                   fontSize: "1rem",
                   fontWeight: "500",
@@ -743,19 +873,29 @@ const CivilifyDocuments = () => {
         </div>
       )}
 
-      <main style={styles.content}>
+      <main
+        style={{
+          ...styles.content,
+          backgroundColor: theme.contentBg,
+          borderColor: theme.border,
+        }}
+      >
         <div style={styles.contentHeader}>
-          <h1 style={styles.contentHeaderTitle}>Documentation</h1>
-          <div style={styles.contentDivider}></div>
+          <h1 style={{ ...styles.contentHeaderTitle, color: theme.text }}>
+            Documentation
+          </h1>
+          <div
+            style={{ ...styles.contentDivider, backgroundColor: theme.border }}
+          ></div>
         </div>
 
         <div style={{ maxWidth: "none" }}>
           {selectedItem ? (
             <div>
-              <h2 style={styles.sectionTitle}>
+              <h2 style={{ ...styles.sectionTitle, color: theme.text }}>
                 {sidebarItems.find((item) => item.id === selectedItem)?.title}
               </h2>
-              <p style={styles.sectionDescription}>
+              <p style={{ ...styles.sectionDescription, color: theme.subtle }}>
                 {sidebarItems.find((item) => item.id === selectedItem)?.content}
               </p>
 
@@ -765,7 +905,7 @@ const CivilifyDocuments = () => {
                   className="section-container"
                   style={sectionContainerStyle}
                 >
-                  <CollapsibleSection title="How to Begin">
+                  <CollapsibleSection title="How to Begin" theme={theme}>
                     <ol
                       style={{
                         paddingLeft: "2rem",
@@ -776,14 +916,14 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
                         Visit{" "}
                         <a
-                          href="#"
-                          style={{ color: "#3b82f6", fontWeight: "500" }}
+                          href="https://civilify.vercel.app"
+                          style={{ color: theme.link, fontWeight: "500" }}
                         >
                           www.civilify.com
                         </a>
@@ -791,7 +931,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -801,7 +941,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -813,7 +953,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -824,7 +964,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -838,6 +978,7 @@ const CivilifyDocuments = () => {
                   <CollapsibleSection
                     title="Tips for Best Results"
                     isLast={true}
+                    theme={theme}
                   >
                     <ul
                       style={{
@@ -849,7 +990,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.75rem",
                         }}
                       >
@@ -858,7 +999,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.75rem",
                         }}
                       >
@@ -867,7 +1008,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.75rem",
                         }}
                       >
@@ -876,7 +1017,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.75rem",
                         }}
                       >
@@ -902,11 +1043,11 @@ const CivilifyDocuments = () => {
                   className="section-container"
                   style={sectionContainerStyle}
                 >
-                  <CollapsibleSection title="Introduction">
+                  <CollapsibleSection title="Introduction" theme={theme}>
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                       }}
                     >
@@ -919,7 +1060,7 @@ const CivilifyDocuments = () => {
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                       }}
                     >
@@ -929,11 +1070,11 @@ const CivilifyDocuments = () => {
                     </p>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Mission">
+                  <CollapsibleSection title="Mission" theme={theme}>
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                       }}
                     >
@@ -943,7 +1084,7 @@ const CivilifyDocuments = () => {
                     </p>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Key Features">
+                  <CollapsibleSection title="Key Features" theme={theme}>
                     <div
                       style={{
                         display: "flex",
@@ -956,10 +1097,12 @@ const CivilifyDocuments = () => {
                         style={{
                           flex: "1 1 300px",
                           minWidth: "0",
-                          backgroundColor: "#f0f8ff",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #e1effe",
+                          border: `1px solid ${
+                            theme.cardBorder || theme.border
+                          }`,
                         }}
                       >
                         <h4
@@ -972,7 +1115,7 @@ const CivilifyDocuments = () => {
                         >
                           General Legal Information Mode
                         </h4>
-                        <p style={{ color: "#374151" }}>
+                        <p style={{ color: theme.subtle }}>
                           Ask questions about laws, rights, and legal
                           procedures. Get quick, clear answers from Villy.
                         </p>
@@ -981,10 +1124,12 @@ const CivilifyDocuments = () => {
                         style={{
                           flex: "1 1 300px",
                           minWidth: "0",
-                          backgroundColor: "#f0fff4",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #e1fcef",
+                          border: `1px solid ${
+                            theme.cardBorder || theme.border
+                          }`,
                         }}
                       >
                         <h4
@@ -997,7 +1142,7 @@ const CivilifyDocuments = () => {
                         >
                           Case Analysis Mode
                         </h4>
-                        <p style={{ color: "#374151" }}>
+                        <p style={{ color: theme.subtle }}>
                           Describe your situation for a detailed analysis,
                           plausibility score, and suggested next steps.
                         </p>
@@ -1006,10 +1151,12 @@ const CivilifyDocuments = () => {
                         style={{
                           flex: "1 1 300px",
                           minWidth: "0",
-                          backgroundColor: "#fff0f0",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #fee1e1",
+                          border: `1px solid ${
+                            theme.cardBorder || theme.border
+                          }`,
                         }}
                       >
                         <h4
@@ -1022,7 +1169,7 @@ const CivilifyDocuments = () => {
                         >
                           AI-Powered Legal Analysis
                         </h4>
-                        <p style={{ color: "#374151" }}>
+                        <p style={{ color: theme.subtle }}>
                           Understand your legal situation using natural language
                           and advanced AI.
                         </p>
@@ -1031,10 +1178,12 @@ const CivilifyDocuments = () => {
                         style={{
                           flex: "1 1 300px",
                           minWidth: "0",
-                          backgroundColor: "#f8f0ff",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #e5d1fe",
+                          border: `1px solid ${
+                            theme.cardBorder || theme.border
+                          }`,
                         }}
                       >
                         <h4
@@ -1047,7 +1196,7 @@ const CivilifyDocuments = () => {
                         >
                           Flexible Chat Modes
                         </h4>
-                        <p style={{ color: "#374151" }}>
+                        <p style={{ color: theme.subtle }}>
                           Switch between quick legal Q&A and in-depth case
                           analysis as needed.
                         </p>
@@ -1056,10 +1205,12 @@ const CivilifyDocuments = () => {
                         style={{
                           flex: "1 1 300px",
                           minWidth: "0",
-                          backgroundColor: "#fff7e6",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #feecc8",
+                          border: `1px solid ${
+                            theme.cardBorder || theme.border
+                          }`,
                         }}
                       >
                         <h4
@@ -1072,15 +1223,26 @@ const CivilifyDocuments = () => {
                         >
                           Privacy-First Design
                         </h4>
-                        <p style={{ color: "#374151" }}>
+                        <p style={{ color: theme.subtle }}>
                           Your data stays with you. No conversations are stored.
                         </p>
                       </div>
                     </div>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Legal Disclaimer" isLast={true}>
-                    <div style={styles.disclaimer}>
+                  <CollapsibleSection
+                    title="Legal Disclaimer"
+                    isLast={true}
+                    theme={theme}
+                  >
+                    <div
+                      style={{
+                        ...styles.disclaimer,
+                        backgroundColor: theme.disclaimerBg,
+                        border: `1px solid ${theme.disclaimerBorder}`,
+                        color: theme.primary,
+                      }}
+                    >
                       Civilify is not a law firm and does not offer legal
                       representation or advice. The platform provides
                       AI-generated legal insights based on publicly available
@@ -1106,11 +1268,11 @@ const CivilifyDocuments = () => {
                   className="section-container"
                   style={sectionContainerStyle}
                 >
-                  <CollapsibleSection title="Why Civilify Exists">
+                  <CollapsibleSection title="Why Civilify Exists" theme={theme}>
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                       }}
                     >
@@ -1123,7 +1285,7 @@ const CivilifyDocuments = () => {
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                       }}
                     >
@@ -1133,7 +1295,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1144,7 +1306,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1157,7 +1319,7 @@ const CivilifyDocuments = () => {
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                       }}
                     >
@@ -1169,17 +1331,17 @@ const CivilifyDocuments = () => {
                     <div
                       style={{
                         marginTop: "1.5rem",
-                        backgroundColor: "#f9fafb",
+                        backgroundColor: theme.cardBg,
                         padding: "1rem",
                         borderRadius: "0.5rem",
-                        border: "1px solid #e5e7eb",
+                        border: `1px solid ${theme.cardBorder || theme.border}`,
                       }}
                     >
                       <h4
                         style={{
                           fontSize: "1rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1189,13 +1351,16 @@ const CivilifyDocuments = () => {
                         style={{
                           paddingLeft: "1.5rem",
                           fontSize: "0.875rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                         }}
                       >
                         <li style={{ marginBottom: "0.25rem" }}>
                           <a
-                            href="#"
-                            style={{ color: "#3b82f6", textDecoration: "none" }}
+                            href="https://legacy.senate.gov.ph/lisdata/4029936714!.pdf"
+                            style={{
+                              color: theme.link,
+                              textDecoration: "none",
+                            }}
                           >
                             PSA: Legal Services Accessibility in the Philippines
                             (2023)
@@ -1203,8 +1368,11 @@ const CivilifyDocuments = () => {
                         </li>
                         <li style={{ marginBottom: "0.25rem" }}>
                           <a
-                            href="#"
-                            style={{ color: "#3b82f6", textDecoration: "none" }}
+                            href="https://sc.judiciary.gov.ph/sc-approves-the-rules-on-unified-legal-aid-service/"
+                            style={{
+                              color: theme.link,
+                              textDecoration: "none",
+                            }}
                           >
                             Supreme Court of the Philippines: Legal Aid Report
                             (2023)
@@ -1212,8 +1380,11 @@ const CivilifyDocuments = () => {
                         </li>
                         <li style={{ marginBottom: "0.25rem" }}>
                           <a
-                            href="#"
-                            style={{ color: "#3b82f6", textDecoration: "none" }}
+                            href="https://worldjusticeproject.org/sites/default/files/documents/Access-to-Justice-2019-Philippines.pdf"
+                            style={{
+                              color: theme.link,
+                              textDecoration: "none",
+                            }}
                           >
                             Philippine Bar Association: Legal Services Survey
                             (2023)
@@ -1226,12 +1397,13 @@ const CivilifyDocuments = () => {
                   <CollapsibleSection
                     title="Who is Civilify For?"
                     isLast={true}
+                    theme={theme}
                   >
                     <div style={{ marginBottom: "1.5rem" }}>
                       <p
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1243,7 +1415,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1252,7 +1424,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1261,7 +1433,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1271,7 +1443,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1283,10 +1455,10 @@ const CivilifyDocuments = () => {
 
                     <div
                       style={{
-                        backgroundColor: "#fff5f5",
+                        backgroundColor: theme.cardBg,
                         padding: "1rem",
                         borderRadius: "0.5rem",
-                        border: "1px solid #fee2e2",
+                        border: `1px solid ${theme.cardBorder || theme.border}`,
                       }}
                     >
                       <h4
@@ -1303,7 +1475,7 @@ const CivilifyDocuments = () => {
                         style={{
                           paddingLeft: "1.5rem",
                           fontSize: "1rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                         }}
                       >
                         <li style={{ marginBottom: "0.25rem" }}>
@@ -1336,12 +1508,12 @@ const CivilifyDocuments = () => {
                   className="section-container"
                   style={sectionContainerStyle}
                 >
-                  <CollapsibleSection title="Authentication">
+                  <CollapsibleSection title="Authentication" theme={theme}>
                     <ul style={{ paddingLeft: "1.5rem", marginBottom: "1rem" }}>
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1351,7 +1523,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1361,12 +1533,12 @@ const CivilifyDocuments = () => {
                     </ul>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Data Handling">
+                  <CollapsibleSection title="Data Handling" theme={theme}>
                     <ul style={{ paddingLeft: "1.5rem", marginBottom: "1rem" }}>
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1376,7 +1548,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1386,7 +1558,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1395,12 +1567,12 @@ const CivilifyDocuments = () => {
                     </ul>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Encryption">
+                  <CollapsibleSection title="Encryption" theme={theme}>
                     <ul style={{ paddingLeft: "1.5rem", marginBottom: "1rem" }}>
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1410,7 +1582,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1420,13 +1592,13 @@ const CivilifyDocuments = () => {
                     </ul>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Terms of Service">
+                  <CollapsibleSection title="Terms of Service" theme={theme}>
                     <div style={{ marginBottom: "1.5rem" }}>
                       <h4
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1435,7 +1607,7 @@ const CivilifyDocuments = () => {
                       <p
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1448,7 +1620,7 @@ const CivilifyDocuments = () => {
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1457,7 +1629,7 @@ const CivilifyDocuments = () => {
                       <p
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1471,7 +1643,7 @@ const CivilifyDocuments = () => {
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1483,7 +1655,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1492,7 +1664,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1501,7 +1673,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1513,7 +1685,7 @@ const CivilifyDocuments = () => {
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1522,7 +1694,7 @@ const CivilifyDocuments = () => {
                       <p
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1534,13 +1706,13 @@ const CivilifyDocuments = () => {
                     </div>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Privacy Policy">
+                  <CollapsibleSection title="Privacy Policy" theme={theme}>
                     <div style={{ marginBottom: "1.5rem" }}>
                       <h4
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1552,7 +1724,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1561,7 +1733,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1570,7 +1742,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1582,7 +1754,7 @@ const CivilifyDocuments = () => {
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1594,7 +1766,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1603,7 +1775,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1612,7 +1784,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1624,7 +1796,7 @@ const CivilifyDocuments = () => {
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1633,7 +1805,7 @@ const CivilifyDocuments = () => {
                       <p
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1646,7 +1818,7 @@ const CivilifyDocuments = () => {
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#111827",
+                          color: theme.text,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1658,7 +1830,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1667,7 +1839,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1676,7 +1848,7 @@ const CivilifyDocuments = () => {
                         <li
                           style={{
                             fontSize: "1.125rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1686,11 +1858,15 @@ const CivilifyDocuments = () => {
                     </div>
                   </CollapsibleSection>
 
-                  <CollapsibleSection title="Compliance" isLast={true}>
+                  <CollapsibleSection
+                    title="Compliance"
+                    isLast={true}
+                    theme={theme}
+                  >
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                       }}
                     >
@@ -1700,7 +1876,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1709,7 +1885,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1718,7 +1894,7 @@ const CivilifyDocuments = () => {
                       <li
                         style={{
                           fontSize: "1.125rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "0.5rem",
                         }}
                       >
@@ -1729,7 +1905,7 @@ const CivilifyDocuments = () => {
                     <p
                       style={{
                         fontSize: "1.125rem",
-                        color: "#4B5563",
+                        color: theme.subtle,
                         marginBottom: "1rem",
                         fontWeight: "600",
                       }}
@@ -1751,21 +1927,22 @@ const CivilifyDocuments = () => {
                   </div>
                 </div>
               )}
-
-              {/* Example content for "Troubleshooting & Support" section */}
               {selectedItem === "troubleshooting" && (
                 <div
                   className="section-container"
                   style={sectionContainerStyle}
                 >
-                  <CollapsibleSection title="Frequently Asked Questions">
+                  <CollapsibleSection
+                    title="Frequently Asked Questions"
+                    theme={theme}
+                  >
                     <div style={{ marginBottom: "1.5rem" }}>
                       <div
                         style={{
-                          backgroundColor: "#f9fafb",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #e5e7eb",
+                          border: `1px solid ${theme.border}`,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1773,7 +1950,7 @@ const CivilifyDocuments = () => {
                           style={{
                             fontSize: "1.125rem",
                             fontWeight: "600",
-                            color: "#111827",
+                            color: theme.text,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1782,22 +1959,22 @@ const CivilifyDocuments = () => {
                         <p
                           style={{
                             fontSize: "1rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             paddingLeft: "1rem",
-                            borderLeft: "3px solid #d1d5db",
+                            borderLeft: `3px solid ${theme.muted}`,
                           }}
                         >
+                          {" "}
                           Check your internet connection. Civilify requires
                           online access for AI processing.
                         </p>
                       </div>
-
                       <div
                         style={{
-                          backgroundColor: "#f9fafb",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #e5e7eb",
+                          border: `1px solid ${theme.border}`,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1805,7 +1982,7 @@ const CivilifyDocuments = () => {
                           style={{
                             fontSize: "1.125rem",
                             fontWeight: "600",
-                            color: "#111827",
+                            color: theme.text,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1814,22 +1991,22 @@ const CivilifyDocuments = () => {
                         <p
                           style={{
                             fontSize: "1rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             paddingLeft: "1rem",
-                            borderLeft: "3px solid #d1d5db",
+                            borderLeft: `3px solid ${theme.muted}`,
                           }}
                         >
+                          {" "}
                           Try rephrasing your question or choosing a simpler
                           version.
                         </p>
                       </div>
-
                       <div
                         style={{
-                          backgroundColor: "#f9fafb",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #e5e7eb",
+                          border: `1px solid ${theme.border}`,
                           marginBottom: "1rem",
                         }}
                       >
@@ -1837,7 +2014,7 @@ const CivilifyDocuments = () => {
                           style={{
                             fontSize: "1.125rem",
                             fontWeight: "600",
-                            color: "#111827",
+                            color: theme.text,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1846,28 +2023,27 @@ const CivilifyDocuments = () => {
                         <p
                           style={{
                             fontSize: "1rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             paddingLeft: "1rem",
-                            borderLeft: "3px solid #d1d5db",
+                            borderLeft: `3px solid ${theme.muted}`,
                           }}
                         >
                           Use the "Forgot Password" option on the sign-in page.
                         </p>
                       </div>
-
                       <div
                         style={{
-                          backgroundColor: "#f9fafb",
+                          backgroundColor: theme.cardBg,
                           padding: "1rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #e5e7eb",
+                          border: `1px solid ${theme.border}`,
                         }}
                       >
                         <h4
                           style={{
                             fontSize: "1.125rem",
                             fontWeight: "600",
-                            color: "#111827",
+                            color: theme.text,
                             marginBottom: "0.5rem",
                           }}
                         >
@@ -1876,15 +2052,19 @@ const CivilifyDocuments = () => {
                         <p
                           style={{
                             fontSize: "1rem",
-                            color: "#4B5563",
+                            color: theme.subtle,
                             paddingLeft: "1rem",
-                            borderLeft: "3px solid #d1d5db",
+                            borderLeft: `3px solid ${theme.muted}`,
                           }}
                         >
-                          Email us at:{" "}
+                          {" "}
+                          Email us at:
                           <a
                             href="mailto:support@civilify.com"
-                            style={{ color: "#3b82f6", textDecoration: "none" }}
+                            style={{
+                              color: theme.link,
+                              textDecoration: "none",
+                            }}
                           >
                             support@civilify.com
                           </a>
@@ -1892,14 +2072,17 @@ const CivilifyDocuments = () => {
                       </div>
                     </div>
                   </CollapsibleSection>
-
-                  <CollapsibleSection title="Contact Support" isLast={true}>
+                  <CollapsibleSection
+                    title="Contact Support"
+                    isLast={true}
+                    theme={theme}
+                  >
                     <div
                       style={{
-                        backgroundColor: "#f0f9ff",
+                        backgroundColor: theme.cardBg,
                         padding: "1.5rem",
                         borderRadius: "0.5rem",
-                        border: "1px solid #e0f2fe",
+                        border: `1px solid ${theme.border}`,
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
@@ -1909,28 +2092,30 @@ const CivilifyDocuments = () => {
                         style={{
                           fontSize: "1.25rem",
                           fontWeight: "600",
-                          color: "#0369a1",
+                          color: theme.primary,
                           marginBottom: "1rem",
                         }}
                       >
+                        {" "}
                         Need additional help?
                       </h4>
                       <p
                         style={{
                           fontSize: "1rem",
-                          color: "#4B5563",
+                          color: theme.subtle,
                           marginBottom: "1.5rem",
                           textAlign: "center",
                         }}
                       >
+                        {" "}
                         Our support team is available Monday through Friday,
-                        9am-5pm EST.
+                        9am-5pm
                       </p>
                       <a
                         href="mailto:support@civilify.com"
                         style={{
-                          backgroundColor: "#0ea5e9",
-                          color: "white",
+                          backgroundColor: theme.primary,
+                          color: theme.contentBg, // Use a contrasting background color for the text
                           padding: "0.75rem 1.5rem",
                           borderRadius: "0.375rem",
                           textDecoration: "none",
@@ -1958,8 +2143,6 @@ const CivilifyDocuments = () => {
                       </a>
                     </div>
                   </CollapsibleSection>
-
-                  {/* Navigation section outside of collapsible sections */}
                   <div style={{ marginTop: "1rem", marginBottom: "2rem" }}>
                     <NavigationLink
                       targetId="what-is"
@@ -1975,7 +2158,7 @@ const CivilifyDocuments = () => {
                 style={{
                   fontSize: "1.25rem",
                   fontWeight: 500,
-                  color: "#6B7280",
+                  color: theme.muted,
                 }}
               >
                 Select a topic from the sidebar to view documentation.
@@ -1995,7 +2178,7 @@ const CivilifyDocuments = () => {
         }
 
         .close-button:hover {
-          color: #f34d01;
+          color: ${styles.light.primary};
         }
 
         .hamburger-button:hover {

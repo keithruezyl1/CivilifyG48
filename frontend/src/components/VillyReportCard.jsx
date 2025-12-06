@@ -453,47 +453,120 @@ const VillyReportCard = ({
           }}
         >
           <div
-            style={{ display: "flex", alignItems: "center", marginBottom: 8, gap: 8 }}
+            style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 8 }}
           >
             <span style={{ fontSize: 18 }}>📚</span>
             <span style={{ fontWeight: 700, fontSize: 16, color: isDarkMode ? "#ffd96a" : "#b97a00" }}>
               Sources
+            </span>
+            <span style={{ 
+              fontSize: 12, 
+              color: isDarkMode ? "#ffd96a" : "#b97a00",
+              opacity: 0.8,
+              fontStyle: "italic",
+              marginLeft: "auto"
+            }}>
+              Click to explore
             </span>
           </div>
           <ul style={{ margin: 0, paddingLeft: 22 }}>
             {displaySources.map((src, i) => {
               // Check if source is an object (from API) or string (from parsed text)
               if (typeof src === 'object' && src.title) {
-                // Check if source has valid URLs
-                const hasValidUrl = src.sourceUrls && src.sourceUrls.length > 0;
-                const firstUrl = hasValidUrl ? src.sourceUrls[0] : null;
+                const dedupUrls = new Set();
+                
+                const addUrl = (url) => {
+                  if (url && typeof url === 'string') {
+                    const trimmed = url.trim();
+                    if (trimmed.startsWith('http')) {
+                      dedupUrls.add(trimmed);
+                    }
+                  }
+                };
+                
+                addUrl(src.primaryUrl || src.primary_url);
+                
+                const rawSourceUrls = src.sourceUrls || src.source_urls || src.source_url || src.sourceUrl || [];
+                if (Array.isArray(rawSourceUrls)) {
+                  rawSourceUrls.forEach(addUrl);
+                } else {
+                  addUrl(rawSourceUrls);
+                }
+                
+                const urlsField = src.urls;
+                if (Array.isArray(urlsField)) {
+                  urlsField.forEach(item => {
+                    if (typeof item === 'string') addUrl(item);
+                    else if (item && typeof item === 'object') addUrl(item.url);
+                  });
+                } else {
+                  addUrl(urlsField);
+                }
+                
+                const externalRelations = src.external_relations || src.externalRelations;
+                if (Array.isArray(externalRelations)) {
+                  externalRelations.forEach(rel => {
+                    if (rel && typeof rel === 'object') addUrl(rel.url);
+                  });
+                }
+                
+                const validUrls = Array.from(dedupUrls);
+                const firstUrl = validUrls.length > 0 ? validUrls[0] : null;
+                
+                // Debug logging
+                if (!firstUrl) {
+                  console.debug('Source has no URL:', {
+                    title: src.title,
+                    sourceUrls: src.sourceUrls || src.source_urls,
+                    canonicalCitation: src.canonicalCitation
+                  });
+                }
                 
                 return (
                   <li key={i} style={{ marginBottom: 8, wordBreak: "break-word", lineHeight: 1.6 }}>
-                    {/* Title - clickable if URL available */}
-                    {hasValidUrl ? (
+                    {/* Title - ALWAYS make it look clickable if URL is available */}
+                    {firstUrl ? (
                       <a
                         href={firstUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                          color: isDarkMode ? "#ffe066" : "#8c6500",
+                          color: isDarkMode ? "#ffd700" : "#b8860b",
                           fontWeight: 700,
-                          textDecoration: "none",
+                          textDecoration: "underline",
+                          textDecorationColor: isDarkMode ? "#ffd700" : "#b8860b",
+                          textUnderlineOffset: "3px",
+                          textDecorationThickness: "2px",
                           cursor: "pointer",
-                          borderBottom: `2px solid ${isDarkMode ? "rgba(255, 224, 102, 0.3)" : "rgba(140, 101, 0, 0.3)"}`,
                           transition: "all 0.2s ease",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "2px 4px",
+                          borderRadius: "4px",
+                          backgroundColor: isDarkMode ? "rgba(255, 215, 0, 0.1)" : "rgba(184, 134, 11, 0.1)",
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.borderBottomColor = isDarkMode ? "#ffe066" : "#8c6500";
-                          e.target.style.opacity = "0.8";
+                          e.target.style.textDecorationColor = isDarkMode ? "#ffd700" : "#b8860b";
+                          e.target.style.opacity = "0.9";
+                          e.target.style.transform = "translateY(-2px)";
+                          e.target.style.backgroundColor = isDarkMode ? "rgba(255, 215, 0, 0.2)" : "rgba(184, 134, 11, 0.2)";
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.borderBottomColor = isDarkMode ? "rgba(255, 224, 102, 0.3)" : "rgba(140, 101, 0, 0.3)";
+                          e.target.style.textDecorationColor = isDarkMode ? "#ffd700" : "#b8860b";
                           e.target.style.opacity = "1";
+                          e.target.style.transform = "translateY(0)";
+                          e.target.style.backgroundColor = isDarkMode ? "rgba(255, 215, 0, 0.1)" : "rgba(184, 134, 11, 0.1)";
                         }}
+                        onClick={(e) => {
+                          // Ensure the link opens in a new tab
+                          e.preventDefault();
+                          window.open(firstUrl, '_blank', 'noopener,noreferrer');
+                        }}
+                        title={`Click to view source: ${firstUrl}`}
                       >
-                        {src.title} 🔗
+                        <span>{src.title}</span>
+                        <span style={{ fontSize: "16px" }}>🔗</span>
                       </a>
                     ) : (
                       <strong style={{ color: isDarkMode ? "#ffe066" : "#8c6500" }}>{src.title}</strong>
@@ -514,28 +587,37 @@ const VillyReportCard = ({
                     )}
                     
                     {/* Show additional URLs if available */}
-                    {hasValidUrl && src.sourceUrls.length > 1 && (
-                      <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
-                        {src.sourceUrls.slice(1).map((url, urlIdx) => (
+                    {validUrls.length > 1 && (
+                      <div style={{ fontSize: 12, marginTop: 6, opacity: 0.8 }}>
+                        <span style={{ fontSize: 11, marginRight: 6 }}>Additional sources:</span>
+                        {validUrls.slice(1).map((url, urlIdx) => (
                           <a
                             key={urlIdx}
-                            href={url}
+                            href={url.trim()}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
                               color: isDarkMode ? "#ffcc66" : "#996600",
-                              textDecoration: "none",
+                              textDecoration: "underline",
+                              textDecorationColor: isDarkMode ? "rgba(255, 204, 102, 0.5)" : "rgba(153, 102, 0, 0.5)",
                               marginRight: 8,
                               fontSize: 11,
+                              cursor: "pointer",
                             }}
                             onMouseEnter={(e) => {
-                              e.target.style.textDecoration = "underline";
+                              e.target.style.textDecorationColor = isDarkMode ? "#ffcc66" : "#996600";
+                              e.target.style.opacity = "0.8";
                             }}
                             onMouseLeave={(e) => {
-                              e.target.style.textDecoration = "none";
+                              e.target.style.textDecorationColor = isDarkMode ? "rgba(255, 204, 102, 0.5)" : "rgba(153, 102, 0, 0.5)";
+                              e.target.style.opacity = "1";
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              window.open(url.trim(), '_blank', 'noopener,noreferrer');
                             }}
                           >
-                            Additional Source {urlIdx + 1} 🔗
+                            Source {urlIdx + 2} 🔗
                           </a>
                         ))}
                       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -24,6 +24,7 @@ import "react-toastify/dist/ReactToastify.css";
 import VillyReportCard from "../components/VillyReportCard";
 import { validateAuthToken, getAuthToken } from "../utils/auth";
 import ReactMarkdown from "react-markdown";
+import AnimateInView from "../components/lightswind/animate-in-view";
 
 // System prompts for different modes
 const GLI_SYSTEM_PROMPT =
@@ -34,7 +35,7 @@ const CPA_SYSTEM_PROMPT =
 // Function to format AI response text
 const formatAIResponse = (text) => {
   if (!text) return "";
-  
+
   // Clean up only metadata tags, preserve sources
   let cleanedText = text
     // Remove metadata tags like {sourcesUsed: [...]}
@@ -44,7 +45,7 @@ const formatAIResponse = (text) => {
     // Clean up extra whitespace but preserve line breaks for sources
     .replace(/\s+/g, " ")
     .trim();
-  
+
   // Replace Markdown-like symbols with HTML tags
   const formattedText = cleanedText
     // Replace ***text*** with <strong><em>text</em></strong>
@@ -75,17 +76,19 @@ const fetchGPTResponse = async (
 
     // Call the backend API endpoint with conversation context
     if (currentAbortController) {
-      try { currentAbortController.abort(); } catch (e) {}
+      try {
+        currentAbortController.abort();
+      } catch (e) {}
     }
     currentAbortController = new AbortController();
     const response = await axios.post(
       `${API_URL}/ai/chat`,
       {
-      message: userMessage,
-      mode: mode,
-      conversationId: conversationId,
-      userId: userId || (user ? user.uid : null),
-      userEmail: userEmail || (user ? user.email : null),
+        message: userMessage,
+        mode: mode,
+        conversationId: conversationId,
+        userId: userId || (user ? user.uid : null),
+        userEmail: userEmail || (user ? user.email : null),
       },
       { signal: currentAbortController.signal }
     );
@@ -299,19 +302,215 @@ const filterSystemEchoAndModeSwitch = (text, mode) => {
   return text.trim();
 };
 
+// Function to capitalize the first letter of sentences in text
+const capitalizeSentences = (text) => {
+  if (!text || typeof text !== "string") return text;
+
+  // Split by common sentence endings, but preserve markdown formatting
+  return text
+    .split(/([.!?]\s+)/)
+    .map((segment, index) => {
+      // Skip the punctuation segments
+      if (/^[.!?]\s+$/.test(segment)) return segment;
+
+      // Capitalize first letter if it's the start or after punctuation
+      if (
+        index === 0 ||
+        /^[.!?]\s+$/.test(text.split(/([.!?]\s+)/)[index - 1])
+      ) {
+        // Don't capitalize if it starts with markdown formatting
+        if (/^(\*\*|\*|#|\[|`)/.test(segment.trim())) {
+          return segment;
+        }
+        return segment.charAt(0).toUpperCase() + segment.slice(1);
+      }
+      return segment;
+    })
+    .join("");
+};
+
+// Function to process markdown text for proper capitalization
+const processMarkdownText = (text) => {
+  if (!text) return text;
+
+  // Process list items to ensure proper capitalization
+  const lines = text.split("\n");
+  const processedLines = lines.map((line) => {
+    const trimmed = line.trim();
+    const leadingWhitespace = line.match(/^(\s*)/)?.[1] || "";
+
+    // Handle numbered list items (1., 2., etc.)
+    if (/^\d+\.\s/.test(trimmed)) {
+      const match = trimmed.match(/^(\d+\.\s+)(.+)/);
+      if (match) {
+        const prefix = match[1];
+        let content = match[2];
+
+        // Handle bold text followed by colon (e.g., "**Historical Context**: The current...")
+        if (/^\*\*/.test(content)) {
+          const boldMatch = content.match(/^(\*\*)([^*:]+)(\*\*)(\s*:\s*)(.*)/);
+          if (boldMatch) {
+            const boldText = boldMatch[2];
+            const colon = boldMatch[4];
+            const afterColon = boldMatch[5];
+
+            // Capitalize bold text if needed
+            let capitalizedBold = /^[a-z]/.test(boldText)
+              ? boldText.charAt(0).toUpperCase() + boldText.slice(1)
+              : boldText;
+
+            // Capitalize text after colon if it starts with lowercase
+            let capitalizedAfter =
+              afterColon && /^[a-z]/.test(afterColon.trim())
+                ? afterColon.trim().charAt(0).toUpperCase() +
+                  afterColon.trim().slice(1)
+                : afterColon;
+
+            content = `**${capitalizedBold}**${colon}${capitalizedAfter}`;
+          } else {
+            // Just bold text without colon
+            const boldMatch = content.match(/^(\*\*)([^*]+)(\*\*)(.*)/);
+            if (boldMatch) {
+              const boldText = boldMatch[2];
+              const afterBold = boldMatch[4];
+              if (/^[a-z]/.test(boldText)) {
+                content = `**${boldText
+                  .charAt(0)
+                  .toUpperCase()}${boldText.slice(1)}**${afterBold}`;
+              }
+            }
+          }
+        } else if (content && /^[a-z]/.test(content)) {
+          // Regular content starting with lowercase
+          content = content.charAt(0).toUpperCase() + content.slice(1);
+        }
+        return leadingWhitespace + prefix + content;
+      }
+    }
+
+    // Handle bullet list items (-, *, •)
+    if (/^[-*•]\s/.test(trimmed)) {
+      const match = trimmed.match(/^([-*•]\s+)(.+)/);
+      if (match) {
+        const prefix = match[1];
+        let content = match[2];
+
+        // Handle bold text followed by colon
+        if (/^\*\*/.test(content)) {
+          const boldMatch = content.match(/^(\*\*)([^*:]+)(\*\*)(\s*:\s*)(.*)/);
+          if (boldMatch) {
+            const boldText = boldMatch[2];
+            const colon = boldMatch[4];
+            const afterColon = boldMatch[5];
+
+            // Capitalize bold text if needed
+            let capitalizedBold = /^[a-z]/.test(boldText)
+              ? boldText.charAt(0).toUpperCase() + boldText.slice(1)
+              : boldText;
+
+            // Capitalize text after colon if it starts with lowercase
+            let capitalizedAfter =
+              afterColon && /^[a-z]/.test(afterColon.trim())
+                ? afterColon.trim().charAt(0).toUpperCase() +
+                  afterColon.trim().slice(1)
+                : afterColon;
+
+            content = `**${capitalizedBold}**${colon}${capitalizedAfter}`;
+          } else {
+            // Just bold text without colon
+            const boldMatch = content.match(/^(\*\*)([^*]+)(\*\*)(.*)/);
+            if (boldMatch) {
+              const boldText = boldMatch[2];
+              const afterBold = boldMatch[4];
+              if (/^[a-z]/.test(boldText)) {
+                content = `**${boldText
+                  .charAt(0)
+                  .toUpperCase()}${boldText.slice(1)}**${afterBold}`;
+              }
+            }
+          }
+        } else if (content && /^[a-z]/.test(content)) {
+          // Regular content starting with lowercase
+          content = content.charAt(0).toUpperCase() + content.slice(1);
+        }
+        return leadingWhitespace + prefix + content;
+      }
+    }
+
+    return line;
+  });
+
+  return processedLines.join("\n");
+};
+
 const markdownComponents = {
   // Render headings as plain paragraphs with bold text (no colors/sizes)
-  h1: ({ node, children }) => <p><strong>{children}</strong></p>,
-  h2: ({ node, children }) => <p><strong>{children}</strong></p>,
-  h3: ({ node, children }) => <p><strong>{children}</strong></p>,
-  // Plain paragraph, no special styling for notes
-  p: ({ node, children, ...props }) => <p {...props}>{children}</p>,
+  h1: ({ node, children }) => (
+    <p style={{ margin: "8px 0", textAlign: "left" }}>
+      <strong>{children}</strong>
+    </p>
+  ),
+  h2: ({ node, children }) => (
+    <p style={{ margin: "8px 0", textAlign: "left" }}>
+      <strong>{children}</strong>
+    </p>
+  ),
+  h3: ({ node, children }) => (
+    <p style={{ margin: "8px 0", textAlign: "left" }}>
+      <strong>{children}</strong>
+    </p>
+  ),
+  // Plain paragraph with proper alignment
+  p: ({ node, children, ...props }) => (
+    <p
+      style={{ margin: "8px 0", textAlign: "left", lineHeight: "1.6" }}
+      {...props}
+    >
+      {children}
+    </p>
+  ),
   // Render bold text properly
-  strong: ({ node, children, ...props }) => <strong {...props}>{children}</strong>,
-  // Plain lists with default browser styling
-  ul: ({ node, ...props }) => <ul {...props} />,
-  ol: ({ node, ...props }) => <ol {...props} />,
-  li: ({ node, ...props }) => <li {...props} />,
+  strong: ({ node, children, ...props }) => (
+    <strong {...props}>{children}</strong>
+  ),
+  // Lists with proper styling and alignment
+  ul: ({ node, ...props }) => (
+    <ul
+      style={{
+        margin: "8px 0",
+        paddingLeft: "24px",
+        textAlign: "left",
+        listStyleType: "disc",
+      }}
+      {...props}
+    />
+  ),
+  ol: ({ node, ...props }) => (
+    <ol
+      style={{
+        margin: "8px 0",
+        paddingLeft: "24px",
+        textAlign: "left",
+        listStyleType: "decimal",
+      }}
+      {...props}
+    />
+  ),
+  li: ({ node, children, ...props }) => {
+    return (
+      <li
+        style={{
+          margin: "4px 0",
+          textAlign: "left",
+          lineHeight: "1.6",
+          paddingLeft: "4px",
+        }}
+        {...props}
+      >
+        {children}
+      </li>
+    );
+  },
   // Keep links as-is (users like current source rendering)
   a: ({ node, ...props }) => (
     <a target="_blank" rel="noopener noreferrer" {...props} />
@@ -365,22 +564,22 @@ const VillyReportUI = ({ reportText, isDarkMode }) => {
   // Helper to style report text for dark mode
   function formatReportText(text, isDarkMode) {
     if (!text) return "";
-    
+
     // Clean up only metadata tags, preserve sources
     let cleanedText = text
       // Remove metadata tags like {sourcesUsed: [...]}
       .replace(/\{sourcesUsed:\s*\[.*?\]\}/g, "")
       // Remove any remaining metadata patterns
       .replace(/\{[^}]*\}/g, "")
-    // Remove emojis from the text
+      // Remove emojis from the text
       .replace(
-      /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
-      ""
+        /[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F300}-\u{1F5FF}]/gu,
+        ""
       )
       // Clean up extra whitespace but preserve line breaks for sources
       .replace(/\s+/g, " ")
       .trim();
-    
+
     // Split into lines
     const lines = cleanedText.split("\n");
     let html = "";
@@ -691,7 +890,7 @@ const Chat = () => {
       e.preventDefault();
       setSendHovered(true);
       if (!isTyping) {
-      handleSubmit(e);
+        handleSubmit(e);
       }
 
       setTimeout(() => setSendHovered(false), 750);
@@ -1038,7 +1237,7 @@ const Chat = () => {
             });
           }
         }, 100);
-        
+
         // Additional scroll for complex responses
         setTimeout(() => {
           if (chatContainerRef.current) {
@@ -1137,7 +1336,7 @@ const Chat = () => {
         });
       }
     }, 100);
-    
+
     // Additional scroll to ensure complete visibility
     setTimeout(() => {
       if (chatContainerRef.current) {
@@ -1536,7 +1735,11 @@ const Chat = () => {
       /* Scrollbar styling for chat messages container */
       .chatMessages {
         scrollbar-width: thin;
-        scrollbar-color: ${isDarkMode ? "rgba(150, 150, 150, 0.5) rgba(50, 50, 50, 0.3)" : "rgba(180, 180, 180, 0.6) rgba(240, 240, 240, 0.4)"};
+        scrollbar-color: ${
+          isDarkMode
+            ? "rgba(150, 150, 150, 0.5) rgba(50, 50, 50, 0.3)"
+            : "rgba(180, 180, 180, 0.6) rgba(240, 240, 240, 0.4)"
+        };
       }
 
       /* Webkit browsers (Chrome, Safari, Edge) */
@@ -1546,29 +1749,41 @@ const Chat = () => {
       }
 
       .chatMessages::-webkit-scrollbar-track {
-        background: ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+        background: ${
+          isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"
+        };
         border-radius: 10px;
         margin: 4px 0;
       }
 
       .chatMessages::-webkit-scrollbar-thumb {
-        background: ${isDarkMode ? "rgba(150, 150, 150, 0.5)" : "rgba(180, 180, 180, 0.6)"};
+        background: ${
+          isDarkMode ? "rgba(150, 150, 150, 0.5)" : "rgba(180, 180, 180, 0.6)"
+        };
         border-radius: 10px;
-        border: 2px solid ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+        border: 2px solid ${
+          isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"
+        };
         transition: background 0.2s ease;
       }
 
       .chatMessages::-webkit-scrollbar-thumb:hover {
-        background: ${isDarkMode ? "rgba(200, 200, 200, 0.7)" : "rgba(150, 150, 150, 0.8)"};
+        background: ${
+          isDarkMode ? "rgba(200, 200, 200, 0.7)" : "rgba(150, 150, 150, 0.8)"
+        };
       }
 
       .chatMessages::-webkit-scrollbar-thumb:active {
-        background: ${isDarkMode ? "rgba(220, 220, 220, 0.8)" : "rgba(130, 130, 130, 0.9)"};
+        background: ${
+          isDarkMode ? "rgba(220, 220, 220, 0.8)" : "rgba(130, 130, 130, 0.9)"
+        };
       }
 
       /* Scrollbar corner (when both scrollbars are present) */
       .chatMessages::-webkit-scrollbar-corner {
-        background: ${isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"};
+        background: ${
+          isDarkMode ? "rgba(50, 50, 50, 0.3)" : "rgba(240, 240, 240, 0.4)"
+        };
       }
     `;
     document.head.appendChild(scrollbarStyle);
@@ -1616,15 +1831,15 @@ const Chat = () => {
   useEffect(() => {
     if (!chatContainerRef.current) return;
     if (messages.length === 0) return; // Don't scroll if no messages (welcome screen)
-    
+
     const container = chatContainerRef.current;
-    
+
     // Scroll immediately for instant feedback
     container.scrollTo({
       top: container.scrollHeight,
       behavior: "smooth",
     });
-    
+
     // Additional scroll after a delay to account for:
     // - DOM rendering completion
     // - Image loading (if any)
@@ -1638,7 +1853,7 @@ const Chat = () => {
         });
       }
     }, 150);
-    
+
     // Final scroll for very large responses (CPA reports)
     // Ensures nothing is cut off by the input box
     setTimeout(() => {
@@ -1854,6 +2069,7 @@ const Chat = () => {
         pauseOnHover
       />
       {/* Header */}
+
       <header
         style={{
           ...styles.header,
@@ -1861,75 +2077,91 @@ const Chat = () => {
           borderBottom: `1px solid ${isDarkMode ? "#F3640B" : "#F3640B"}`,
         }}
       >
-        <div style={styles.headerLeft}>
-          <img
-            src={logoIconOrange}
-            alt="Civilify Logo"
-            style={{ ...styles.logo, height: "30px", marginRight: "12px" }}
-          />
-          <span
-            style={{
-              fontSize: "24px",
-              fontWeight: "600",
-              color: isDarkMode ? "#ffffff" : "#1a1a1a",
-            }}
-            className="header-to-mobile"
-          >
-            Civilify
-          </span>
-        </div>
+        <AnimateInView animationType="slide-left">
+          <div style={styles.headerLeft}>
+            <img
+              src={logoIconOrange}
+              alt="Civilify Logo"
+              style={{ ...styles.logo, height: "30px", marginRight: "12px" }}
+            />
+            <span
+              style={{
+                fontSize: "24px",
+                fontWeight: "600",
+                color: isDarkMode ? "#ffffff" : "#1a1a1a",
+              }}
+              className="header-to-mobile"
+            >
+              Civilify
+            </span>
+          </div>
+        </AnimateInView>
+
         <div style={styles.headerRight}>
-          <button
-            style={{
-              ...styles.headerButton,
-              color: isDarkMode ? "#ffffff" : "#1a1a1a",
-              background: "none",
-              transition:
-                "background 0.2s, width 0.2s, height 0.2s, min-width 0.2s, transform 0.1s",
-              minWidth: howItWorksHovered ? "110px" : undefined,
-              height: howItWorksHovered ? "40px" : undefined,
-              borderRadius: howItWorksHovered ? "6px" : "6px",
-              padding: howItWorksHovered ? "8px 16px" : "8px 16px",
-              fontWeight: 500,
-              fontSize: "14px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transform: howItWorksHovered ? "translateY(-2px)" : "none",
-            }}
-            onClick={handleHowItWorks}
-            className="primary-button-hover header-to-mobile"
-            onMouseEnter={() => setHowItWorksHovered(true)}
-            onMouseLeave={() => setHowItWorksHovered(false)}
-          >
-            How it works
-          </button>
-          <button
-            style={{
-              ...styles.newChatButton,
-              background: isDarkMode ? "#ffffff" : "#1a1a1a",
-              color: isDarkMode ? "#1a1a1a" : "#ffffff",
-              border: "none",
-              borderRadius: "6px",
-              padding: "8px 16px",
-              fontSize: "14px",
-              fontWeight: "500",
-            }}
-            onClick={handleNewChat}
-            className="primary-button-hover"
-          >
-            + New chat
-          </button>
+          <AnimateInView animationType="slide-right">
+            <button
+              style={{
+                ...styles.headerButton,
+                color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                background: "none",
+                transition:
+                  "background 0.2s, width 0.2s, height 0.2s, min-width 0.2s, transform 0.1s",
+                minWidth: howItWorksHovered ? "110px" : undefined,
+                height: howItWorksHovered ? "40px" : undefined,
+                borderRadius: howItWorksHovered ? "6px" : "6px",
+                padding: howItWorksHovered ? "8px 16px" : "8px 16px",
+                fontWeight: 500,
+                fontSize: "14px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transform: howItWorksHovered ? "translateY(-2px)" : "none",
+              }}
+              onClick={handleHowItWorks}
+              className="primary-button-hover header-to-mobile"
+              onMouseEnter={() => setHowItWorksHovered(true)}
+              onMouseLeave={() => setHowItWorksHovered(false)}
+            >
+              How it works
+            </button>
+          </AnimateInView>
+          <AnimateInView animationType="slide-right">
+            <button
+              style={{
+                ...styles.newChatButton,
+                background: isDarkMode ? "#ffffff" : "#1a1a1a",
+                color: isDarkMode ? "#1a1a1a" : "#ffffff",
+                border: "none",
+                borderRadius: "6px",
+                padding: "8px 16px",
+                fontSize: "14px",
+                fontWeight: "500",
+                ...(isTyping && {
+                  opacity: 0.5,
+                  cursor: "not-allowed",
+                  transition: "opacity 0.3s ease",
+                  transform: "none", // Prevent hover lift/scale
+                }),
+              }}
+              onClick={handleNewChat}
+              className="primary-button-hover new-chat-button"
+              disabled={isTyping} // Disable while typing
+            >
+              + New chat
+            </button>
+          </AnimateInView>
           <div style={styles.avatarContainer} ref={dropdownRef}>
             <button
               style={styles.avatarButton}
               onClick={() => setShowDropdown(!showDropdown)}
               className="avatar-button-hover"
             >
-              <ProfileAvatar
-                onClick={() => setShowDropdown(!showDropdown)}
-                style={styles.avatarCircle}
-              />
+              <AnimateInView animationType="slide-right">
+                <ProfileAvatar
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  style={styles.avatarCircle}
+                />
+              </AnimateInView>
             </button>
             {showDropdown && (
               <div
@@ -2105,248 +2337,266 @@ const Chat = () => {
           >
             {messages.length === 0 ? (
               <div style={styles.welcomeSection}>
-                <h1
-                  style={{
-                    ...styles.welcomeTitle,
-                    color: isDarkMode ? "#ffffff" : "#1a1a1a",
-                  }}
-                  className="welcome-title"
+                <AnimateInView animationType="slide-up">
+                  <h1
+                    style={{
+                      ...styles.welcomeTitle,
+                      color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                    }}
+                    className="welcome-title"
+                  >
+                    Start your conversation with{" "}
+                    <span style={styles.villyText}>Villy</span>.
+                  </h1>
+                </AnimateInView>
+                <AnimateInView
+                  animationType="slide-up"
+                  delay={200}
+                  asChild={true}
                 >
-                  Start your conversation with{" "}
-                  <span style={styles.villyText}>Villy</span>.
-                </h1>
-                <div style={styles.modeSelectionContainer}>
-                  <div
-                    style={{
-                      ...styles.modeOption,
-                      backgroundColor: isDarkMode ? "#333" : "#ffffff",
-                      color: isDarkMode ? "#fff" : "#1a1a1a",
-                      border: isDarkMode
-                        ? "1px solid #444"
-                        : "1px solid #e0e0e0",
-                    }}
-                    onClick={() => handleModeSelection("A")}
-                    className="mode-option-hover"
-                  >
-                    <div style={styles.modeIcon}>
-                      <FaQuestionCircle size={24} />
+                  <div style={styles.modeSelectionContainer}>
+                    <div
+                      style={{
+                        ...styles.modeOption,
+                        backgroundColor: isDarkMode ? "#333" : "#ffffff",
+                        color: isDarkMode ? "#fff" : "#1a1a1a",
+                        border: isDarkMode
+                          ? "1px solid #444"
+                          : "1px solid #e0e0e0",
+                      }}
+                      onClick={() => handleModeSelection("A")}
+                      className="mode-option-hover"
+                    >
+                      <div style={styles.modeIcon}>
+                        <FaQuestionCircle size={24} />
+                      </div>
+                      <div style={styles.modeContent}>
+                        <h3
+                          style={{
+                            ...styles.modeTitle,
+                            color: isDarkMode ? "#fff" : styles.modeTitle.color,
+                          }}
+                        >
+                          General Legal Information
+                        </h3>
+                        <p
+                          style={{
+                            ...styles.modeDescription,
+                            color: isDarkMode
+                              ? "#bbbbbb"
+                              : styles.modeDescription.color,
+                          }}
+                        >
+                          Ask general questions about laws, procedures, and
+                          legal concepts.
+                        </p>
+                      </div>
                     </div>
-                    <div style={styles.modeContent}>
-                      <h3
-                        style={{
-                          ...styles.modeTitle,
-                          color: isDarkMode ? "#fff" : styles.modeTitle.color,
-                        }}
-                      >
-                        General Legal Information
-                      </h3>
-                      <p
-                        style={{
-                          ...styles.modeDescription,
-                          color: isDarkMode
-                            ? "#bbbbbb"
-                            : styles.modeDescription.color,
-                        }}
-                      >
-                        Ask general questions about laws, procedures, and legal
-                        concepts.
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      ...styles.modeOption,
-                      backgroundColor: isDarkMode ? "#333" : "#ffffff",
-                      color: isDarkMode ? "#fff" : "#1a1a1a",
-                      border: isDarkMode
-                        ? "1px solid #444"
-                        : "1px solid #e0e0e0",
-                    }}
-                    onClick={() => handleModeSelection("B")}
-                    className="mode-option-hover"
-                  >
-                    <div style={styles.modeIcon}>
-                      <FaClipboardList size={24} />
-                    </div>
-                    <div style={styles.modeContent}>
-                      <h3
-                        style={{
-                          ...styles.modeTitle,
-                          color: isDarkMode ? "#fff" : styles.modeTitle.color,
-                        }}
-                      >
-                        Case Plausibility Assessment
-                      </h3>
-                      <p
-                        style={{
-                          ...styles.modeDescription,
-                          color: isDarkMode
-                            ? "#bbbbbb"
-                            : styles.modeDescription.color,
-                        }}
-                      >
-                        Get a detailed analysis of your specific legal
-                        situation.
-                      </p>
+                    <div
+                      style={{
+                        ...styles.modeOption,
+                        backgroundColor: isDarkMode ? "#333" : "#ffffff",
+                        color: isDarkMode ? "#fff" : "#1a1a1a",
+                        border: isDarkMode
+                          ? "1px solid #444"
+                          : "1px solid #e0e0e0",
+                      }}
+                      onClick={() => handleModeSelection("B")}
+                      className="mode-option-hover"
+                    >
+                      <div style={styles.modeIcon}>
+                        <FaClipboardList size={24} />
+                      </div>
+                      <div style={styles.modeContent}>
+                        <h3
+                          style={{
+                            ...styles.modeTitle,
+                            color: isDarkMode ? "#fff" : styles.modeTitle.color,
+                          }}
+                        >
+                          Case Plausibility Assessment
+                        </h3>
+                        <p
+                          style={{
+                            ...styles.modeDescription,
+                            color: isDarkMode
+                              ? "#bbbbbb"
+                              : styles.modeDescription.color,
+                          }}
+                        >
+                          Get a detailed analysis of your specific legal
+                          situation.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </AnimateInView>
               </div>
             ) : (
               messages.map((message, index) => (
-                <div
-                  key={index}
-                  style={{
-                    ...styles.messageWrapper,
-                    flexDirection: message.isUser ? "row-reverse" : "row",
-                    justifyContent: message.isUser ? "flex-end" : "flex-start",
-                    marginBottom:
-                      index === messages.length - 1 ? 20 : undefined,
-                  }}
-                  className="message-wrapper"
-                >
-                  {message.isUser ? (
-                    <img
-                      src={
-                        profilePicture ||
-                        "https://randomuser.me/api/portraits/men/32.jpg" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg"
-                      }
-                      alt="User Avatar"
-                      style={{
-                        ...styles.messageAvatar,
-                        ...styles.userAvatar,
-                        objectFit: "cover",
-                      }}
-                    />
-                  ) : (
-                    <img
-                      src={villyAvatar || "/placeholder.svg"}
-                      alt="Villy Avatar"
-                      style={{
-                        ...styles.messageAvatar,
-                        ...styles.aiAvatar,
-                        backgroundColor: isDarkMode ? "#363636" : "#ffffff",
-                        // border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
-                        objectFit: "cover",
-                      }}
-                    />
-                  )}
+                <AnimateInView animationType="slide-up-fast">
                   <div
+                    key={index}
                     style={{
-                      ...styles.message,
-                      ...(message.isUser
-                        ? styles.userMessage
-                        : message.isError
-                        ? {
-                            ...styles.aiMessage,
-                            backgroundColor: "#fff0f0",
-                            color: "#b91c1c",
-                            // border: "1px solid #fca5a5",
-                            fontStyle: "italic",
-                          }
-                        : {
-                            ...styles.aiMessage,
-                            backgroundColor: isDarkMode ? "#363636" : "#ffffff",
-                            color: isDarkMode ? "#ffffff" : "#1a1a1a",
-                            // border: `1px solid ${
-                            //   isDarkMode ? "#555" : "#e0e0e0"
-                            // }`,
-                            boxShadow: isDarkMode
-                              ? "0 4px 12px rgba(0, 0, 0, 0.3)"
-                              : "0 4px 12px rgba(0, 0, 0, 0.15)",
-                          }),
-                      cursor: "pointer",
+                      ...styles.messageWrapper,
+                      flexDirection: message.isUser ? "row-reverse" : "row",
+                      justifyContent: message.isUser
+                        ? "flex-end"
+                        : "flex-start",
+                      marginBottom:
+                        index === messages.length - 1 ? 20 : undefined,
                     }}
-                    onClick={() => handleMessageClick(index)}
+                    className="message-wrapper"
                   >
-                    {!message.isUser &&
-                    selectedMode === "B" &&
-                    (message.text
-                      .toLowerCase()
-                      .includes("plausibility score") ||
-                      message.text.toLowerCase().includes("case summary") ||
-                      message.text.toLowerCase().includes("legal issues") ||
-                      message.text
-                        .toLowerCase()
-                        .includes("suggested next steps")) ? (
-                      <VillyReportCard
-                        reportText={message.text}
-                        isDarkMode={isDarkMode}
-                        plausibilityLabel={message.plausibilityLabel}
-                        plausibilitySummary={message.plausibilitySummary}
-                        sources={message.sources || []}
+                    {message.isUser ? (
+                      <img
+                        src={
+                          profilePicture ||
+                          "https://randomuser.me/api/portraits/men/32.jpg" ||
+                          "/placeholder.svg" ||
+                          "/placeholder.svg"
+                        }
+                        alt="User Avatar"
+                        style={{
+                          ...styles.messageAvatar,
+                          ...styles.userAvatar,
+                          objectFit: "cover",
+                        }}
                       />
                     ) : (
-                      <div>
-                      <ReactMarkdown components={markdownComponents}>
-                        {message.isUser ? message.text : message.text}
-                      </ReactMarkdown>
-                        {/* CPA facts UI removed per request */}
+                      <img
+                        src={villyAvatar || "/placeholder.svg"}
+                        alt="Villy Avatar"
+                        style={{
+                          ...styles.messageAvatar,
+                          ...styles.aiAvatar,
+                          backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                          // border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                          objectFit: "cover",
+                        }}
+                      />
+                    )}
+                    <div
+                      style={{
+                        ...styles.message,
+                        ...(message.isUser
+                          ? styles.userMessage
+                          : message.isError
+                          ? {
+                              ...styles.aiMessage,
+                              backgroundColor: "#fff0f0",
+                              color: "#b91c1c",
+                              // border: "1px solid #fca5a5",
+                              fontStyle: "italic",
+                            }
+                          : {
+                              ...styles.aiMessage,
+                              backgroundColor: isDarkMode
+                                ? "#363636"
+                                : "#ffffff",
+                              color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                              // border: `1px solid ${
+                              //   isDarkMode ? "#555" : "#e0e0e0"
+                              // }`,
+                              boxShadow: isDarkMode
+                                ? "0 4px 12px rgba(0, 0, 0, 0.3)"
+                                : "0 4px 12px rgba(0, 0, 0, 0.15)",
+                            }),
+                        cursor: "pointer",
+                      }}
+                      onClick={() => handleMessageClick(index)}
+                    >
+                      {!message.isUser &&
+                      selectedMode === "B" &&
+                      (message.text
+                        .toLowerCase()
+                        .includes("plausibility score") ||
+                        message.text.toLowerCase().includes("case summary") ||
+                        message.text.toLowerCase().includes("legal issues") ||
+                        message.text
+                          .toLowerCase()
+                          .includes("suggested next steps")) ? (
+                        <VillyReportCard
+                          reportText={message.text}
+                          isDarkMode={isDarkMode}
+                          plausibilityLabel={message.plausibilityLabel}
+                          plausibilitySummary={message.plausibilitySummary}
+                          sources={message.sources || []}
+                        />
+                      ) : (
+                        <div style={{ textAlign: "left", width: "100%" }}>
+                          <ReactMarkdown components={markdownComponents}>
+                            {message.isUser
+                              ? message.text
+                              : processMarkdownText(message.text)}
+                          </ReactMarkdown>
+                          {/* CPA facts UI removed per request */}
+                        </div>
+                      )}
+                    </div>
+                    {showTimestamp === index && message.timestamp && (
+                      <div
+                        style={{
+                          ...styles.timestamp,
+                          ...(message.isUser
+                            ? styles.userTimestamp
+                            : styles.aiTimestamp),
+                        }}
+                      >
+                        {message.timestamp}
                       </div>
                     )}
                   </div>
-                  {showTimestamp === index && message.timestamp && (
-                    <div
-                      style={{
-                        ...styles.timestamp,
-                        ...(message.isUser
-                          ? styles.userTimestamp
-                          : styles.aiTimestamp),
-                      }}
-                    >
-                      {message.timestamp}
-                    </div>
-                  )}
-                </div>
+                </AnimateInView>
               ))
             )}
 
             {/* Typing animation */}
             {isTyping && (
-              <div
-                style={{
-                  ...styles.messageWrapper,
-                  flexDirection: "row",
-                  justifyContent: "flex-start",
-                }}
-              >
-                <img
-                  src={villyAvatar || "/placeholder.svg"}
-                  alt="Villy Avatar"
-                  style={{
-                    ...styles.messageAvatar,
-                    ...styles.aiAvatar,
-                    backgroundColor: isDarkMode ? "#363636" : "#ffffff",
-                    border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
-                    objectFit: "cover",
-                  }}
-                />
+              <AnimateInView animationType="slide-up" delay={300}>
                 <div
                   style={{
-                    ...styles.message,
-                    ...styles.aiMessage,
-                    backgroundColor: isDarkMode ? "#363636" : "#ffffff",
-                    color: isDarkMode ? "#ffffff" : "#1a1a1a",
-                    border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
-                    boxShadow: isDarkMode
-                      ? "0 4px 12px rgba(0, 0, 0, 0.3)"
-                      : "0 4px 12px rgba(0, 0, 0, 0.1)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "16px 20px",
-                    minHeight: "20px",
+                    ...styles.messageWrapper,
+                    flexDirection: "row",
+                    justifyContent: "flex-start",
                   }}
                 >
-                  <div className="typing-animation">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                  <img
+                    src={villyAvatar || "/placeholder.svg"}
+                    alt="Villy Avatar"
+                    style={{
+                      ...styles.messageAvatar,
+                      ...styles.aiAvatar,
+                      backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                      border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                      objectFit: "cover",
+                    }}
+                  />
+                  <div
+                    style={{
+                      ...styles.message,
+                      ...styles.aiMessage,
+                      backgroundColor: isDarkMode ? "#363636" : "#ffffff",
+                      color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                      // border: `1px solid ${isDarkMode ? "#555" : "#e0e0e0"}`,
+                      boxShadow: isDarkMode
+                        ? "0 4px 12px rgba(0, 0, 0, 0.3)"
+                        : "0 4px 12px rgba(0, 0, 0, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "16px 20px",
+                      minHeight: "20px",
+                    }}
+                  >
+                    <div className="typing-animation">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </AnimateInView>
             )}
           </div>
         </div>
@@ -2357,34 +2607,36 @@ const Chat = () => {
             ref={inputWrapperRef}
           >
             {showDisclaimer && (
-              <div
-                style={{
-                  ...styles.disclaimer,
-                  background: isDarkMode
-                    ? "rgba(220, 38, 38, 0.50)"
-                    : "rgba(239, 68, 68, 0.50)",
-
-                  padding: "8px",
-                  margin: "12px 0",
-                  maxWidth: "900px",
-                  borderRadius: "20px",
-                  color: isDarkMode ? "#bbbbbb" : "#ffffff",
-                  cursor: "pointer",
-                  boxShadow: isDarkMode
-                    ? "0 2px 8px rgba(0,0,0,0.32)"
-                    : "0 2px 8px rgba(0, 0, 0, 0.2)",
-                }}
-                onClick={() => setShowDisclaimer(false)} // Hide disclaimer on click
-              >
-                Villy offers AI-powered legal insights to help you explore your
-                situation. While it's here to assist, it's not a substitute for
-                professional legal advice.
+              <AnimateInView animationType="slide-up" asChild={true}>
                 <div
-                  style={{ marginTop: "3px", fontSize: "12px", opacity: 0.8 }}
+                  style={{
+                    ...styles.disclaimer,
+                    background: isDarkMode
+                      ? "rgba(220, 38, 38, 0.50)"
+                      : "rgba(239, 68, 68, 0.50)",
+
+                    padding: "8px",
+                    margin: "12px 0",
+                    maxWidth: "900px",
+                    borderRadius: "20px",
+                    color: isDarkMode ? "#bbbbbb" : "#ffffff",
+                    cursor: "pointer",
+                    boxShadow: isDarkMode
+                      ? "0 2px 8px rgba(0,0,0,0.32)"
+                      : "0 2px 8px rgba(0, 0, 0, 0.2)",
+                  }}
+                  onClick={() => setShowDisclaimer(false)} // Hide disclaimer on click
                 >
-                  (Click to dismiss)
+                  Villy offers AI-powered legal insights to help you explore
+                  your situation. While it's here to assist, it's not a
+                  substitute for professional legal advice.
+                  <div
+                    style={{ marginTop: "3px", fontSize: "12px", opacity: 0.8 }}
+                  >
+                    (Click to dismiss)
+                  </div>
                 </div>
-              </div>
+              </AnimateInView>
             )}
             <div
               style={{
@@ -2394,7 +2646,7 @@ const Chat = () => {
                   ? "0 2px 8px rgba(0,0,0,0.32)"
                   : "0 1px 2px rgba(0, 0, 0, 0.05)",
                 border: isDarkMode ? "1.5px solid #555" : "1px solid #e0e0e0",
-                borderRadius: "12px",
+                borderRadius: "25px",
                 padding: "16px",
                 transition: "box-shadow 0.2s ease, border-color 0.2s ease",
               }}
@@ -2486,22 +2738,22 @@ const Chat = () => {
                       />
                     </svg>
                   ) : (
-                  <svg
-                    key={sendHovered ? "hovered" : "not-hovered"}
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={sendHovered ? "#fff" : "#666"}
-                    strokeWidth="2"
-                    style={{ transition: "stroke 0.2s" }}
-                  >
-                    <path
-                      d="M12 20V4M5 11l7-7 7 7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                    <svg
+                      key={sendHovered ? "hovered" : "not-hovered"}
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={sendHovered ? "#fff" : "#666"}
+                      strokeWidth="2"
+                      style={{ transition: "stroke 0.2s" }}
+                    >
+                      <path
+                        d="M12 20V4M5 11l7-7 7 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   )}
                 </button>
               </form>
@@ -2719,7 +2971,7 @@ const Chat = () => {
               color: isDarkMode ? "#fff" : "#1a1a1a",
               borderRadius: "18px",
               boxShadow: "0 4px 24px rgba(0,0,0,0.1)",
-              maxWidth: 375,
+              maxWidth: "500px",
               width: "92vw",
               padding: "28px 32px 24px 32px",
               display: "flex",
@@ -3680,6 +3932,37 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
       scrollbar-color: rgba(243, 77, 1, 0) transparent;
     }
 
+    .new-chat-btn[disabled] {
+    /* Keep these overrides to prevent animation/hover effects */
+    cursor: not-allowed !important;
+    pointer-events: none; 
+    transform: none !important;
+    box-shadow: none !important;
+    transition: opacity 0.3s ease, background-color 0.3s ease, color 0.3s ease; 
+    opacity: 0.6; /* Add opacity here if you want it to dim */
+}
+
+/* --- LIGHT MODE DISABLED COLORS (UPDATED) --- */
+body.light-mode .new-chat-btn.primary-button-hover[disabled] {
+    /* Set disabled color to be dark text on a pale background */
+    background-color: #f0f0f0 !important; /* Pale background */
+    color: #1a1a1a !important; /* Near-black text */
+}
+
+/* --- DARK MODE DISABLED COLORS (UNCHANGED) --- */
+body.dark-mode .new-chat-btn.primary-button-hover[disabled] {
+    background-color: #444444 !important; 
+    color: #bbbbbb !important;
+}
+
+/* Existing primary-button-hover remains untouched to ensure normal enabled hover works */
+/* Your existing :hover rules should correctly take over when [disabled] is removed */
+.primary-button-hover:hover {
+    /* This rule ensures the standard hover effect works when NOT disabled */
+    background-color: #e04000; /* Darker orange */
+    transform: translateY(-1px);
+}
+
     /* Mobile Header Visibility */
   .mobile-to-header {
     display: none !important;
@@ -3778,7 +4061,7 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
         padding: 12px !important;
       }
       .main-content {
-        padding: 12px 16px !important;
+        // padding: 12px 16px !important;
       }
       .message-wrapper {
         gap: 5px !important;

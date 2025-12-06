@@ -490,7 +490,7 @@ const SystemAdminPage = () => {
           marginLeft: windowWidth <= 768 ? 0 : "280px",
           paddingTop: windowWidth <= 768 ? "88px" : "32px",
         }}
-        className="main-content"
+        className="main-content-system"
       >
         <div style={currentStyles.topBar} className="top-bar">
           <div>
@@ -1654,7 +1654,7 @@ styleSheet.textContent = `
       display: block !important;
     }
     
-    .main-content {
+    .main-content-system {
       margin-left: 0 !important;
       padding: 88px 16px 24px 16px !important;
     }

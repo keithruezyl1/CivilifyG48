@@ -11,6 +11,7 @@ import {
 } from "../utils/auth";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AnimateInView from "../components/lightswind/animate-in-view";
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const EditProfile = () => {
     password: "",
     confirmPassword: "",
   });
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -40,6 +42,7 @@ const EditProfile = () => {
   useEffect(() => {
     const loadUserData = async () => {
       try {
+        setPendingAvatarFile(null);
         if (location.state) {
           setFormData((prev) => ({
             ...prev,
@@ -82,37 +85,52 @@ const EditProfile = () => {
     }
   };
 
-  const handleAvatarChange = async (e) => {
+  // const handleAvatarChange = async (e) => {
+  //   const file = e.target.files[0];
+  //   if (file) {
+  //     const reader = new FileReader();
+  //     reader.onload = () => {
+  //       setAvatarPreview(reader.result);
+  //     };
+  //     reader.readAsDataURL(file);
+
+  //     try {
+  //       setIsLoading(true);
+  //       const tokenStatus = validateAuthToken();
+  //       if (!tokenStatus.valid) {
+  //         toast.error(`${tokenStatus.message}. Please sign in again.`);
+  //         setTimeout(() => navigate("/signin"), 2000);
+  //         return;
+  //       }
+  //       const profilePictureUrl = await uploadProfilePicture(file);
+  //       toast.success("Profile picture uploaded successfully");
+  //       setAvatarPreview(profilePictureUrl);
+  //     } catch (error) {
+  //       console.error("Error uploading profile picture:", error);
+  //       if (error.response && error.response.status === 403) {
+  //         toast.error("Session expired. Please sign in again.");
+  //         setTimeout(() => navigate("/signin"), 2000);
+  //       } else {
+  //         toast.error("Failed to upload profile picture. Please try again.");
+  //       }
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   }
+  // };
+  const handleAvatarChange = (e) => {
+    // Removed 'async'
     const file = e.target.files[0];
     if (file) {
+      // 1. Store the file object, pending upload
+      setPendingAvatarFile(file); // <-- NEW
+
+      // 2. Create a local data URL for immediate preview
       const reader = new FileReader();
       reader.onload = () => {
         setAvatarPreview(reader.result);
       };
       reader.readAsDataURL(file);
-
-      try {
-        setIsLoading(true);
-        const tokenStatus = validateAuthToken();
-        if (!tokenStatus.valid) {
-          toast.error(`${tokenStatus.message}. Please sign in again.`);
-          setTimeout(() => navigate("/signin"), 2000);
-          return;
-        }
-        const profilePictureUrl = await uploadProfilePicture(file);
-        toast.success("Profile picture uploaded successfully");
-        setAvatarPreview(profilePictureUrl);
-      } catch (error) {
-        console.error("Error uploading profile picture:", error);
-        if (error.response && error.response.status === 403) {
-          toast.error("Session expired. Please sign in again.");
-          setTimeout(() => navigate("/signin"), 2000);
-        } else {
-          toast.error("Failed to upload profile picture. Please try again.");
-        }
-      } finally {
-        setIsLoading(false);
-      }
     }
   };
 
@@ -122,19 +140,44 @@ const EditProfile = () => {
       toast.error("Passwords do not match");
       return;
     }
+    let newProfilePictureUrl = null;
     try {
       setIsLoading(true);
       const tokenStatus = validateAuthToken();
       if (!tokenStatus.valid) {
         toast.error(`${tokenStatus.message}. Please sign in again.`);
         setTimeout(() => navigate("/signin"), 2000);
+        setIsLoading(false);
         return;
+      }
+
+      if (pendingAvatarFile) {
+        toast.info("Uploading profile picture...");
+        try {
+          // This call completes the image upload and updates the localStorage
+          await uploadProfilePicture(pendingAvatarFile);
+          setPendingAvatarFile(null); // Clear the pending file
+          toast.success("Picture uploaded successfully.");
+
+          // IMPORTANT: The state for avatarPreview should be correct
+          // because uploadProfilePicture updates localStorage, and
+          // useEffect or another mechanism should handle re-fetching/re-rendering.
+          // However, since we are doing a two-step process, we rely on the
+          // final updateUserProfile call to correctly refresh the user data.
+        } catch (uploadError) {
+          console.error("Error uploading profile picture:", uploadError);
+          toast.error(
+            "Failed to upload new picture. Saving other profile changes..."
+          );
+          // Note: newProfilePictureUrl is now implicitly stored in localStorage by utility function
+        }
       }
       const updateData = { username: formData.username, email: formData.email };
       if (formData.password) {
         updateData.password = formData.password;
       }
       await updateUserProfile(updateData);
+      setPendingAvatarFile(null);
       toast.success("Profile updated successfully");
       setTimeout(() => navigate("/profile"), 1000);
     } catch (error) {
@@ -202,180 +245,204 @@ const EditProfile = () => {
       />
 
       <div className="header">
-        <div className="back-button">
-          <button onClick={() => navigate("/profile")} className="back-btn">
-            <svg
-              style={{ width: "20px", height: "20px", marginRight: "8px" }}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="full-text">Back to Profile</span>
-            <span className="short-text">Profile</span>
-          </button>
-        </div>
-        <div>
-          <img
-            src={logoIconOrange}
-            alt="Civilify"
-            style={{ height: "30px", marginRight: "12px", marginTop: "6px" }}
-          />
-        </div>
+        <AnimateInView asChild={true} animationType="slide-left">
+          <div className="back-button">
+            <button onClick={() => window.history.back()} className="back-btn">
+              <svg
+                style={{ width: "20px", height: "20px", marginRight: "8px" }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              <span className="full-text">Back</span>
+              <span className="short-text">Back</span>
+            </button>
+          </div>
+        </AnimateInView>
+        <AnimateInView asChild={true} animationType="slide-right">
+          <div>
+            <img
+              src={logoIconOrange}
+              alt="Civilify"
+              style={{ height: "30px", marginRight: "12px", marginTop: "6px" }}
+            />
+          </div>
+        </AnimateInView>
       </div>
 
       <div className="content">
         <form onSubmit={handleSubmit}>
-          <div className="avatar-section">
-            {mode === "edit" && (
-              <div
-                className="avatar"
-                onClick={() => document.getElementById("avatar-upload").click()}
-              >
-                {avatarPreview ? (
-                  <img
-                    src={avatarPreview || "/placeholder.svg"}
-                    alt="Avatar Preview"
-                    className="avatar-img"
-                  />
-                ) : (
-                  <div className="avatar-placeholder">
-                    {formData.username.substring(0, 2).toUpperCase() || "U"}
-                  </div>
-                )}
-                <div className="avatar-overlay">
-                  {isLoading ? "Uploading..." : "Change Photo"}
-                </div>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  style={{ display: "none" }}
-                  disabled={isLoading}
-                />
-              </div>
-            )}
-            <h1
-              {...(mode === "change-password" && {
-                style: { marginTop: "10vh" },
-              })}
-            >
-              {mode === "edit"
-                ? "Edit Profile"
-                : mode === "change-password"
-                ? "Change Password"
-                : "Invalid Mode"}
-            </h1>
-            <p>
-              {mode === "edit"
-                ? "Update your profile information"
-                : mode === "change-password"
-                ? "Update your password"
-                : "Please navigate from the profile page."}
-            </p>
-          </div>
-
-          {mode === "edit" || mode === "change-password" ? (
-            <div className="form-fields">
+          <AnimateInView asChild={true} animationType="slide-up">
+            <div className="avatar-section">
               {mode === "edit" && (
-                <>
-                  <div className="form-group">
-                    <label>Username</label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      onBlur={handleInputBlur}
-                      className="form-input"
-                      placeholder="Enter your username"
-                      disabled={isLoading}
+                <div
+                  className="avatar"
+                  onClick={() =>
+                    document.getElementById("avatar-upload").click()
+                  }
+                >
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview || "/placeholder.svg"}
+                      alt="Avatar Preview"
+                      className="avatar-img"
                     />
-                    {errors.username && (
-                      <p className="error">{errors.username}</p>
-                    )}
+                  ) : (
+                    <div className="avatar-placeholder">
+                      {formData.username.substring(0, 2).toUpperCase() || "U"}
+                    </div>
+                  )}
+                  <div className="avatar-overlay">
+                    {isLoading ? "Uploading..." : "Change Photo"}
                   </div>
-
-                  <div className="form-group">
-                    <label>Email Address</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      onBlur={handleInputBlur}
-                      className="form-input"
-                      placeholder="Enter your email address"
-                      disabled={isLoading}
-                    />
-                    {errors.email && <p className="error">{errors.email}</p>}
-                  </div>
-                </>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    style={{ display: "none" }}
+                    disabled={isLoading}
+                  />
+                </div>
               )}
-              {mode === "change-password" && (
-                <>
-                  <div className="form-group">
-                    <label>
-                      {mode === "edit"
-                        ? "New Password (Optional)"
-                        : "New Password"}
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      onBlur={handleInputBlur}
-                      className="form-input"
-                      placeholder={
-                        mode === "edit"
-                          ? "Leave blank to keep current password"
-                          : "Enter your new password"
-                      }
-                      disabled={isLoading}
-                    />
-                    {errors.password && (
-                      <p className="error">{errors.password}</p>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label>Confirm New Password</label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      onBlur={handleInputBlur}
-                      className="form-input"
-                      placeholder="Confirm your new password"
-                      disabled={isLoading}
-                    />
-                    {errors.confirmPassword && (
-                      <p className="error">{errors.confirmPassword}</p>
-                    )}
-                  </div>
-                </>
-              )}
+              <h1
+                {...(mode === "change-password" && {
+                  style: { marginTop: "10vh" },
+                })}
+              >
+                {mode === "edit"
+                  ? "Edit Profile"
+                  : mode === "change-password"
+                  ? "Change Password"
+                  : "Invalid Mode"}
+              </h1>
+              <p>
+                {mode === "edit"
+                  ? "Update your profile information"
+                  : mode === "change-password"
+                  ? "Update your password"
+                  : "Please navigate from the profile page."}
+              </p>
             </div>
-          ) : null}
+          </AnimateInView>
+          <AnimateInView asChild={true} animationType="slide-up" delay={200}>
+            {mode === "edit" || mode === "change-password" ? (
+              <div className="form-fields">
+                {mode === "edit" && (
+                  <>
+                    <div className="form-group">
+                      <label>Username</label>
+                      <input
+                        type="text"
+                        name="username"
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        onBlur={handleInputBlur}
+                        className="form-input"
+                        placeholder="Enter your username"
+                        disabled={isLoading}
+                      />
+                      {errors.username && (
+                        <p className="error">{errors.username}</p>
+                      )}
+                    </div>
 
-          <div className="submit-button">
-            <button
-              type="submit"
-              className="submit-btn"
-              disabled={isLoading || Object.keys(errors).length > 0}
-            >
-              {isLoading ? "Saving Changes..." : "Save Changes"}
-            </button>
-          </div>
+                    <div className="form-group">
+                      <label>Email Address</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        onBlur={handleInputBlur}
+                        className="form-input"
+                        placeholder="Enter your email address"
+                        disabled={isLoading}
+                      />
+                      {errors.email && <p className="error">{errors.email}</p>}
+                    </div>
+                  </>
+                )}
+                {mode === "change-password" && (
+                  <>
+                    <div className="form-group">
+                      <label>
+                        {mode === "edit"
+                          ? "New Password (Optional)"
+                          : "New Password"}
+                      </label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        onBlur={handleInputBlur}
+                        className="form-input"
+                        placeholder={
+                          mode === "edit"
+                            ? "Leave blank to keep current password"
+                            : "Enter your new password"
+                        }
+                        disabled={isLoading}
+                      />
+                      {errors.password && (
+                        <p className="error">{errors.password}</p>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Confirm New Password</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        onBlur={handleInputBlur}
+                        className="form-input"
+                        placeholder="Confirm your new password"
+                        disabled={isLoading}
+                      />
+                      {errors.confirmPassword && (
+                        <p className="error">{errors.confirmPassword}</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </AnimateInView>
+          <AnimateInView asChild={true} animationType="slide-up" delay={400}>
+            <div className="submit-button">
+              <button
+                type="submit"
+                className="submit-btn"
+                // MODIFIED disabled check
+                disabled={
+                  isLoading ||
+                  Object.keys(errors).length > 0 ||
+                  (mode === "change-password" &&
+                    (!formData.password || !formData.confirmPassword)) ||
+                  (mode === "edit" &&
+                    !pendingAvatarFile &&
+                    !formData.password &&
+                    !formData.confirmPassword &&
+                    formData.username ===
+                      (location.state?.username || getUserData()?.username) &&
+                    formData.email ===
+                      (location.state?.email || getUserData()?.email))
+                }
+              >
+                {isLoading ? "Saving Changes..." : "Save Changes"}
+              </button>
+            </div>
+          </AnimateInView>
         </form>
       </div>
       <style>{`
@@ -441,22 +508,27 @@ const EditProfile = () => {
     position: relative;
     display: inline-block;
     cursor: pointer;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;border-radius: 50%;
   }
+    .avatar:hover {
+  transform: scale(1.05); 
+  box-shadow: 0 0 0 3px rgba(242, 76, 0, 0.1), 0 0 20px rgba(242, 76, 0, 0.3);
+}
 
-  .avatar-img,
-  .avatar-placeholder {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid ${isDarkMode ? "#404040" : "#ffffff"};
-    box-shadow: ${
-      isDarkMode
-        ? "0 8px 32px rgba(0, 0, 0, 0.3)"
-        : "0 8px 32px rgba(0, 0, 0, 0.1)"
-    };
-    transition: transform 0.2s ease;
-  }
+ .avatar-img,
+.avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid ${isDarkMode ? "#404040" : "#ffffff"};
+  box-shadow: ${
+    isDarkMode
+      ? "0 8px 32px rgba(0, 0, 0, 0.3)"
+      : "0 8px 32px rgba(0, 0, 0, 0.1)"
+  };
+}
 
   .avatar-placeholder {
     background: linear-gradient(135deg, #f24c00 0%, #ea580c 100%);
@@ -468,33 +540,24 @@ const EditProfile = () => {
     color: #ffffff;
   }
 
-  .avatar:hover .avatar-img,
-  .avatar:hover .avatar-placeholder .avatar-overlay:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 3px rgba(242, 76, 0, 0.1), 0 0 20px rgba(242, 76, 0, 0.3);
-  }
-
   .avatar-overlay {
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    width: 125px;
-    height: 125px;
-    border-radius: 50%;
-    background: rgba(242, 76, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    color: white;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .avatar:hover .avatar-overlay {
-    opacity: 1;
-  }
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%; 
+  border-radius: 50%;
+  background: rgba(242, 76, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 50;
+}
 
   .content { max-width: 600px; margin: 0 auto; padding: 0px 30px 30px 30px; }
   .form-fields { display: flex; flex-direction: column; gap: 24px; }

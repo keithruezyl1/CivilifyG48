@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.stream.Collectors;
+import java.util.LinkedHashSet;
 
 /**
  * Service for interacting with the knowledge base system.
@@ -283,10 +284,24 @@ public class KnowledgeBaseService {
                                     @SuppressWarnings("unchecked")
                                     Map<String, Object> casted = (Map<String, Object>) item;
                                     results.add(casted);
+                                    // Log raw response structure for debugging sourceUrls
+                                    if (logger.isDebugEnabled()) {
+                                        logger.debug("KB search result keys: {}", casted.keySet());
+                                        logger.debug("KB search result source_urls: {}", casted.get("source_urls"));
+                                        logger.debug("KB search result sourceUrls: {}", casted.get("sourceUrls"));
+                                    }
                                 }
                             }
                         }
                         List<KnowledgeBaseEntry> entries = convertToKnowledgeBaseEntries(results);
+                        // Log final entries to verify sourceUrls are set
+                        for (KnowledgeBaseEntry entry : entries) {
+                            if (entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty()) {
+                                logger.info("Entry '{}' has {} sourceUrls: {}", entry.getTitle(), entry.getSourceUrls().size(), entry.getSourceUrls());
+                            } else {
+                                logger.debug("Entry '{}' has no sourceUrls", entry.getTitle());
+                            }
+                        }
                         resultCache.put(cacheKey, new CacheEntry<>(entries, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(knowledgeBaseCacheTtlSeconds)));
                         return entries;
                     }
@@ -411,6 +426,10 @@ public class KnowledgeBaseService {
         } catch (org.springframework.web.client.ResourceAccessException e) {
             logger.warn("Knowledge base service is not available (connection refused). This is expected if the Villy service is not running. Falling back to empty response.");
             return new KnowledgeBaseChatResponse("", new ArrayList<>(), "Knowledge base service is not available");
+        } catch (HttpClientErrorException.TooManyRequests e429) {
+            logger.warn("KB 429 Too Many Requests while chatting with knowledge base. Render free tier may be waking the service.");
+            logger.error("Client error when chatting with knowledge base: {}", e429.getMessage());
+            return new KnowledgeBaseChatResponse("", new ArrayList<>(), "Client error: " + e429.getMessage());
         } catch (HttpClientErrorException e) {
             logger.error("Client error when chatting with knowledge base: {}", e.getMessage());
             return new KnowledgeBaseChatResponse("", new ArrayList<>(), "Client error: " + e.getMessage());
@@ -454,7 +473,12 @@ public class KnowledgeBaseService {
         }
         
         try {
-            String url = knowledgeBaseApiUrl + "/health";
+            // The knowledgeBaseApiUrl already includes /api, so we just need /health
+            // Remove trailing slash if present, then append /health
+            String baseUrl = knowledgeBaseApiUrl.endsWith("/") 
+                ? knowledgeBaseApiUrl.substring(0, knowledgeBaseApiUrl.length() - 1) 
+                : knowledgeBaseApiUrl;
+            String url = baseUrl + "/health";
             
             HttpHeaders headers = buildAuthHeaders();
             
@@ -513,16 +537,22 @@ public class KnowledgeBaseService {
                 entry.setSectionNo((String) result.get("section_no"));
                 entry.setRightsScope((String) result.get("rights_scope"));
                 
-                // Handle source URLs array
-                Object sourceUrlsObj = result.get("source_urls");
-                if (sourceUrlsObj instanceof List<?>) {
-                    List<String> sourceUrls = new ArrayList<>();
-                    for (Object url : (List<?>) sourceUrlsObj) {
-                        if (url instanceof String) {
-                            sourceUrls.add((String) url);
-                        }
-                    }
+                List<String> sourceUrls = extractSourceUrls(result);
                     entry.setSourceUrls(sourceUrls);
+                if (!sourceUrls.isEmpty()) {
+                    entry.setPrimaryUrl(sourceUrls.get(0));
+                    logger.info("Using {} URLs from KB API for entry: {} - {}", 
+                        sourceUrls.size(), entry.getTitle(), sourceUrls);
+                } else if (!backfillEntryDetails(entry)) {
+                    logger.debug("No KB-provided source URLs for entry: {} (available keys: {})",
+                        entry.getTitle(), result.keySet());
+                }
+                
+                // Log final state
+                if (entry.getSourceUrls().isEmpty()) {
+                    logger.debug("Entry '{}' has no sourceUrls after all attempts", entry.getTitle());
+                } else {
+                    logger.debug("Entry '{}' has {} sourceUrls: {}", entry.getTitle(), entry.getSourceUrls().size(), entry.getSourceUrls());
                 }
                 
                 entries.add(entry);
@@ -559,7 +589,18 @@ public class KnowledgeBaseService {
             );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return mapToKnowledgeBaseEntry(response.getBody());
+                Map<String, Object> body = response.getBody();
+                // KB API returns { success: true, entry: {...} } - unwrap the entry field
+                Object entryObj = body.get("entry");
+                if (entryObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> entryMap = (Map<String, Object>) entryObj;
+                    return mapToKnowledgeBaseEntry(entryMap);
+                } else {
+                    // Fallback: if response structure is different, try direct mapping
+                    logger.debug("KB entry response missing 'entry' field, attempting direct mapping. Keys: {}", body.keySet());
+                    return mapToKnowledgeBaseEntry(body);
+                }
             }
             
         } catch (Exception e) {
@@ -576,7 +617,15 @@ public class KnowledgeBaseService {
         try {
             KnowledgeBaseEntry entry = new KnowledgeBaseEntry();
             
-            entry.setEntryId((String) result.get("entry_id"));
+            String entryId = firstNonBlank(
+                asString(result.get("entry_id")),
+                asString(result.get("entryId")),
+                asString(result.get("id"))
+            );
+            entry.setEntryId(entryId);
+            if (entryId == null || entryId.isBlank()) {
+                logger.warn("KB entry missing entry_id. Available keys: {}", result.keySet());
+            }
             entry.setType((String) result.get("type"));
             entry.setTitle((String) result.get("title"));
             entry.setCanonicalCitation((String) result.get("canonical_citation"));
@@ -604,16 +653,15 @@ public class KnowledgeBaseService {
             entry.setSectionNo((String) result.get("section_no"));
             entry.setRightsScope((String) result.get("rights_scope"));
             
-            // Handle source URLs array
-            Object sourceUrlsObj = result.get("source_urls");
-            if (sourceUrlsObj instanceof List<?>) {
-                List<String> sourceUrls = new ArrayList<>();
-                for (Object url : (List<?>) sourceUrlsObj) {
-                    if (url instanceof String) {
-                        sourceUrls.add((String) url);
-                    }
-                }
+            List<String> sourceUrls = extractSourceUrls(result);
                 entry.setSourceUrls(sourceUrls);
+            if (!sourceUrls.isEmpty()) {
+                entry.setPrimaryUrl(sourceUrls.get(0));
+                logger.info("Using {} URLs from KB API for entry: {} - {}", 
+                    sourceUrls.size(), entry.getTitle(), sourceUrls);
+            } else if (!backfillEntryDetails(entry)) {
+                logger.debug("No KB-provided source URLs for entry: {} (available keys: {})",
+                    entry.getTitle(), result.keySet());
             }
             
             return entry;
@@ -622,6 +670,119 @@ public class KnowledgeBaseService {
             logger.warn("Failed to convert knowledge base entry: {}", e.getMessage());
             return null;
         }
+    }
+    
+    private List<String> extractSourceUrls(Map<String, Object> result) {
+        LinkedHashSet<String> collector = new LinkedHashSet<>();
+        
+        addUrlIfValid(collector, result.get("primary_url"));
+        addUrlIfValid(collector, result.get("primaryUrl"));
+        
+        addUrlsFromObject(collector, result.get("source_urls"));
+        addUrlsFromObject(collector, result.get("sourceUrls"));
+        addUrlsFromObject(collector, result.get("source_url"));
+        addUrlsFromObject(collector, result.get("sourceUrl"));
+        
+        addUrlIfValid(collector, result.get("url"));
+        
+        Object urlsObj = result.get("urls");
+        if (urlsObj instanceof List<?>) {
+            for (Object item : (List<?>) urlsObj) {
+                if (item instanceof Map<?, ?> map) {
+                    addUrlIfValid(collector, map.get("url"));
+                } else {
+                    addUrlIfValid(collector, item);
+                }
+            }
+        } else {
+            addUrlIfValid(collector, urlsObj);
+        }
+        
+        Object externalRelationsObj = result.get("external_relations");
+        if (externalRelationsObj instanceof List<?>) {
+            for (Object relation : (List<?>) externalRelationsObj) {
+                if (relation instanceof Map<?, ?> map) {
+                    addUrlIfValid(collector, map.get("url"));
+                }
+            }
+        }
+        
+        return new ArrayList<>(collector);
+    }
+    
+    /**
+     * If a KB search result doesn't include URL metadata, fetch the full entry
+     * to populate source URLs and summaries from the authoritative record.
+     */
+    private boolean backfillEntryDetails(KnowledgeBaseEntry entry) {
+        if (entry == null || entry.getEntryId() == null || entry.getEntryId().trim().isEmpty()) {
+            return false;
+        }
+        try {
+            KnowledgeBaseEntry detailed = getKnowledgeBaseEntry(entry.getEntryId());
+            if (detailed == null) {
+                return false;
+            }
+            if ((entry.getSourceUrls() == null || entry.getSourceUrls().isEmpty())
+                && detailed.getSourceUrls() != null && !detailed.getSourceUrls().isEmpty()) {
+                entry.setSourceUrls(detailed.getSourceUrls());
+                entry.setPrimaryUrl(detailed.getPrimaryUrl());
+            }
+            if ((entry.getSummary() == null || entry.getSummary().isBlank()) && detailed.getSummary() != null) {
+                entry.setSummary(detailed.getSummary());
+            }
+            if ((entry.getText() == null || entry.getText().isBlank()) && detailed.getText() != null) {
+                entry.setText(detailed.getText());
+            }
+            boolean hydrated = entry.getSourceUrls() != null && !entry.getSourceUrls().isEmpty();
+            if (!hydrated) {
+                logger.debug("KB entry {} still lacks source URLs after hydration", entry.getEntryId());
+            }
+            return hydrated;
+        } catch (Exception e) {
+            logger.warn("Failed to backfill KB entry {}: {}", entry.getEntryId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Public helper so higher layers (e.g., CPA controller) can hydrate entries on demand.
+     */
+    public boolean hydrateEntryDetails(com.capstone.civilify.DTO.KnowledgeBaseEntry entry) {
+        return backfillEntryDetails(entry);
+    }
+    
+    private void addUrlsFromObject(LinkedHashSet<String> collector, Object value) {
+        if (value instanceof List<?>) {
+            for (Object url : (List<?>) value) {
+                addUrlIfValid(collector, url);
+            }
+        } else {
+            addUrlIfValid(collector, value);
+        }
+    }
+    
+    private void addUrlIfValid(LinkedHashSet<String> collector, Object urlObj) {
+        if (urlObj instanceof String) {
+            String url = ((String) urlObj).trim();
+            if (!url.isEmpty() && url.startsWith("http")) {
+                collector.add(url);
+            }
+        }
+    }
+
+    private String asString(Object value) {
+        return value instanceof String ? ((String) value).trim() : null;
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
     
     private String sanitizeUserText(String text) {
@@ -667,7 +828,6 @@ public class KnowledgeBaseService {
             logger.warn("Query too short: {}", question);
             return new KnowledgeBaseChatResponse(null, null, "Query too short for meaningful search");
         }
-        
         try {
             if (performanceLogging) {
                 logger.info("Enhanced KB chat request for mode: {}, question: {}", mode, question);
@@ -862,4 +1022,5 @@ public class KnowledgeBaseService {
         
         return statutes;
     }
+    
 }
