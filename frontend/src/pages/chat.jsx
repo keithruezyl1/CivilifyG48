@@ -12,9 +12,10 @@ import {
   FaLock,
   FaShieldAlt,
 } from "react-icons/fa";
-import villyAvatar from "../assets/images/villypfporange.jpg";
+import villyAvatar from "../assets/images/villypfpwhite.jpg";
 import LoadingScreen from "./LoadingScreen";
 import ProfileAvatar from "../components/ProfileAvatar";
+import CivilifyText from "../assets/images/logotextorange.png";
 import logoIconOrange from "../assets/images/logoiconorange.png";
 import {
   fetchUserProfile,
@@ -2022,16 +2023,17 @@ const Chat = () => {
               alt="Civilify Logo"
               style={{ ...styles.logo, height: "30px", marginRight: "12px" }}
             />
-            <span
+            <img
+              src={CivilifyText}
+              alt="Civilify Logo"
               style={{
-                fontSize: "24px",
-                fontWeight: "600",
-                color: isDarkMode ? "#ffffff" : "#1a1a1a",
+                ...styles.logo,
+                height: "24px",
+                marginRight: "12px",
+                marginTop: "4px",
               }}
               className="header-to-mobile"
-            >
-              Civilify
-            </span>
+            />
           </div>
         </AnimateInView>
 
@@ -2950,7 +2952,7 @@ const Chat = () => {
               alignItems: "center",
               textAlign: "center",
               position: "relative",
-              overflowY: "hidden", // Enable scrolling if content overflows
+              overflowY: "hidden",
               animation: "popUpAnimationHIW 0.3s ease-out forwards",
             }}
           >
@@ -2965,6 +2967,7 @@ const Chat = () => {
               >
                 How Civilify Works
               </h2>
+
               <ol
                 style={{
                   paddingLeft: 0,
@@ -2973,7 +2976,7 @@ const Chat = () => {
                   width: "100%",
                 }}
               >
-                <li style={{ marginBottom: 18 }}>
+                <li style={{ marginBottom: 20 }}>
                   <span
                     style={{
                       fontWeight: "bold",
@@ -2981,19 +2984,29 @@ const Chat = () => {
                       fontSize: 18,
                     }}
                   >
-                    1. Choose a mode
+                    1. Select Your Mode
                   </span>
                   <br />
                   <span
                     style={{
                       fontSize: 15,
-                      color: isDarkMode ? "#bbbbbb" : "#666666",
+                      color: isDarkMode ? "#bbbbbb" : "#777",
                     }}
                   >
-                    Pick between quick legal info or full case assessment.
+                    Choose{" "}
+                    <strong style={{ color: "#F34D01" }}>
+                      General Legal Information
+                    </strong>{" "}
+                    for quick answers or <br />
+                    Choose{" "}
+                    <strong style={{ color: "#F34D01" }}>
+                      Case Plausibility Analysis
+                    </strong>{" "}
+                    for deeper insights.
                   </span>
                 </li>
-                <li style={{ marginBottom: 18 }}>
+
+                <li style={{ marginBottom: 20 }}>
                   <span
                     style={{
                       fontWeight: "bold",
@@ -3001,62 +3014,20 @@ const Chat = () => {
                       fontSize: 18,
                     }}
                   >
-                    2. Chat naturally
+                    2. Ask Villy Your Question
                   </span>
                   <br />
                   <span
                     style={{
                       fontSize: 15,
-                      color: isDarkMode ? "#bbbbbb" : "#666666",
+                      color: isDarkMode ? "#bbbbbb" : "#777",
                     }}
                   >
-                    Tell Villy your situation or question in simple words. No
-                    legal jargon needed.
+                    Describe your situation in simple words, no legal jargon
+                    needed.
                   </span>
                 </li>
-                <li style={{ marginBottom: 18 }}>
-                  <span
-                    style={{
-                      fontWeight: "bold",
-                      color: isDarkMode ? "#fff" : "#1a1a1a",
-                      fontSize: 18,
-                    }}
-                  >
-                    3. Smart help
-                  </span>
-                  <br />
-                  <span
-                    style={{
-                      fontSize: 15,
-                      color: isDarkMode ? "#bbbbbb" : "#666666",
-                    }}
-                  >
-                    If needed, Civilify will offer to switch modes to better
-                    assist you.
-                  </span>
-                </li>
-                <li style={{ marginBottom: 18 }}>
-                  <span
-                    style={{
-                      fontWeight: "bold",
-                      color: isDarkMode ? "#fff" : "#1a1a1a",
-                      fontSize: 18,
-                    }}
-                  >
-                    4. Get your answer
-                  </span>
-                  <br />
-                  <span
-                    style={{
-                      fontSize: 15,
-                      color: isDarkMode ? "#bbbbbb" : "#666666",
-                    }}
-                  >
-                    If you're sharing a real situation, Civilify will build a
-                    personalized case report with analysis, sources, a
-                    plausibility score, and next steps.
-                  </span>
-                </li>
+
                 <li style={{ marginBottom: 0 }}>
                   <span
                     style={{
@@ -3065,21 +3036,22 @@ const Chat = () => {
                       fontSize: 18,
                     }}
                   >
-                    5. Stay in control
+                    3. Get Clear Guidance
                   </span>
                   <br />
                   <span
                     style={{
                       fontSize: 15,
-                      color: isDarkMode ? "#bbbbbb" : "#666666",
+                      color: isDarkMode ? "#bbbbbb" : "#777",
                     }}
                   >
-                    You decide if you want deeper help or just a quick answer.
-                    Your privacy and understanding come first.
+                    Villy provides tailored insights, legal context, and next
+                    steps to help you move forward confidently.
                   </span>
                 </li>
               </ol>
             </div>
+
             <button
               style={{
                 background: isDarkMode
