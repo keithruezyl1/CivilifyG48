@@ -21,6 +21,7 @@ import {
   FaUserCog,
   FaTools,
   FaUser,
+  FaComment,
 } from "react-icons/fa";
 import logoIconOrange from "../assets/images/logoiconorange.png";
 import { ToastContainer, toast } from "react-toastify";
@@ -439,7 +440,14 @@ const SystemAdminPage = () => {
             </div>
           </div>
         </div>
-
+        <button
+          onClick={() => navigate("/chat")}
+          style={currentStyles.patchButton}
+          className="patch-button-hover"
+        >
+          <FaComment style={{ marginRight: "8px", color: "#8b5cf6" }} />
+          Talk to Villy
+        </button>
         <button
           onClick={() => toast.info("Adding patches feature coming soon")}
           style={currentStyles.patchButton}
