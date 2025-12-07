@@ -23,10 +23,14 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 
   // Handle authentication check
   if (!token || !authStatus.valid) {
+    if (currentPath.startsWith("/admin") || currentPath.startsWith("/system")) {
+      // Block unauthenticated access to admin/system paths
+      return <Navigate to="/404" replace />;
+    }
+
+    // Only redirect to signin for chat or other pages
     console.log("Authentication failed, redirecting to login");
-    // Store the current location to redirect back after login
     localStorage.setItem("redirectAfterLogin", location.pathname);
-    // Clear any existing auth data
     localStorage.removeItem("authToken");
     localStorage.removeItem("tokenExpires");
     localStorage.removeItem("user");
