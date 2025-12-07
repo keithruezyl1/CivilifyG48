@@ -1536,11 +1536,15 @@ const Chat = () => {
           localStorage.setItem("user", JSON.stringify(storedUser));
         } else {
           console.log("No profile picture found for user");
-          setProfilePicture("https://randomuser.me/api/portraits/men/32.jpg");
+          setProfilePicture(
+            "https://hips.hearstapps.com/digitalspyuk.cdnds.net/17/13/1490989105-twitter1.jpg?resize=768:*"
+          );
         }
       } catch (error) {
         console.error("Error fetching profile picture:", error);
-        setProfilePicture("https://randomuser.me/api/portraits/men/32.jpg");
+        setProfilePicture(
+          "https://hips.hearstapps.com/digitalspyuk.cdnds.net/17/13/1490989105-twitter1.jpg?resize=768:*"
+        );
       }
     };
 
@@ -1550,7 +1554,8 @@ const Chat = () => {
       const defaultUser = {
         username: "Civilify User",
         email: "user@civilify.com",
-        profile_picture_url: "https://randomuser.me/api/portraits/men/32.jpg",
+        profile_picture_url:
+          "https://hips.hearstapps.com/digitalspyuk.cdnds.net/17/13/1490989105-twitter1.jpg?resize=768:*",
       };
 
       console.log("Created default user:", defaultUser);
@@ -2122,8 +2127,13 @@ const Chat = () => {
                     color: isDarkMode ? "#fff" : "#232323",
                   }}
                 >
-                  <ProfileAvatar size="small" />
-                  <div style={{ display: "flex", flexDirection: "column" }}>
+                  <ProfileAvatar size="small" style={{ cursor: "default" }} />
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
                     <span style={{ fontWeight: "bold", fontSize: "14px" }}>
                       {getUserData()?.username || "User"}
                     </span>
@@ -2290,7 +2300,7 @@ const Chat = () => {
               // maxWidth: "100%",
               width: "100%",
               maxWidth: "900px",
-              overflowY: messages.length === 0 ? "hidden" : "scroll",
+              overflowY: "auto",
               alignItems: "stretch",
               justifyContent: messages.length === 0 ? "center" : "flex-start",
               padding: selectedMode == null ? "0px !important" : "0px 24px",
@@ -2421,18 +2431,28 @@ const Chat = () => {
                     className="message-wrapper"
                   >
                     {message.isUser ? (
-                      <img
-                        src={
-                          profilePicture ||
-                          "https://randomuser.me/api/portraits/men/32.jpg" ||
-                          "/placeholder.svg" ||
-                          "/placeholder.svg"
-                        }
-                        alt="User Avatar"
+                      // <img
+                      //   src={
+                      //     profilePicture ||
+                      //     "https://hips.hearstapps.com/digitalspyuk.cdnds.net/17/13/1490989105-twitter1.jpg?resize=768:*" ||
+                      //     "/placeholder.svg" ||
+                      //     "/placeholder.svg"
+                      //   }
+                      //   alt="User Avatar"
+                      //   style={{
+                      //     ...styles.messageAvatar,
+                      //     ...styles.userAvatar,
+                      //     objectFit: "cover",
+                      //   }}
+                      // />
+                      <ProfileAvatar
+                        size="small" // Use 'small' for chat bubbles (32x32px)
+                        userData={userData} // Pass userData for pfp/initials generation
                         style={{
-                          ...styles.messageAvatar,
-                          ...styles.userAvatar,
+                          // Apply the user-specific color and ensure object-fit for image
+                          ...styles.avatarCircle,
                           objectFit: "cover",
+                          cursor: "default",
                         }}
                       />
                     ) : (
@@ -3796,8 +3816,38 @@ if (!document.getElementById("chat-input-no-scrollbar-style")) {
   const style = document.createElement("style");
   style.id = "chat-input-no-scrollbar-style";
   style.textContent = `
-    
+/* 1. Webkit (Chrome, Safari, Edge) */
+.chatMessages::-webkit-scrollbar {
+  /* This value (1px) enforces the absolute thinnest scrollbar width. */
+  width: 1px;
+  background-color: transparent;
+}
 
+/* Hide the arrows/buttons explicitly (WebKit only) */
+.chatMessages::-webkit-scrollbar-button {
+  display: none;
+}
+
+.chatMessages::-webkit-scrollbar-thumb {
+  /* The thumb will be 1px wide due to the main scrollbar width. */
+  background-color: #9e9e9e; /* Changed from #F34D01 (orange) */
+  border-radius: 10px;
+  /* Setting border to 0 will ensure the thumb occupies the full 1px width. */
+  border: 0px solid transparent;
+  background-clip: content-box;
+}
+
+/* 2. Firefox */
+.chatMessages {
+  /* Use 'thin' keyword to enforce the browser's thinnest style (usually 5-8px). 
+     This overrides the standard 'auto' width. 
+  */
+  scrollbar-width: thin;
+  /* Styles the thumb (#9e9e9e) and track (transparent) */
+  scrollbar-color: #9e9e9e transparent; /* Changed from #F34D01 (orange) */
+
+  /* Ensure overflowY is set to 'auto' in the JSX style for this element */
+}
     .new-chat-btn[disabled] {
     /* Keep these overrides to prevent animation/hover effects */
     cursor: not-allowed !important;
