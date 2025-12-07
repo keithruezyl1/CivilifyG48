@@ -17,6 +17,7 @@ import SystemAdminPage from "./pages/system";
 import ProtectedRoute from "./components/ProtectedRoute";
 // import LoadingScreen from "./pages/LoadingScreen";
 import LoadingScreen from "./pages/LoadingScreen";
+import Page404 from "./pages/pageDoesntExist";
 
 const AppRoutes = () => {
   return (
@@ -55,22 +56,36 @@ const AppRoutes = () => {
         }
       />
       <Route path="/diagnostics" element={<DiagnosticsPage />} />
-      <Route path="/admin" element={
-        <ProtectedRoute requiredRole="ADMIN">
-          <Admin />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/knowledge-base" element={
-        <ProtectedRoute requiredRole="ADMIN">
-          <AdminKnowledgeBase />
-        </ProtectedRoute>
-      } />
-      <Route path="/system" element={
-        <ProtectedRoute requiredRole="SYSTEM_ADMIN">
-          <SystemAdminPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/unauthorized" element={<div style={{padding:20}}>Unauthorized</div>} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/knowledge-base"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminKnowledgeBase />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system"
+        element={
+          <ProtectedRoute requiredRole="SYSTEM_ADMIN">
+            <SystemAdminPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/unauthorized"
+        element={<div style={{ padding: 20 }}>Unauthorized</div>}
+      />
+      <Route path="/404" element={<Page404 />} />
+      <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   );
 };
