@@ -80,17 +80,16 @@ const Page404 = () => {
         </p>
 
         <a
-          onClick={() => window.history.back()}
+          href="/"
           style={{
             ...styles.button,
             backgroundColor: "#f34d01",
             color: "#ffffff",
             fontSize: isMobile ? "14px" : "15px",
             padding: isMobile ? "8px 16px" : "10px 20px",
-            cursor: "pointer",
           }}
         >
-          Return
+          Return Home
         </a>
       </div>
     </div>
