@@ -654,21 +654,28 @@ const Landing = () => {
           >
             <AnimateInView delay={100} flexDirection="col">
               {/* 1. TITLE MASK */}
-              <quiet-text-mask
-                image={villyBackground}
-                fixed
+              <div
+                className="text-mask-title"
                 style={{
                   fontFamily: "'Fira Sans', sans-serif",
                   fontSize: "10vw",
                   fontWeight: 900,
                   lineHeight: 1,
                   textAlign: "center",
-                  "--brightness": "90%",
-                  "--contrast": "90%",
+                  backgroundImage: `url(${villyBackground})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundAttachment: "fixed",
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  color: "transparent",
+                  WebkitTextFillColor: "transparent",
+                  filter: "brightness(0.9) contrast(0.9)",
+                  textShadow: "none",
                 }}
               >
                 CIVILIFY
-              </quiet-text-mask>
+              </div>
 
               {/* 2. SUBHEADING */}
               <AnimateInView delay={300}>

@@ -25,6 +25,7 @@ const SignUp = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [activeModal, setActiveModal] = useState(null); // "terms" | "privacy" | null
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -469,35 +470,27 @@ const SignUp = () => {
               />
               <label htmlFor="terms" className="terms-text">
                 I agree to the{" "}
-                <Link
-                  // to="/civilify-documents"
+                <span
                   className="terms-link"
-                  onClick={() => {
-                    window.localStorage.setItem(
-                      "selectedDocSection",
-                      "security"
-                    );
-                    window.localStorage.setItem("docFromSignup", "true");
-                    toast.info("Terms of Service coming soon");
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveModal("terms");
                   }}
+                  style={{ cursor: "pointer" }}
                 >
                   Terms of Service
-                </Link>{" "}
+                </span>{" "}
                 and{" "}
-                <Link
-                  // to="/civilify-documents"
+                <span
                   className="terms-link"
-                  onClick={() => {
-                    window.localStorage.setItem(
-                      "selectedDocSection",
-                      "security"
-                    );
-                    window.localStorage.setItem("docFromSignup", "true");
-                    toast.info("Privacy Policy coming soon");
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveModal("privacy");
                   }}
+                  style={{ cursor: "pointer" }}
                 >
                   Privacy Policy
-                </Link>
+                </span>
               </label>
             </div>
 
@@ -525,6 +518,138 @@ const SignUp = () => {
           </p>
         </div>
       </div>
+
+      {/* Terms of Service / Privacy Policy Modal */}
+      {activeModal && (
+        <div className="modal-overlay" onClick={() => setActiveModal(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+          >
+            <div className="modal-header">
+              <h3 id="modal-title" className="modal-title">
+                {activeModal === "terms"
+                  ? "Civilify Terms of Service (Preview)"
+                  : "Civilify Privacy Policy (Preview)"}
+              </h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setActiveModal(null)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              {activeModal === "terms" ? (
+                <>
+                  <p>
+                    These preview Terms of Service outline how you can use
+                    Civilify&apos;s AI-powered legal assistance platform.
+                    They will be finalized soon; please review and check back
+                    for updates.
+                  </p>
+                  <h4>1. Service Scope</h4>
+                  <ul>
+                    <li>
+                      Civilify provides AI-generated legal information and case
+                      plausibility assessments for Philippine law.
+                    </li>
+                    <li>
+                      Responses are informational and do not create a lawyer–
+                      client relationship.
+                    </li>
+                  </ul>
+                  <h4>2. User Responsibilities</h4>
+                  <ul>
+                    <li>Provide accurate information when using the app.</li>
+                    <li>Do not misuse, attack, or attempt to reverse engineer the service.</li>
+                    <li>Respect intellectual property and privacy of others.</li>
+                  </ul>
+                  <h4>3. Accounts & Security</h4>
+                  <ul>
+                    <li>Keep your credentials secure and notify us of any breach.</li>
+                    <li>
+                      Civilify may suspend accounts for abuse, fraud, or policy
+                      violations.
+                    </li>
+                  </ul>
+                  <h4>4. Disclaimers</h4>
+                  <ul>
+                    <li>No legal advice; consult a licensed attorney for counsel.</li>
+                    <li>
+                      Availability may vary; outages or maintenance may occur.
+                    </li>
+                  </ul>
+                  <h4>5. Changes</h4>
+                  <p>
+                    Terms may be updated; continued use means you accept the
+                    latest version. A finalized document will replace this
+                    preview.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    This preview Privacy Policy explains how Civilify handles
+                    data for AI-powered legal assistance. A finalized version
+                    will follow soon.
+                  </p>
+                  <h4>1. Data We Collect</h4>
+                  <ul>
+                    <li>Account info: username, email, optional profile image.</li>
+                    <li>
+                      Chat content you provide to generate GLI or CPA responses.
+                    </li>
+                    <li>Technical data for performance and security.</li>
+                  </ul>
+                  <h4>2. How We Use Data</h4>
+                  <ul>
+                    <li>To generate AI responses grounded in the knowledge base.</li>
+                    <li>To improve reliability, security, and user experience.</li>
+                    <li>To comply with legal obligations when applicable.</li>
+                  </ul>
+                  <h4>3. Sharing</h4>
+                  <ul>
+                    <li>
+                      Service providers (e.g., AI model hosts, storage) under
+                      appropriate safeguards.
+                    </li>
+                    <li>No selling of personal data.</li>
+                  </ul>
+                  <h4>4. Your Choices</h4>
+                  <ul>
+                    <li>Update or delete your account data where supported.</li>
+                    <li>
+                      Contact support for data requests once the final policy is
+                      published.
+                    </li>
+                  </ul>
+                  <h4>5. Retention & Security</h4>
+                  <p>
+                    Data is retained as needed for service delivery and
+                    security, then deleted or anonymized per policy. Industry
+                    safeguards are applied, but no system is perfectly secure.
+                  </p>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="modal-button"
+                onClick={() => setActiveModal(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         #root {
@@ -1042,6 +1167,129 @@ const SignUp = () => {
             width: 60px;
             height: 60px;
           }
+        }
+
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          z-index: 1000;
+          backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+          width: 100%;
+          max-width: 640px;
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .light .modal-content {
+          background: #ffffff;
+          color: #1a202c;
+        }
+
+        .dark .modal-content {
+          background: #1f1f1f;
+          color: #e5e7eb;
+          border-color: #323232;
+        }
+
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 20px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .dark .modal-header {
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .modal-title {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: 18px;
+          cursor: pointer;
+          color: inherit;
+          padding: 4px 8px;
+          border-radius: 8px;
+          transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .modal-close:hover {
+          background: rgba(243, 77, 1, 0.08);
+          transform: scale(1.02);
+        }
+
+        .dark .modal-close:hover {
+          background: rgba(243, 77, 1, 0.16);
+        }
+
+        .modal-body {
+          padding: 16px 20px;
+          max-height: 60vh;
+          overflow-y: auto;
+          line-height: 1.6;
+        }
+
+        .modal-body h4 {
+          margin: 16px 0 8px;
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .modal-body p {
+          margin: 0 0 12px 0;
+          font-size: 14px;
+        }
+
+        .modal-body ul {
+          padding-left: 18px;
+          margin: 0 0 12px 0;
+          font-size: 14px;
+          display: grid;
+          gap: 6px;
+        }
+
+        .modal-footer {
+          padding: 16px 20px;
+          border-top: 1px solid rgba(0, 0, 0, 0.06);
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .dark .modal-footer {
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .modal-button {
+          background: linear-gradient(135deg, #f34d01 0%, #ff6b3d 100%);
+          color: white;
+          border: none;
+          border-radius: 10px;
+          padding: 10px 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .modal-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(243, 77, 1, 0.25);
         }
       `}</style>
     </div>
