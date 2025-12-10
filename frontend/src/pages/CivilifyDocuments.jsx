@@ -64,6 +64,7 @@ const styles = {
   logo: {
     height: "1em !important",
     cursor: "pointer",
+    height: "64px",
   },
 
   hamburgerButton: {
@@ -428,9 +429,6 @@ const styles = {
     link: "#FF8A4B", // Keeping the primary orange for links
     navLinkBg: "#292929", // Navigation link background
     overlay: "rgba(0,0,0,0.6)",
-  },
-  logo: {
-    height: "64px",
   },
 };
 

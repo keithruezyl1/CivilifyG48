@@ -3804,7 +3804,6 @@ const styles = {
   welcomeTitle: {
     fontSize: "48px",
     fontWeight: "500",
-    margin: 0,
     margin: "16px 0",
     marginBottom: "32px",
     whiteSpace: "wrap",

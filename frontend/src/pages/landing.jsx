@@ -1007,7 +1007,6 @@ const Landing = () => {
             scrollSnapAlign: "start",
             position: "relative",
             overflow: "hidden",
-            scrollSnapAlign: "start",
           }}
         >
           <div
