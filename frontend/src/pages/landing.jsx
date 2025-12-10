@@ -12,7 +12,6 @@ import number2Icon from "../assets/images/2(1).png";
 import number3Icon from "../assets/images/3(1).png";
 import LoadingScreen from "./LoadingScreen";
 import SeasonalHoverCards from "../components/lightswind/seasonal-hover-cards";
-import "@quietui/quiet/components/text-mask/text-mask.js";
 import BeamGridBackground from "../components/lightswind/beam-grid-background";
 import {
   GlowingCards,
